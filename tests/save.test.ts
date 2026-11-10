@@ -47,3 +47,18 @@ describe('古い版のセーブの変換', () => {
     expect(loadFrom(kv, slotKey(2))!.season).toBe(G.season);
   });
 });
+
+describe('版2（段階2）のセーブの変換', () => {
+  it('ユースが足され、そのまま続けて遊べる', () => {
+    const kv = memoryKV(); kv.setItem(AUTO_KEY, readFileSync(__dirname + '/fixtures/save-v2.json', 'utf8'));
+    const raw = JSON.parse(kv.getItem(AUTO_KEY)!);
+    expect(raw.state.version).toBe(2);
+    const G = loadFrom(kv, AUTO_KEY)!;
+    expect(G.version).toBe(SAVE_VERSION);
+    expect(G.youth.length).toBeGreaterThanOrEqual(12);
+    expect(G.week).toBe(raw.state.week);
+    expect(G.squad.length).toBe(raw.state.squad.length);
+    for (let i = 0; i < 50; i++) advanceWeek(G);
+    expect(G.season).toBe(2);
+  });
+});

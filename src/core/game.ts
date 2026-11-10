@@ -10,9 +10,10 @@ import { makeWorld, nudgeToTier, TIER_LVL, type Club } from './world';
 import { AWARD_WEEK, CUP_ROUND_NAMES, WEEKS, isCamp, isOff, isWindow, monthOf, seasonSchedule, weekOfMonth } from './calendar';
 import { makeFixtures } from './fixtures';
 import type { Manager, MatchView, Player, ReportEntry } from './types';
+import { intake, monthlyReport, recommend, startYouth, youthWeek, type YouthReport } from './youth';
 
 export { makeFixtures };
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export interface Row { p: number; w: number; d: number; l: number; gf: number; ga: number; }
 export interface Offer { type: 'offer'; pid: number; club: string; price: number; }
 export interface CupTie { a: number; b: number; w?: number; s?: [number, number]; pk?: [number, number] | null; }
@@ -44,6 +45,13 @@ export interface GameState {
   goals: GoalRec[];
   /** 今週のお知らせ（1行ずつ） */
   news: string[];
+  /** ユース（段階3） */
+  youth: Player[];
+  youthLog: YouthReport[];
+  /** 春の昇格会議（開いているあいだ） */
+  promo: { open: boolean; rec: number[] } | null;
+  /** 年末のコーチのひとこと（ポテンシャルが動いたことなど） */
+  yearNotes: { pid: number; name: string; text: string }[];
 }
 export const ME = 0;
 
@@ -56,6 +64,9 @@ export function newGame(o: NewGameOpts = {}): GameState {
   mgr.forms = ['4-3-3', '4-2-3-1', '5-3-2']; mgr.youth = 1.3; mgr.obey = 0.75; mgr.grow = 1.15;
   /* 最初の選手は、地元の若手中心の22人ほどで、能力は低め（企画書 3★） */
   const squad = makeSquad(r, ids, 53, { prefPool: [pref, pref, pref, pref, '東京都', '大阪府', '神奈川県', '愛知県', '福岡県'] });
+  /* 若手4人を足して23人にする（トップは22〜25人：企画書 8-1） */
+  for (const pos of ['CB', 'CM', 'WG'] as const) { const i = squad.findIndex((p) => p.pos === pos); squad.splice(i, 1); }
+  squad.forEach((p) => (p.num = 0));
   for (const pos of ['WG', 'CM', 'ST', 'CB'] as const) {
     const k = makePlayer(r, ids, 44, pos, { age: r.int(16, 18), nSp: 0, exp: 0, pref, origin: 'ユース出身' });
     k.pot = r.int(76, 86); k.gStart = k.age; k.gLen = r.int(4, 7); k.contract = 3; squad.push(k);
@@ -69,7 +80,9 @@ export function newGame(o: NewGameOpts = {}): GameState {
     club: { name, color, pref, city: P.city, emblem },
     clubs, squad, mgr, policy: 'ふつう', leagues: {}, sched: seasonSchedule(), cup: { round: 0, rounds: [], champion: null },
     lastMatch: null, lastReport: [], pending: [], history: [], goals: [], news: [],
+    youth: [], youthLog: [], promo: null, yearNotes: [],
   };
+  G.youth = startYouth(r, ids, youthEnv(G));
   setupSeason(G, r);
   G.rng = r.s;
   return G;
@@ -86,6 +99,8 @@ export function setupSeason(G: GameState, r: Rng) {
   G.sched = seasonSchedule();
   G.cup = { round: 0, rounds: [], champion: null };
 }
+export function youthEnv(G: GameState) { return { pref: G.club.pref, facility: 1, dorm: 0, coachSkill: 0.5 }; }
+export function youthCoachSkill(_G: GameState) { return 0.5; }
 export const emptyRow = (): Row => ({ p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 });
 export const clubById = (G: GameState, id: number) => G.clubs.find((c) => c.id === id)!;
 export const myClub = (G: GameState) => clubById(G, ME);
@@ -187,6 +202,7 @@ export function advanceWeek(G: GameState): WeekResult {
   const news: string[] = [];
   try {
     const w = G.week;
+    if (G.promo?.open) news.push(...applyPromo(G, r, G.promo.rec));
     let match: MatchView | null = null;
     const li = G.sched.league.indexOf(w); const ci = G.sched.cup.indexOf(w);
     if (li >= 0) match = playLeagueRound(G, r, li);
@@ -204,6 +220,12 @@ export function advanceWeek(G: GameState): WeekResult {
     const report: ReportEntry[] = [];
     if (!isOff(w)) for (const p of G.squad) { const e = growPlayer(r, p, { ...DEFAULT_CTX, mgrGrow: G.mgr.grow, style: G.mgr.style, camp: isCamp(w) }); if (e) report.push(e); }
     else for (const p of G.squad) { p.fat = 0; p.cond = 0; if (p.inj) p.inj = Math.max(0, p.inj - 2); p.played = false; p.injNew = false; }
+    if (!isOff(w)) youthWeek(r, G.youth, youthCoachSkill(G), 1, isCamp(w));
+    if (w >= 8 && w % 4 === 0) {
+      const rep = monthlyReport(r, G.youth, G.season, monthOf(w), youthCoachSkill(G));
+      G.youthLog.push(rep); if (G.youthLog.length > 4) G.youthLog.shift();
+      news.push(`${monthOf(w)}月のユースの報告会議があった。`);
+    }
     for (const c of G.clubs) if (!c.me) for (const p of c.squad) { p.fat = clamp(p.fat - (isOff(w) ? 100 : 28), 0, 100); if (p.inj && !p.injNew) p.inj--; p.injNew = false; p.played = false; }
     if (w === AWARD_WEEK) news.push(...yearEnd(G, r));
     if (isWindow(w)) maybeOffer(G, r);
@@ -211,7 +233,8 @@ export function advanceWeek(G: GameState): WeekResult {
     G.lastReport = mergeReports(report);
     G.week++;
     let seasonEnd = false;
-    if (G.week >= WEEKS) { newSeason(G, r); seasonEnd = true; news.push(`${G.season}年目が始まった。`); }
+    if (G.week >= WEEKS) { news.push(...newSeason(G, r)); seasonEnd = true; news.push(`${G.season}年目が始まった。`); }
+    if (G.week === 4) { G.promo = { open: true, rec: recommend(G.youth, G.squad.length) }; news.push('春の昇格会議が開かれる。トップに上げる子を決めよう。'); }
     G.news = news;
     return { match, report: G.lastReport, seasonEnd, news };
   } finally { G.rng = r.s; }
@@ -256,6 +279,7 @@ function yearEnd(G: GameState, r: Rng): string[] {
   const mine = awards.filter((a) => a.me);
   if (mine.length) out.push(`年末の表彰：${mine.map((a) => `${a.name}（${a.tier}部の${a.title}）`).join('、')}`);
   else out.push('年末の表彰が行われた。');
+  out.push(...potentialAndRetire(G, r));
   const tier = myTier(G); const rank = myRank(G);
   const champ: Record<number, string> = {};
   for (const t of [1, 2, 3]) champ[t] = nameOf(standings(G, t)[0].id);
@@ -293,8 +317,64 @@ export function currentGoal(G: GameState): string {
   return next.text;
 }
 
+/* ---------- 年末：ポテンシャルの上下（企画書 8-4）と引退（12月に知らされる） ---------- */
+function potentialAndRetire(G: GameState, r: Rng): string[] {
+  const out: string[] = []; G.yearNotes = [];
+  for (const p of G.squad) {
+    const big = p.seasonApps >= 20 || p.seasonGoals >= 10;
+    const ok = p.seasonApps >= 14;
+    const few = p.seasonApps <= 3;
+    let d = 0;
+    if (big && p.age <= 28) d = r.int(2, 5); else if (ok && p.age <= 26) d = r.int(0, 2); else if (few && p.age <= 26) d = -r.int(1, 3);
+    if (d) {
+      p.pot = clamp(p.pot + d, 30, 88);
+      G.yearNotes.push({ pid: p.id, name: p.name, text: d >= 2 ? '今年の活躍で、あいつはひと皮むけた' : d > 0 ? '試合に出て、少し上が見えてきた' : '出番が少なくて、伸びが止まりかけている' });
+    }
+  }
+  /* 引退：能力が下がってきた選手や、試合に出られなくなった選手から考え始める。下限の年齢はない */
+  for (const p of G.squad) {
+    let pr = 0;
+    if (p.age >= p.decl + 1) pr += 0.12 + 0.13 * (p.age - p.decl - 1);
+    if (p.seasonApps <= 2 && p.age >= 24) pr += 0.06 + (p.age - 24) * 0.02;
+    if (p.age >= 37) pr += 0.5;
+    if (pr > 0 && r.next() < pr) { p.retiring = true; out.push(`${p.name}（${p.age}歳）が、今シーズンかぎりでの引退を決めた。`); }
+  }
+  if (G.yearNotes.length) out.push(`コーチから、${G.yearNotes.length}人についてひとことがある。`);
+  return out;
+}
+
+/* ---------- 春の昇格会議（企画書 9-1）：上げる子を決める。上げなかった3年は卒業してクラブを去る ---------- */
+export function applyPromo(G: GameState, r: Rng, ids: number[]): string[] {
+  const out: string[] = [];
+  const up = G.youth.filter((p) => ids.includes(p.id)).slice(0, Math.max(0, 25 - G.squad.length));
+  for (const p of up) {
+    p.grade = undefined; p.snap = undefined; p.contract = 3; p.salary = 150; p.num = 0; p.origin = 'ユース出身'; p.exp = Math.max(p.exp, 5);
+    G.squad.push(p);
+  }
+  assignNumbers(G.squad);
+  if (up.length) out.push(`ユースから ${up.map((p) => p.name).join('、')} をトップに上げた。`);
+  const leave = G.youth.filter((p) => !up.includes(p) && p.grade === 3);
+  if (leave.length) out.push(`${leave.map((p) => p.name).join('、')} がユースを卒業し、クラブを去った。`);
+  G.youth = G.youth.filter((p) => !up.includes(p) && p.grade !== 3);
+  for (const p of G.youth) p.grade = (p.grade || 1) + 1;
+  const kids = intake(r, G.ids, youthEnv(G));
+  G.youth.push(...kids);
+  out.push(`ユースに新しい1年生が${kids.length}人入ってきた。`);
+  G.promo = null;
+  return out;
+}
+/** 画面から：昇格会議で決める */
+export function decidePromo(G: GameState, ids: number[]): string[] {
+  const r = new Rng(G.rng); try { const o = applyPromo(G, r, ids); G.news = o; return o; } finally { G.rng = r.s; }
+}
+
 /* ---------- 新しいシーズン：昇格と降格 ---------- */
-function newSeason(G: GameState, r: Rng) {
+function newSeason(G: GameState, r: Rng): string[] {
+  const out: string[] = [];
+  const ret = G.squad.filter((p) => p.retiring);
+  if (ret.length) out.push(`${ret.map((p) => p.name).join('、')} が引退した。`);
+  G.squad = G.squad.filter((p) => !p.retiring);
+  for (const p of G.youth) p.age++;
   const moves: { id: number; to: number }[] = [];
   for (const t of [1, 2, 3]) {
     const rows = standings(G, t);
@@ -320,6 +400,7 @@ function newSeason(G: GameState, r: Rng) {
   G.season++; G.week = 0;
   setupSeason(G, r);
   void teamStrength;
+  return out;
 }
 
 export interface SkipResult { weeks: number; report: ReportEntry[]; lastMatch: MatchView | null; seasonEnd: boolean; news: string[]; }
@@ -330,7 +411,7 @@ export function advanceToDecision(G: GameState, maxWeeks = 8): SkipResult {
     const res = advanceWeek(G); weeks++;
     all.push(...res.report); if (res.match) last = res.match; news.push(...res.news);
     if (res.seasonEnd) { seasonEnd = true; break; }
-    if (G.pending.length || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8) break;
+    if (G.pending.length || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open) break;
   }
   G.news = news;
   return { weeks, report: mergeReports(all), lastMatch: last, seasonEnd, news };

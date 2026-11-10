@@ -7,7 +7,16 @@ import { emptyRow, setupSeason, ME, type GameState } from './game';
 import { simulateMatch } from './match';
 import { defaultEmblem } from './emblem';
 
+import { startYouth } from './youth';
 export const MIGRATIONS: Record<number, (s: any) => any> = {
+  /* 版2（段階2）→ 版3（ユース・引退・ポテンシャルの上下） */
+  2: (s: any) => {
+    const r = new Rng((s.rng ^ 0x5bd1e995) >>> 0);
+    s.youth = startYouth(r, s.ids, { pref: s.club.pref, facility: 1, dorm: 0, coachSkill: 0.5 });
+    s.youthLog = []; s.promo = null; s.yearNotes = [];
+    if (s.week === 4) s.promo = { open: true, rec: [] };
+    return s;
+  },
   /* 版1（段階1：3部12クラブだけ・22節）→ 版2（36クラブ・48週の1年・大会） */
   1: (s: any) => {
     const r = new Rng(s.rng >>> 0);
@@ -28,12 +37,12 @@ export const MIGRATIONS: Record<number, (s: any) => any> = {
       keep.push({ id, name: c.name, color: c.color, pref: p, tier, lvl: c.lvl, squad: c.squad, mgr: c.mgr, emblem: defaultEmblem(c.color), me: false, prevRank: 0 });
     });
     const clubs = makeWorld(r, s.ids, pref, tier, keep);
-    const G: GameState = {
+    const G = {
       version: 2, rng: 0, ids: s.ids, season: s.season, week: 0,
       club: { name: s.club.name, color: s.club.color, pref, city: s.club.city ?? prefByName(pref).city, emblem: s.club.emblem ?? defaultEmblem(s.club.color) },
       clubs, squad: s.squad, mgr: s.mgr, policy: s.policy ?? 'ふつう', leagues: {}, sched: seasonSchedule(), cup: { round: 0, rounds: [], champion: null },
       lastMatch: s.lastMatch ?? null, lastReport: s.lastReport ?? [], pending: s.pending ?? [], history: [], goals: [], news: ['セーブを新しい版に変換しました。'],
-    };
+    } as unknown as GameState;
     for (const p of [...G.squad, ...G.clubs.flatMap((c) => c.squad)]) { p.decl ??= 30; p.aptXp ??= {}; p.hist ??= []; p.seasonPerf ??= 0; p.contract ??= 2; p.salary ??= 300; p.num ??= 0; p.injNew ??= false; p.played ??= false; }
     setupSeason(G, r);
     /* 自分の段は、版1の日程と順位をそのまま引き継ぐ */

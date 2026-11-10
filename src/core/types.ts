@@ -46,6 +46,16 @@ export interface Player {
   salary: number;
   /** 移籍市場に出しているか */
   listed?: boolean;
+  /** ユースの学年（1〜3）。トップの選手はなし */
+  grade?: number;
+  /** ユース：前の報告会議のときの能力（伸び方を言葉で見せるため） */
+  snap?: number[];
+  /** ユースの試合の記録（その月・通算） */
+  mApps?: number; mGoals?: number; yApps?: number; yGoals?: number;
+  /** 今季で引退する */
+  retiring?: boolean;
+  /** 練習生（あと何か月預かるか） */
+  trialMonths?: number;
 }
 
 export interface Manager {

@@ -60,7 +60,7 @@ export function growPlayer(r: Rng, p: Player, ctx: GrowCtx): ReportEntry | null 
   let newSp: string | null = null, cured: string | null = null;
   const learn = p.sp.includes('学ぶ力') ? 1.8 : 1;
   if ((p.played || ctx.camp) && p.sp.length < 5 && r.next() < (0.008 + (ctx.camp ? 0.01 : 0) + (awake ? 0.5 : 0)) * learn) {
-    const pool = [...SP_BY_POS[p.pos], ...SP_ANY, ...(ctx.style ? STYLE_SP[ctx.style] || [] : [])].filter((s) => !p.sp.includes(s) && !(p.pos === 'GK' && NOT_GK.has(s)));
+    const pool = (p.pos === 'GK' ? [...SP_BY_POS.GK, ...SP_ANY] : [...SP_BY_POS[p.pos], ...SP_ANY, ...(ctx.style ? STYLE_SP[ctx.style] || [] : [])]).filter((s) => !p.sp.includes(s) && !(p.pos === 'GK' && NOT_GK.has(s)));
     if (pool.length) { newSp = r.pick(pool); p.sp.push(newSp); }
   }
   if (p.bad.length) {
