@@ -131,7 +131,7 @@ function squadHTML(): string {
 }
 export function plRow(p: Player): string {
   const o = ovr(p);
-  return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.req ? ' <span class="tag">起用を依頼中</span>' : ''}${p.retiring ? ' <span class="tag bad">今季で引退</span>' : ''}${p.listed ? ' <span class="tag away">売りに出している</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
+  return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.req ? ' <span class="tag">起用を依頼中</span>' : ''}${p.retiring ? ' <span class="tag bad">今季で引退</span>' : ''}${p.listed ? ' <span class="tag away">売りに出している</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}${p.fat >= 40 ? ' ・ 疲れ' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
 }
 let tableView = 'mine';
 function tableHTML(): string {
@@ -198,11 +198,16 @@ function bindView(v: HTMLElement) {
   $$<HTMLElement>('[data-theme-set]', v).forEach((b) => b.addEventListener('click', () => { const p = readPrefs(); p.theme = b.dataset.themeSet!; writePrefs(p); applyThemeMode(p.theme); render(); }));
   $$<HTMLElement>('[data-sound]', v).forEach((b) => b.addEventListener('click', () => { const p = readPrefs(); p.sound = b.dataset.sound === 'on'; writePrefs(p); setSound(p.sound); sfx('tap'); render(); }));
 }
+function posCoach(pos: string): { name: string; skill: number } {
+  const C = app.G.owner.coaches; const c = pos === 'GK' ? C.gk : ['CB', 'SB', 'DM'].includes(pos) ? C.def : C.off;
+  const role = pos === 'GK' ? 'キーパーコーチ' : ['CB', 'SB', 'DM'].includes(pos) ? 'ディフェンスコーチ' : 'オフェンスコーチ';
+  return c ? { name: role, skill: c.skill } : { name: '監督', skill: 0.3 };
+}
 export function showPlayer(id: number, back: () => void) {
   const p = find(id); if (!p) return;
   openPlayer(p, {
     report: (app.G.lastReport || []).find((r) => r.pid === id) || null,
-    coachName: 'コーチ', coachSkill: 0.6, mgrName: mgrShort(app.G.mgr), mgrObeyWord: obeyWord(app.G.mgr),
+    coachName: posCoach(p.pos).name, coachSkill: posCoach(p.pos).skill, mgrName: mgrShort(app.G.mgr), mgrObeyWord: obeyWord(app.G.mgr),
     onReq: (pl) => { pl.req = !pl.req; autosave(); }, back,
     extraHTML: contractHTML(p),
     bindExtra: (root) => {

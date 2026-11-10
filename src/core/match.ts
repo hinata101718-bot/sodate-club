@@ -370,6 +370,19 @@ function resolveChance(r: Rng, A: Side, D: Side, min: number): Chance | null {
     goal = r.next() < pr; save = !goal; shotAv = sv;
     gkFired = shotFires.some((f) => f.gk);
   }
+  /* 能力を上げない特殊能力も、関わった場面の文に出す（企画書 8-8：どの特殊能力も見どころの文に出る） */
+  const pf = (side: Side, pl: OnPl | null, s: string, cond: boolean) => { if (pl && cond && has(pl, s) && !fires.some((f) => f.sp === s && f.t === pl.p.name) && fires.length < 2) fires.push({ sp: s, t: pl.p.name, me: side.t.me }); };
+  pf(A, att, '点取り屋', r.next() < 0.5);
+  pf(A, assist, 'チャンスメーカー', r.next() < 0.6);
+  pf(A, att, '仕掛け屋', scene === 'dribble');
+  pf(A, att, '2列目からの飛び出し', ['AM', 'CM'].includes(att.pos) && (scene === 'through' || scene === 'loose'));
+  pf(A, assist, '攻撃参加', scene === 'cross' && assist?.pos === 'SB');
+  pf(D, def, '守備職人', !ok);
+  pf(A, att, 'エンジン', t >= 70); pf(D, def, 'エンジン', t >= 70 && !ok);
+  pf(A, att, 'スーパーサブ', att.sub); pf(A, assist, 'スーパーサブ', !!assist?.sub);
+  pf(A, att, '立ち上がりに強い', t <= 15); pf(D, def, '立ち上がりに強い', t <= 15 && !ok);
+  pf(D, g, 'コーチング', !ok && ['CB', 'SB', 'DM'].includes(def.pos) && r.next() < 0.5);
+  pf(D, def, 'クリーンディフェンス', !ok && (scene === 'dribble' || scene === 'through') && r.next() < 0.5);
   const text = narrate(r, scene, A, D, att, assist, def, g, ok, goal, fires, shotFires, headed, rec, gkFired);
   return { min, scene, k: 0, att, ok, goal, save, shotAv, text, turnover };
 }
