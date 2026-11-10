@@ -1,5 +1,5 @@
 /* セーブ（企画書 15：自動セーブ1つ＋手動3枠）。版の番号つき。どの読み書きも、失敗しても落ちない */
-import { SAVE_VERSION, type GameState } from './game';
+import { SAVE_VERSION, myTier, type GameState } from './game';
 import { MIGRATIONS } from './migrate';
 
 export interface KV { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void; }
@@ -25,7 +25,7 @@ export function safeStorage(): KV {
   } catch { return memoryKV(); }
 }
 
-export function summaryOf(G: GameState): string { return `${G.club.name} ・ ${G.season}年目 ・ ${G.tier}部`; }
+export function summaryOf(G: GameState): string { return `${G.club.name} ・ ${G.season}年目 ・ ${myTier(G)}部`; }
 
 export function saveTo(kv: KV, key: string, G: GameState): boolean {
   try {

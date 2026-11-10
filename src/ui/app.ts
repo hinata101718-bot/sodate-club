@@ -1,5 +1,7 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
-import { advanceToDecision, advanceWeek, answerOffer, monthOf, newGame, standings, type GameState } from '../core/game';
+import { advanceToDecision, advanceWeek, answerOffer, newGame, standings, myTier, myRank, eventOf, currentGoal, cupAlive, clubName, clubById, dateText, cupResultText, ME, type GameState } from '../core/game';
+import { CUP_ROUND_NAMES, monthOf, isWindow } from '../core/calendar';
+import { openNewClub } from './newclub';
 import { ovr } from '../core/player';
 import { STYLES } from '../core/constants';
 import { obeyWord } from '../core/staff';
@@ -27,11 +29,10 @@ export function boot() {
   app.kv = safeStorage();
   const pr = readPrefs(); applyThemeMode(pr.theme); setSound(pr.sound);
   const g = loadFrom(app.kv, AUTO_KEY);
-  app.G = g ?? newGame((Date.now() % 1e9) >>> 0);
-  if (!g) autosave();
+  if (g) app.G = g;
   $$<HTMLButtonElement>('.navbtn').forEach((b) => b.addEventListener('click', () => { sfx('tap'); setTab(b.dataset.tab!); }));
   $('#menuBtn').addEventListener('click', () => { sfx('tap'); setTab('settings'); });
-  render();
+  if (g) render(); else startNew(false);
 }
 export function setTab(t: string) {
   app.tab = t;
@@ -43,37 +44,52 @@ export function render() {
   applyClubColor(G.club.color);
   $('#crest').innerHTML = emblemSVG(G.club.emblem);
   $('#clubName').textContent = G.club.name;
-  $('#clubSub').textContent = `${G.club.pref} ${G.club.city} ・ ${G.tier}部 ・ ${G.season}年目 ${monthOf(G.week)}`;
+  const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
+  $('#clubSub').textContent = `${G.club.city} ・ ${myTier(G)}部${pl ? ` ${myRank(G)}位` : ''} ・ ${G.season}年目 ${monthOf(G.week)}月`;
   const v = $('#view');
   const views: Record<string, () => string> = { home: homeHTML, squad: squadHTML, table: tableHTML, settings: settingsHTML };
   v.innerHTML = (views[app.tab] || homeHTML)();
   bindView(v);
 }
 
+function nextHTML(G: GameState): string {
+  const e = eventOf(G);
+  const oppLine = (opp: number, home: boolean | null, extra = '') => { const c = clubById(G, opp); return `<div class="next-match">${home == null ? '<span class="tag">中立</span>' : `<span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span>`}<span class="grow">${esc(c.name)}</span><span class="muted small">${c.tier}部 ・ ${esc(c.mgr.style)}</span></div>${extra}`; };
+  if (e.kind === 'league') return `<h2>今週の試合 ・ リーグ第${e.round}節</h2>${oppLine(e.opp, e.home)}`;
+  if (e.kind === 'cup') {
+    const nm = CUP_ROUND_NAMES[e.round];
+    if (!cupAlive(G)) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">大会はもう負けている。今週は試合がない。</div>`;
+    if (e.round === 0 && myTier(G) === 1) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">1部のクラブは、2回戦か3回戦から出る。</div>`;
+    if (e.round === 1 && myTier(G) === 1 && (clubById(G, ME).prevRank || 99) <= 8) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">去年の上位8つは、3回戦から出る。</div>`;
+    return `<h2>今週の試合 ・ 勝ち抜きの大会 ${nm}</h2><div class="goal">相手は今週の抽選で決まる</div><div class="muted">引き分けなら、すぐにPK戦。${e.round === 5 ? '決勝は中立の会場。' : ''}</div>`;
+  }
+  const txt: Record<string, [string, string]> = {
+    off: ['1月 ・ オフの休み', 'ケガと疲れが回復する。練習はお休み。'],
+    promo: ['2月 ・ 春の昇格会議', 'ユースからトップに上げる子を決める時期。'],
+    camp: ['2月 ・ 春のキャンプ', '選手が伸びやすい特別な期間。'],
+    rest: ['今週は試合がない', '練習で少しずつ伸びる週。'],
+    dec: ['12月 ・ 年末', '表彰・契約更新・冬の移籍の期間。'],
+  };
+  const [h, m] = txt[e.kind];
+  return `<h2>今週</h2><div class="goal">${h}</div><div class="muted">${m}</div>`;
+}
 function homeHTML(): string {
   const G = app.G;
-  const rows = standings(G); const rank = rows.findIndex((r) => r.c.me) + 1;
-  const done = G.week >= 22;
-  const round = done ? null : G.fixtures[G.week];
-  const pair = round ? round.find(([h, a]) => G.clubs[h].me || G.clubs[a].me) : null;
-  const opp = pair ? (G.clubs[pair[0]].me ? G.clubs[pair[1]] : G.clubs[pair[0]]) : null;
-  const home = pair ? G.clubs[pair[0]].me : false;
-  const tbl = G.table[0];
+  const rank = myRank(G); const tier = myTier(G);
+  const tbl = G.leagues[tier].table[ME];
   const pend = G.pending.map((e, i) => { const p = find(e.pid); if (!p) return ''; return `<div class="item"><span class="grow"><b>${esc(e.club)}</b> から ${esc(p.name)} にオファー（${e.price.toLocaleString()}万円）</span><button class="btn small primary" data-offer="${i}">見る</button></div>`; }).join('');
+  const news = (G.news || []).filter(Boolean).map((n) => `<div class="item"><span class="grow">${esc(n)}</span></div>`).join('');
   const lastRep = G.lastReport && G.lastReport.length ? `<div class="item"><span class="grow">先週の報告：${G.lastReport.filter((r) => r.ups.some((v) => v > 0)).length}人が伸びた</span><button class="btn small ghost" data-act="report">見る</button></div>` : '';
   const lm = G.lastMatch;
-  const lastM = lm ? `<div class="item"><span class="grow">前の試合 ${esc(lm.home.name)} ${lm.score[0]}-${lm.score[1]} ${esc(lm.away.name)}</span><button class="btn small ghost" data-act="replay">見どころ</button></div>` : '';
+  const lastM = lm ? `<div class="item"><span class="grow">前の試合 ${esc(lm.home.name)} ${lm.score[0]}-${lm.score[1]} ${esc(lm.away.name)}${lm.pk ? `（PK ${lm.pk.join('-')}）` : ''}</span><button class="btn small ghost" data-act="replay">見どころ</button></div>` : '';
+  const last = G.history[G.history.length - 1];
   return `
-  <section class="card"><h2>次の目標</h2>
-    <div class="goal">${G.tier}部で2位以内に入って昇格</div>
-    <div class="muted">いま ${rank}位 ・ 勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</div>
-    ${G.lastSeason ? `<div class="muted">${G.lastSeason.season}年目は ${G.lastSeason.rank}位${G.lastSeason.up ? 'で昇格！' : ''}</div>` : ''}
-  </section>
-  <section class="card"><h2>${done ? 'シーズン終了' : '次の試合 ・ 第' + (G.week + 1) + '節'}</h2>
-    ${done ? `<div class="goal">${rank}位でシーズンを終えた</div><div class="muted">「1週進む」で次のシーズンへ。選手はみんな1つ年をとる。</div>`
-      : `<div class="next-match"><span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span><span class="grow">${esc(opp!.name)}</span><span class="muted small">${esc(opp!.mgr.style)}</span></div>`}
-  </section>
-  ${pend || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${pend}${lastM}${lastRep}</section>` : ''}
+  <section class="card"><div class="row"><span class="grow">${tbl.w + tbl.d + tbl.l ? `<span class="goal">${tier}部 ${rank}位</span> <span class="muted">勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</span>` : `<span class="goal">${tier}部 ・ 開幕前</span>`}</span></div>
+    <div class="muted">${dateText(G)}${isWindow(G.week) ? ' ・ 移籍の期間' : ''}</div></section>
+  <section class="card"><h2>次の目標</h2><div class="goal">${esc(currentGoal(G))}</div>
+    ${last ? `<div class="muted">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
+  <section class="card">${nextHTML(G)}</section>
+  ${pend || news || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${pend}${news}${lastM}${lastRep}</section>` : ''}
   <div class="btns">
     <button class="btn primary" data-act="week">1週進む</button>
     <button class="btn ghost" data-act="skip">次に決めることまで進む</button>
@@ -95,13 +111,41 @@ export function plRow(p: Player): string {
   const o = ovr(p);
   return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.req ? ' <span class="tag">起用を依頼中</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
 }
+let tableView = 'mine';
 function tableHTML(): string {
-  const G = app.G; const rows = standings(G);
-  return `<section class="card"><h2>${G.tier}部 ・ 第${G.week}節まで</h2><div style="overflow-x:auto"><table>
-  <thead><tr><th class="l">#</th><th class="l">クラブ</th><th>試</th><th>勝</th><th>分</th><th>敗</th><th>差</th><th>点</th></tr></thead><tbody>
-  ${rows.map((r, i) => `<tr class="${r.c.me ? 'me' : ''} ${i < 2 ? 'up' : ''} ${i >= 10 ? 'down' : ''}"><td class="l">${i + 1}</td><td class="l club">${esc(r.c.me ? G.club.name : r.c.name)}</td><td>${r.w + r.d + r.l}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga > 0 ? '+' : ''}${r.gf - r.ga}</td><td><b>${r.p}</b></td></tr>`).join('')}
-  </tbody></table></div><div class="muted small" style="margin-top:8px">緑の線は昇格（上位2つ）、赤の線は降格（下位2つ）。差は得失点差（取った点−取られた点）。</div></section>`;
+  const G = app.G; const tier = myTier(G);
+  const views: [string, string][] = [['mine', `${tier}部`], ...[1, 2, 3].filter((t) => t !== tier).map((t) => [`t${t}`, `${t}部`] as [string, string]), ['cup', '大会'], ['rec', '記録']];
+  const seg = `<div class="seg tight" role="group" aria-label="表の切りかえ">${views.map(([k, l]) => `<button data-tv="${k}" aria-pressed="${tableView === k}">${l}</button>`).join('')}</div>`;
+  let body = '';
+  if (tableView === 'cup') body = cupHTML(G);
+  else if (tableView === 'rec') body = recordHTML(G);
+  else {
+    const t = tableView === 'mine' ? tier : +tableView.slice(1);
+    const rows = standings(G, t); const played = rows[0] ? rows[0].w + rows[0].d + rows[0].l : 0;
+    body = `<section class="card"><h2>${t}部 ・ ${played}試合まで</h2><div style="overflow-x:auto"><table>
+    <thead><tr><th class="l">#</th><th class="l">クラブ</th><th>試</th><th>勝</th><th>分</th><th>敗</th><th>差</th><th>点</th></tr></thead><tbody>
+    ${rows.map((r, i) => `<tr class="${r.id === ME ? 'me' : ''} ${i < 2 && t > 1 ? 'up' : ''} ${i >= 10 && t < 3 ? 'down' : ''}"><td class="l">${i + 1}</td><td class="l club">${esc(clubName(G, r.id))}</td><td>${r.w + r.d + r.l}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga > 0 ? '+' : ''}${r.gf - r.ga}</td><td><b>${r.p}</b></td></tr>`).join('')}
+    </tbody></table></div><div class="muted small" style="margin-top:8px">${t > 1 ? '緑の線は昇格（上位2つ）。' : '1位が優勝。'}${t < 3 ? '赤の線は降格（下位2つ）。' : ''}勝ち3点・引き分け1点。並んだら得失点差（取った点−取られた点）で決める。</div></section>`;
+  }
+  return seg + body;
 }
+function cupHTML(G: GameState): string {
+  const rounds = G.cup.rounds;
+  const res = cupResultText(G);
+  const head = `<section class="card"><h2>勝ち抜きの大会 ・ ${G.season}年目</h2><div class="muted">全36クラブが出る。1回戦は3部と2部、2回戦から1部の下位4つ、3回戦から1部の上位8つが出てくる。引き分けはすぐにPK戦。</div>
+    <div style="margin-top:6px">自分のクラブ：<b>${esc(res)}</b>${G.cup.champion != null ? ` ・ 優勝は ${esc(clubName(G, G.cup.champion))}` : ''}</div></section>`;
+  if (!rounds.length) return head + `<section class="card muted">まだ始まっていない。1回戦は ${monthOf(G.sched.cup[0] ?? 13)}月。</section>`;
+  return head + [...rounds].map((rd, i) => ({ rd, i })).reverse().map(({ rd, i }) => `<section class="card"><h2>${CUP_ROUND_NAMES[i]}</h2><div class="bracket">${rd.map((t) => `<div class="m ${t.a === ME || t.b === ME ? 'me' : ''}"><span class="${t.w === t.a ? 'w' : ''}">${esc(clubName(G, t.a))}</span><span>${t.s ? t.s.join('-') : ''}${t.pk ? `<br><span class="small">PK ${t.pk.join('-')}</span>` : ''}</span><span class="${t.w === t.b ? 'w' : ''}" style="text-align:right">${esc(clubName(G, t.b))}</span></div>`).join('')}</div></section>`).join('');
+}
+function recordHTML(G: GameState): string {
+  if (!G.history.length) return `<section class="card muted">1年目が終わると、ここに記録がのります。</section>`;
+  const done = G.goals.map((g) => `<li>${g.season}年目：${esc(goalText(g.id))}</li>`).join('');
+  return `${done ? `<section class="card"><h2>達成した目標</h2><ul style="margin:0;padding-left:1.2em">${done}</ul></section>` : ''}` + [...G.history].reverse().map((h) => `<section class="card"><h2>${h.season}年目</h2>
+    <div class="goal">${h.tier}部 ${h.rank}位${h.promoted ? ' ・ 昇格' : h.relegated ? ' ・ 降格' : ''}</div><div class="muted">勝ち抜きの大会：${esc(h.cup)}（優勝 ${esc(h.cupChampion)}）・ 1部の優勝 ${esc(h.champion[1] || '')}</div>
+    <h3>年末の表彰</h3><div class="list">${h.awards.map((a) => `<div class="row"><span class="tag ${a.me ? 'gold' : ''}">${a.tier}部</span><span class="grow">${esc(a.title)}：<b>${esc(a.name)}</b> <span class="muted small">${esc(a.club)} ・ ${esc(a.detail)}</span></span></div>`).join('')}</div></section>`).join('');
+}
+import { GOALS } from '../core/game';
+const goalText = (id: string) => GOALS.find((g) => g.id === id)?.text ?? id;
 function settingsHTML(): string {
   const slots = listSlots(app.kv); const pr = readPrefs();
   const fmt = (s: string) => { try { const d = new Date(s); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; } catch { return ''; } };
@@ -116,6 +160,7 @@ function settingsHTML(): string {
 function bindView(v: HTMLElement) {
   const G = app.G;
   $$<HTMLElement>('[data-act]', v).forEach((b) => b.addEventListener('click', () => act(b.dataset.act!)));
+  $$<HTMLElement>('[data-tv]', v).forEach((b) => b.addEventListener('click', () => { tableView = b.dataset.tv!; render(); }));
   $$<HTMLElement>('[data-pol]', v).forEach((b) => b.addEventListener('click', () => { G.policy = b.dataset.pol as Policy; sfx('tap'); autosave(); render(); }));
   $$<HTMLElement>('[data-pid]', v).forEach((b) => b.addEventListener('click', () => showPlayer(+b.dataset.pid!, render)));
   $$<HTMLElement>('[data-offer]', v).forEach((b) => b.addEventListener('click', () => openOffer(+b.dataset.offer!)));
@@ -138,7 +183,6 @@ export function showPlayer(id: number, back: () => void) {
 }
 function afterWeek(res: ReturnType<typeof advanceWeek>) {
   autosave(); render();
-  if (res.seasonEnd) { toast('新しいシーズンが始まった'); return; }
   const rep = () => openReport(res.report, find, showPlayer, render);
   if (res.match) openMatch(res.match, app.G.club.color, rep); else rep();
 }
@@ -148,21 +192,25 @@ function act(a: string) {
   if (a === 'skip') {
     sfx('tap');
     const r = advanceToDecision(G); autosave(); render();
-    if (r.seasonEnd && r.weeks === 1) { toast('新しいシーズンが始まった'); return; }
     openReport(r.report, find, showPlayer, render, `${r.weeks}週ぶんの報告`);
   }
   if (a === 'report') openReport(G.lastReport || [], find, showPlayer, render);
   if (a === 'replay' && G.lastMatch) openMatch(G.lastMatch, G.club.color, null);
   if (a === 'reset') {
     const box = $('#resetBox');
-    box.innerHTML = `<span class="muted">いまのクラブは自動セーブから消えます。始めますか？</span><button class="btn small primary" data-act="reset2">始める</button><button class="btn small ghost" data-act="cancel">やめる</button>`;
+    box.innerHTML = `<span class="muted">いまのクラブは自動セーブから消えます（クラブを作り終えたとき）。進みますか？</span><button class="btn small primary" data-act="reset2">進む</button><button class="btn small ghost" data-act="cancel">やめる</button>`;
     $$<HTMLElement>('[data-act]', box).forEach((b) => b.addEventListener('click', () => act(b.dataset.act!)));
   }
-  if (a === 'reset2') { removeSave(app.kv, AUTO_KEY); startNew(); }
+  if (a === 'reset2') startNew(true);
   if (a === 'cancel') render();
 }
-export let startNew = () => { app.G = newGame((Date.now() % 1e9) >>> 0); autosave(); setTab('home'); };
-export function setStartNew(f: () => void) { startNew = f; }
+export function startNew(cancelable: boolean) {
+  openNewClub((c) => {
+    removeSave(app.kv, AUTO_KEY);
+    app.G = newGame({ seed: (Date.now() % 1e9) >>> 0, pref: c.pref, name: c.name, color: c.color, emblem: c.emblem });
+    autosave(); setTab('home');
+  }, cancelable ? () => render() : null);
+}
 function openOffer(i: number) {
   const G = app.G; const e = G.pending[i]; const p = find(e.pid); if (!p) return;
   sheet(`<div class="bar"><h2>オファーが届いた</h2></div>

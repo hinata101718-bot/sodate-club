@@ -188,3 +188,6 @@ tr.down td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 .bar-meter{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
 .bar-meter i{display:block;height:100%;background:var(--club)}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+.crest.big,svg.big{width:96px;height:106px;display:block;margin:0 auto}
+svg.mini{width:34px;height:38px}
+.seg.tight button{min-width:0;padding:0 2px}
