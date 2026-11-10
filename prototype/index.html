@@ -111,7 +111,17 @@ tr.down td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 .n-op{color:var(--away);font-weight:700}
 @keyframes in{from{transform:translateY(8px);opacity:.3}to{transform:none;opacity:1}}
 .spfire{display:inline-block;font-size:13px;font-weight:800;font-family:var(--f-disp);padding:2px 10px;border-radius:999px;background:var(--glow);border:1px solid var(--gold);color:var(--fg);margin-right:6px}
-.talk{font-size:14px;color:var(--muted);padding:2px 4px}
+.talk{font-size:14px;color:var(--muted);padding:2px 4px;animation:in .3s ease-out}
+.cutin{position:fixed;inset:0;z-index:70;display:flex;align-items:center;pointer-events:auto;background:rgba(0,0,0,.35);animation:fade .2s ease-out}
+.cutin .band{width:100%;background:var(--club);color:#fff;padding:18px max(20px,env(safe-area-inset-right,0px)) 18px max(20px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:end;
+  transform:skewY(-6deg);animation:slide .55s cubic-bezier(.2,1.2,.3,1) both;box-shadow:0 8px 0 rgba(0,0,0,.18)}
+.cutin.opp .band{background:var(--away)}
+.cutin .cg{grid-column:1/-1;font-family:var(--f-disp);font-weight:800;font-size:64px;line-height:1;letter-spacing:.02em;color:var(--gold);text-shadow:0 3px 0 rgba(0,0,0,.3);transform:skewY(6deg)}
+.cutin .cw{font-family:var(--f-disp);font-weight:800;font-size:24px;line-height:1.25;transform:skewY(6deg)}
+.cutin .cw span{display:block;font-size:13px;font-weight:700;opacity:.85}
+.cutin .cs{font-family:var(--f-disp);font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;transform:skewY(6deg)}
+@keyframes slide{0%{transform:translateX(110%) skewY(-6deg)}100%{transform:translateX(0) skewY(-6deg)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
 .talk b{color:var(--fg)}
 .log{font-size:14px;display:flex;flex-direction:column;gap:6px}
 .log div{padding:6px 0;border-bottom:1px dashed var(--line)}
@@ -495,6 +505,7 @@ function narrate(scene,A,D,att,assist,def,g,ok,goal,used,headed,rec,usedShot){
     else B.push([pick(['GKと1対1。','シュートコースが空いた。','ゴールが見えた。']),spTxt,a(att),' が',foot,'で狙う――']);
     if(usedShot&&usedShot.length) B.push(spLine(usedShot));
     if(goal) B.push([pick(['ネットが揺れた！','ゴールに突き刺さる！','GKの手をかすめて、ゴール！'])]);
+    else if(usedShot&&usedShot.length) B.push(pick([[d(g),' が横っ跳びで弾き出す！'],[d(g),' が指先でかき出した！'],[d(g),' が正面でがっちり止めた。']]));
     else B.push(pick([[d(g),' が横っ跳びで弾き出す！'],[d(g),' が正面でがっちり止めた。'],['わずかに枠の外。'],['クロスバーを叩いた！']]));
   };
   switch(scene){
@@ -768,17 +779,18 @@ function pickHighlights(res){
 function openMatch(m, after){
   const res=m.res; const [h,a]=res.sides;
   const hl=pickHighlights(res);
+  const all=[...res.log.map(r=>({min:r.min,kind:r.goal?'goal':'chance',r})), ...res.ev.map(e=>({min:e.t,kind:e.kind,e}))].sort((x,y)=>x.min-y.min || (x.kind==='talk'?-1:1));
   const layer=$('#layer');
   layer.innerHTML=`<div class="sheet" role="dialog" aria-label="試合"><div class="in">
     <div class="bar"><h2>第${G.week}節</h2></div>
     <div class="card score"><div class="tn" style="color:${h.club.me?'var(--club)':'var(--away)'}">${esc(h.club.name)}</div><div class="sc" id="sc">0 - 0</div><div class="tn" style="color:${a.club.me?'var(--club)':'var(--away)'}">${esc(a.club.name)}</div></div>
     <div class="seg" role="group" aria-label="見方"><button id="mHL" aria-pressed="true">見どころ</button><button id="mLog" aria-pressed="false">実況（試合の流れ全部）</button></div>
     <div id="feed" class="wk"></div>
+    <div class="muted small" style="text-align:center">画面のどこを押しても進みます</div>
   </div></div>
   <div class="dock"><div class="in2"><button class="btn ghost" id="mAll">最後まで出す</button><button class="btn primary" id="mNext">次へ</button></div></div>`;
-  const feed=$('#feed'); let mode='hl';
-  /* 見どころは、1回タップするごとに1文ずつ進む（感想 11）。場面の種類の札・くらべた能力は出さない（感想 10・12） */
-  let idx=0, card=null, lines=[], k=0, cur=null;
+  const feed=$('#feed'), sheet=layer.querySelector('.sheet'); let mode='hl', items=hl;
+  let idx=0, card=null, lines=[], k=0, cur=null, cut=null;
   const isMe=it=> it.r ? it.r.att.club.me : true;
   function resultHTML(it){
     if(it.kind==='flow') return `<span class="tag">流れが変わった</span>`;
@@ -786,30 +798,45 @@ function openMatch(m, after){
     const r=it.r; if(!r||!r.goal) return '';
     return `${r.flow?`<span class="tag">${r.flow}</span> `:''}${r.mem?`<span class="tag">プロ初ゴール</span> `:''}<span class="gol">ゴール！</span>`;
   }
-  function closeCard(){ if(!cur) return; if(cur.r&&cur.r.goal){ card.classList.add('goal'); $('#sc').textContent=cur.r.score.join(' - '); } card.querySelector('.res').innerHTML=resultHTML(cur); cur=null; }
-  function openCard(it){ cur=it; feed.insertAdjacentHTML('beforeend',`<div class="scene ${isMe(it)?'':'opp'}"><div class="head"><span class="minute">${it.min}分</span><span class="res"></span></div></div>`); card=feed.lastElementChild; lines=it.r?it.r.text:[it.e.text]; k=0; }
+  /* 新しい行が出たら、下のボタンに隠れないところまで自動で送る（感想 16） */
+  const follow=(instant)=>{ requestAnimationFrame(()=>sheet.scrollTo({top:sheet.scrollHeight,behavior:instant?'auto':'smooth'})); };
+  /* ゴールのカットイン（感想 17） */
+  function goalCut(r){
+    const me=r.att.club.me; const el=document.createElement('div'); el.className='cutin'+(me?'':' opp'); el.setAttribute('role','status');
+    el.innerHTML=`<div class="band"><div class="cg">ゴール！！</div><div class="cw">${esc(r.scorer.p.name)}<span>${r.min}分 ・ ${esc(r.att.club.name)}</span></div><div class="cs">${r.score.join(' - ')}</div></div>`;
+    document.body.appendChild(el); cut=el;
+    const close=()=>{ if(cut===el){ el.remove(); cut=null; } };
+    el.addEventListener('click',e=>{ e.stopPropagation(); close(); });
+    setTimeout(close, 2200);
+  }
+  function closeCard(instant){ if(!cur) return; if(cur.r&&cur.r.goal){ card.classList.add('goal'); $('#sc').textContent=cur.r.score.join(' - '); if(!instant) goalCut(cur.r); } card.querySelector('.res').innerHTML=resultHTML(cur); cur=null; }
+  function openCard(it){
+    cur=it;
+    if(it.kind==='talk'){ feed.insertAdjacentHTML('beforeend',`<div class="talk"><b>${it.min}分</b>　<span class="res"></span></div>`); card=feed.lastElementChild; lines=[it.e.text]; k=0; return; }
+    feed.insertAdjacentHTML('beforeend',`<div class="scene ${isMe(it)?'':'opp'}"><div class="head"><span class="minute">${it.min}分</span><span class="res"></span></div></div>`); card=feed.lastElementChild; lines=it.r?it.r.text:[it.e.text]; k=0;
+  }
   function endCard(){ if(!feed.querySelector('.endcard')){ $('#sc').textContent=res.score.join(' - ');
       feed.insertAdjacentHTML('beforeend',`<div class="card endcard"><b>試合終了 ${res.score.join(' - ')}</b><div class="muted">決定機 ${res.log.length}回（${esc(h.club.name)} ${res.log.filter(x=>x.att===h).length}回 ・ ${esc(a.club.name)} ${res.log.filter(x=>x.att===a).length}回）</div></div>`); }
     $('#mNext').textContent= after?'週の報告へ':'閉じる'; }
-  const done=()=> idx>=hl.length && !cur;
-  function tap(){
-    if(mode!=='hl') return;
-    if(cur && k<lines.length){ card.insertAdjacentHTML('beforeend',`<p>${line(lines[k])}</p>`); k++; if(k>=lines.length) closeCard(); card.scrollIntoView({behavior:'smooth',block:'end'}); if(done()) endCard(); return; }
-    if(idx<hl.length){ openCard(hl[idx]); idx++; tap(); return; }
-    finish();
+  const done=()=> idx>=items.length && !cur;
+  /* 1回押すごとに1文ずつ（見どころも実況も：感想 11・14） */
+  function tap(instant){
+    if(cut){ cut.remove(); cut=null; return; }
+    if(cur && k<lines.length){
+      if(cur.kind==='talk'){ card.querySelector('.res').outerHTML=line(lines[k]); k++; cur=null; }
+      else { card.insertAdjacentHTML('beforeend',`<p>${line(lines[k])}</p>`); k++; if(k>=lines.length) closeCard(instant); }
+      if(!instant) follow(); if(done()) endCard(); return; }
+    if(idx<items.length){ openCard(items[idx]); idx++; tap(instant); return; }
+    if(feed.querySelector('.endcard')) finish(); else endCard();
   }
-  function finish(){ layer.innerHTML=''; if(after) after(); }
-  $('#mNext').addEventListener('click',()=>{ if(mode!=='hl' || (done() && feed.querySelector('.endcard'))) finish(); else tap(); });
-  $('#mAll').addEventListener('click',()=>{ if(mode!=='hl') return; while(!done()){ tap(); } endCard(); });
-  function sceneHTML(it){
-    if(it.kind==='talk') return `<div class="talk"><b>${it.min}分</b>　${line(it.e.text)}</div>`;
-    const goal=it.r&&it.r.goal;
-    return `<div class="scene ${goal?'goal':''} ${isMe(it)?'':'opp'}"><div class="head"><span class="minute">${it.min}分</span><span>${resultHTML(it)}</span></div>${(it.r?it.r.text:[it.e.text]).map(l=>`<p>${line(l)}</p>`).join('')}</div>`;
-  }
-  $('#mHL').addEventListener('click',()=>{ mode='hl'; $('#mHL').setAttribute('aria-pressed','true'); $('#mLog').setAttribute('aria-pressed','false'); feed.innerHTML=''; idx=0; cur=null; $('#sc').textContent='0 - 0'; $('#mNext').textContent='次へ'; tap(); });
-  $('#mLog').addEventListener('click',()=>{ mode='log'; $('#mLog').setAttribute('aria-pressed','true'); $('#mHL').setAttribute('aria-pressed','false');
-    const all=[...res.log.map(r=>({min:r.min,kind:r.goal?'goal':'chance',r})), ...res.ev.map(e=>({min:e.t,kind:e.kind,e}))].sort((x,y)=>x.min-y.min || (x.kind==='talk'?-1:1));
-    feed.innerHTML=all.map(sceneHTML).join(''); $('#sc').textContent=res.score.join(' - '); $('#mNext').textContent= after?'週の報告へ':'閉じる'; });
+  function finish(){ if(cut){cut.remove();cut=null;} layer.innerHTML=''; if(after) after(); }
+  function restart(m){ mode=m; items= m==='hl'?hl:all; $('#mHL').setAttribute('aria-pressed',String(m==='hl')); $('#mLog').setAttribute('aria-pressed',String(m==='log')); feed.innerHTML=''; idx=0; cur=null; $('#sc').textContent='0 - 0'; $('#mNext').textContent='次へ'; tap(); }
+  $('#mNext').addEventListener('click',e=>{ e.stopPropagation(); tap(); });
+  $('#mAll').addEventListener('click',e=>{ e.stopPropagation(); if(cut){cut.remove();cut=null;} while(!done()) tap(true); endCard(); follow(true); });
+  $('#mHL').addEventListener('click',e=>{ e.stopPropagation(); restart('hl'); });
+  $('#mLog').addEventListener('click',e=>{ e.stopPropagation(); restart('log'); });
+  /* 画面のどこを押しても進む（感想 13） */
+  sheet.addEventListener('click',e=>{ if(e.target.closest('button')) return; tap(); });
   tap();
 }
 
