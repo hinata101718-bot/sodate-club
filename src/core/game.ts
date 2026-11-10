@@ -60,6 +60,8 @@ export interface GameState {
   owner: OwnerState;
 }
 export const ME = 0;
+/** 最初の選手の強さの目安（3部の相手は57前後。少し低めから始める） */
+export const START_LVL = 55;
 
 export function newGame(o: NewGameOpts = {}): GameState {
   const r = new Rng(o.seed ?? 20261110); const ids = { n: 1 };
@@ -69,7 +71,7 @@ export function newGame(o: NewGameOpts = {}): GameState {
   const mgr = makeManager(r, ids, 0.55, 'ポゼッション');
   mgr.forms = ['4-3-3', '4-2-3-1', '5-3-2']; mgr.youth = 1.3; mgr.obey = 0.75; mgr.grow = 1.15;
   /* 最初の選手は、地元の若手中心の22人ほどで、能力は低め（企画書 3★） */
-  const squad = makeSquad(r, ids, 53, { prefPool: [pref, pref, pref, pref, '東京都', '大阪府', '神奈川県', '愛知県', '福岡県'] });
+  const squad = makeSquad(r, ids, START_LVL, { prefPool: [pref, pref, pref, pref, '東京都', '大阪府', '神奈川県', '愛知県', '福岡県'] });
   /* 若手4人を足して23人にする（トップは22〜25人：企画書 8-1） */
   for (const pos of ['CB', 'CM', 'WG'] as const) { const i = squad.findIndex((p) => p.pos === pos); squad.splice(i, 1); }
   squad.forEach((p) => (p.num = 0));
@@ -150,6 +152,8 @@ export function cupAlive(G: GameState): boolean {
 export interface WeekResult { match: MatchView | null; report: ReportEntry[]; seasonEnd?: boolean; news: string[]; }
 
 let homeInfo: { oppTier: number; cup: boolean } | null = null;
+/** バランスの確かめ用（ふだんは使わない） */
+export const STATS = { on: false, matches: [] as { tier: number; hs: number; as: number; sh: number; sa: number }[] };
 function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
   let mine: MatchView | null = null;
   const tier = myTier(G);
@@ -161,6 +165,7 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
       const big = isMine && li >= 17 && contention(G, t);
       const res = simulateMatch(r, teamIn(G, hc), teamIn(G, ac), { record: true, label: `${G.season}年目 リーグ第${li + 1}節`, big, title: `${t}部 第${li + 1}節` });
       const [sh, sa] = res.score; const th = L.table[h], ta = L.table[a];
+      if (STATS.on) STATS.matches.push({ tier: t, hs: teamStrength(hc.me ? G.squad : hc.squad), as: teamStrength(ac.me ? G.squad : ac.squad), sh, sa });
       th.gf += sh; th.ga += sa; ta.gf += sa; ta.ga += sh;
       if (sh > sa) { th.w++; th.p += 3; ta.l++; } else if (sh < sa) { ta.w++; ta.p += 3; th.l++; } else { th.d++; ta.d++; th.p++; ta.p++; }
       if (isMine) { mine = res.view; if (G.owner) { popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); if (h === ME) homeInfo = { oppTier: t, cup: false }; } }

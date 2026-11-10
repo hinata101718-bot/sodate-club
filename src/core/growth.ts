@@ -49,7 +49,7 @@ export function growPlayer(r: Rng, p: Player, ctx: GrowCtx): ReportEntry | null 
   }
   /* 大きな伸び（覚醒）：成長期の若手に、ときどき起きる */
   const campBoost = ctx.camp ? (p.sp.includes('キャンプで化ける') ? 3 : 1.6) : 1;
-  if (gp >= 1 && room > 0.25 && r.next() < (p.played ? 0.024 : 0.006) * campBoost) {
+  if (gp >= 1 && room > 0.25 && r.next() < (p.played ? 0.012 : 0.003) * campBoost) {
     const order = [0, 1, 2, 3, 4, 5, 6, 7].sort((x, y) => W[p.pos][y] - W[p.pos][x]);
     const i = order[r.int(0, 2)]; const jump = r.int(10, 13);
     const from = Math.floor(p.a[i]); p.a[i] = clamp(p.a[i] + jump, 5, 99);
