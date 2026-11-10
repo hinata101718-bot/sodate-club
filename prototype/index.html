@@ -116,6 +116,10 @@ tr.down td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 .cutin .band{width:100%;background:var(--club);color:#fff;padding:18px max(20px,env(safe-area-inset-right,0px)) 18px max(20px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:end;
   transform:skewY(-6deg);animation:slide .55s cubic-bezier(.2,1.2,.3,1) both;box-shadow:0 8px 0 rgba(0,0,0,.18)}
 .cutin.opp .band{background:var(--away)}
+.cutin.sp .band{background:#1d1a10;color:#fff;border-top:4px solid var(--gold);border-bottom:4px solid var(--gold)}
+.cutin.sp.opp .band{background:#2a1410}
+.cutin .ck{grid-column:1/-1;font-family:var(--f-disp);font-weight:800;font-size:16px;letter-spacing:.12em;color:var(--gold);transform:skewY(6deg)}
+.cutin.sp .cg{font-size:40px;color:#fff;text-shadow:0 0 18px rgba(232,189,60,.8)}
 .cutin .cg{grid-column:1/-1;font-family:var(--f-disp);font-weight:800;font-size:64px;line-height:1;letter-spacing:.02em;color:var(--gold);text-shadow:0 3px 0 rgba(0,0,0,.3);transform:skewY(6deg)}
 .cutin .cw{font-family:var(--f-disp);font-weight:800;font-size:24px;line-height:1.25;transform:skewY(6deg)}
 .cutin .cw span{display:block;font-size:13px;font-weight:700;opacity:.85}
@@ -809,6 +813,15 @@ function openMatch(m, after){
     el.addEventListener('click',e=>{ e.stopPropagation(); close(); });
     setTimeout(close, 2200);
   }
+  /* 特殊能力が働いたときのカットイン（感想 18） */
+  function spCut(list){
+    const u=list[0]; const el=document.createElement('div'); el.className='cutin sp'+(u.me?'':' opp'); el.setAttribute('role','status');
+    el.innerHTML=`<div class="band"><div class="ck">特殊能力発動！</div><div class="cg">${esc(u.sp)}</div><div class="cw">${esc(u.t)}${list.length>1?`<span>ほかに ${list.slice(1).map(x=>esc(x.sp)).join('・')}</span>`:''}</div></div>`;
+    document.body.appendChild(el); cut=el;
+    const close=()=>{ if(cut===el){ el.remove(); cut=null; } };
+    el.addEventListener('click',e=>{ e.stopPropagation(); close(); });
+    setTimeout(close, 1800);
+  }
   function closeCard(instant){ if(!cur) return; if(cur.r&&cur.r.goal){ card.classList.add('goal'); $('#sc').textContent=cur.r.score.join(' - '); if(!instant) goalCut(cur.r); } card.querySelector('.res').innerHTML=resultHTML(cur); cur=null; }
   function openCard(it){
     cur=it;
@@ -824,7 +837,7 @@ function openMatch(m, after){
     if(cut){ cut.remove(); cut=null; return; }
     if(cur && k<lines.length){
       if(cur.kind==='talk'){ card.querySelector('.res').outerHTML=line(lines[k]); k++; cur=null; }
-      else { card.insertAdjacentHTML('beforeend',`<p>${line(lines[k])}</p>`); k++; if(k>=lines.length) closeCard(instant); }
+      else { const L=lines[k]; card.insertAdjacentHTML('beforeend',`<p>${line(L)}</p>`); k++; const sps=L.filter(x=>x&&x.sp); if(sps.length&&!instant) spCut(sps); if(k>=lines.length) closeCard(instant); }
       if(!instant) follow(); if(done()) endCard(); return; }
     if(idx<items.length){ openCard(items[idx]); idx++; tap(instant); return; }
     if(feed.querySelector('.endcard')) finish(); else endCard();
