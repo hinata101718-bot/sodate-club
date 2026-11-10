@@ -29,3 +29,25 @@ export function makeManager(r: Rng, ids: { n: number }, q = 0.5, style?: StyleNa
 export function youthWord(m: Manager) { return m.youth >= 1.2 ? '若手をどんどん使う' : m.youth <= 0.85 ? 'ベテランを信じる' : '若手もベテランも、その時の調子で使う'; }
 export function obeyWord(m: Manager) { return m.obey >= 0.7 ? '頼みを素直に聞いてくれる' : m.obey <= 0.4 ? '頑固で、頼みはあまり聞かない' : '頼みは、ときどき聞いてくれる'; }
 export function growWord(m: Manager) { return m.grow >= 1.15 ? '育てるのがとてもうまい' : m.grow >= 1.0 ? '育てるのがうまい' : '育てるのはふつう'; }
+
+/* ---------- コーチ（企画書 10-2）とスカウト（企画書 9-2） ---------- */
+import { REGIONS } from './data/prefs';
+import type { Pos } from './constants';
+export type CoachRole = 'off' | 'def' | 'gk' | 'phys' | 'youth';
+export const COACH_ROLES: CoachRole[] = ['off', 'def', 'gk', 'phys', 'youth'];
+export const COACH_NAME: Record<CoachRole, string> = { off: 'オフェンスコーチ', def: 'ディフェンスコーチ', gk: 'キーパーコーチ', phys: 'フィジカルコーチ', youth: 'ユースコーチ' };
+export const COACH_NOTE: Record<CoachRole, string> = { off: 'シュート・パス・ドリブル', def: 'ディフェンス・IQ', gk: 'キーパーの4項目（セービング・飛び出し・キック・ハイボール）', phys: 'スピード・フィジカル・スタミナ', youth: 'ユースの子全員の伸び方と、月1回の報告の正確さ' };
+export interface Coach { id: number; name: string; role: CoachRole; skill: number; salary: number; age: number; }
+export interface Scout { id: number; name: string; region: string; pos: Pos | null; skill: number; salary: number; age: number; }
+/** 腕のいい人ほど給料が高い（問30） */
+export function makeCoach(r: Rng, ids: { n: number }, role: CoachRole, q = r.next()): Coach {
+  const skill = Math.round(Math.min(1, Math.max(0.05, q * 0.9 + r.next() * 0.15)) * 100) / 100;
+  return { id: ids.n++, name: staffName(r), role, skill, salary: Math.round((250 + skill * skill * 1500) / 10) * 10, age: r.int(32, 66) };
+}
+export function makeScout(r: Rng, ids: { n: number }, q = r.next()): Scout {
+  const skill = Math.round(Math.min(1, Math.max(0.05, q * 0.9 + r.next() * 0.15)) * 100) / 100;
+  const P: (Pos | null)[] = [null, null, 'GK', 'CB', 'SB', 'DM', 'CM', 'AM', 'WG', 'ST'];
+  return { id: ids.n++, name: staffName(r), region: r.pick(REGIONS), pos: r.pick(P), skill, salary: Math.round((200 + skill * skill * 1100) / 10) * 10, age: r.int(30, 68) };
+}
+export const skillWord = (s: number) => (s >= 0.8 ? 'とても腕がいい' : s >= 0.6 ? '腕がいい' : s >= 0.4 ? 'ふつう' : 'まだ経験が浅い');
+export const skillStars = (s: number) => Math.max(1, Math.min(5, Math.round(s * 5)));

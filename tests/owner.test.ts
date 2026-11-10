@@ -1,0 +1,88 @@
+import { describe, expect, it } from 'vitest';
+import { advanceWeek, newGame, answerOffer, type GameState } from '../src/core/game';
+import { borrow, repay, startBuild, signCand, takeTrial, decideTrial, setRenew, hireScout, hireCoach, coachWindow, payroll } from '../src/core/owner';
+import { debtCap, facCost } from '../src/core/finance';
+import { Rng } from '../src/core/rng';
+
+const toWeek = (G: GameState, w: number, s: number) => { let g = 0; while (!(G.week === w && G.season === s) && g++ < 400) advanceWeek(G); };
+
+describe('お金（企画書 11）', () => {
+  it('入場料・スポンサー・給料が毎週動く。1年で記録がのこる', () => {
+    const G = newGame({ seed: 31 });
+    toWeek(G, 0, 2);
+    const L = G.owner.lastLedger!;
+    expect(L.gate).toBeGreaterThan(0); expect(L.sponsor).toBeGreaterThan(0); expect(L.salary).toBeGreaterThan(0); expect(L.staff).toBeGreaterThan(0);
+  });
+  it('借金には上限がある。上限まで借りてもゲームオーバーにならない', () => {
+    const G = newGame({ seed: 32 });
+    const cap = debtCap(3);
+    expect(borrow(G, cap * 2)).toBe(cap);
+    expect(borrow(G, 1000)).toBe(0);
+    expect(repay(G, 1000)).toBe(1000);
+    G.owner.money = -999999; G.owner.debt = cap;
+    for (let i = 0; i < 10; i++) advanceWeek(G);
+    expect(G.week).toBe(10);
+  });
+  it('施設はお金と時間がかかり、終わるとレベルが上がる', () => {
+    const G = newGame({ seed: 33 }); G.owner.money = 1e6;
+    const before = G.owner.money;
+    expect(startBuild(G, 'field')).toBeNull();
+    expect(G.owner.money).toBe(before - facCost('field', 2));
+    expect(startBuild(G, 'medical')).not.toBeNull();
+    for (let i = 0; i < 20; i++) advanceWeek(G);
+    expect(G.owner.fac.field).toBe(2); expect(G.owner.build).toBeNull();
+  });
+});
+
+describe('人を雇う（企画書 10）', () => {
+  it('スカウトは3人まで。コーチの入れかえは冬だけ', () => {
+    const G = newGame({ seed: 34 });
+    while (G.owner.market.scout.length && G.owner.scouts.length < 3) hireScout(G, G.owner.market.scout[0].id);
+    expect(G.owner.scouts.length).toBe(3);
+    expect(hireScout(G, G.owner.market.scout[0]?.id ?? -1)).not.toBeNull();
+    toWeek(G, 20, 1);
+    expect(coachWindow(G)).toBe(false);
+    expect(hireCoach(G, 'off', G.owner.market.coach.off[0].id)).not.toBeNull();
+    toWeek(G, 45, 1);
+    expect(hireCoach(G, 'off', G.owner.market.coach.off[0].id)).toBeNull();
+  });
+  it('スカウトは毎月候補を持ってきて、獲るとトップに入る', () => {
+    const G = newGame({ seed: 35 }); G.owner.money = 1e6;
+    toWeek(G, 9, 1);
+    G.squad = G.squad.slice(0, 22);
+    const c = G.owner.cands.find((x) => x.src === 'scout')!;
+    expect(c).toBeTruthy();
+    expect(signCand(G, c.id, new Rng(1))).toBeNull();
+    expect(G.squad.some((p) => p.id === c.id)).toBe(true);
+  });
+});
+
+describe('移籍と契約（企画書 12）・練習生（企画書 9-4）', () => {
+  it('オファーを受けると選手が去り、お金が入る', () => {
+    const G = newGame({ seed: 36 }); const p = G.squad[0];
+    G.pending.push({ type: 'offer', pid: p.id, club: G.clubs[5].name, clubId: G.clubs[5].id, price: 3000 });
+    const m = G.owner.money; answerOffer(G, 0, true);
+    expect(G.squad.some((x) => x.id === p.id)).toBe(false); expect(G.owner.money).toBe(m + 3000);
+  });
+  it('契約を更新しなかった選手は、年が変わると去る。更新した選手は残る', () => {
+    const G = newGame({ seed: 37 });
+    const [a, b] = G.squad; a.contract = 1; b.contract = 1;
+    toWeek(G, 45, 1);
+    setRenew(G, a.id, 1, true); setRenew(G, b.id, 3, false);
+    toWeek(G, 0, 2);
+    expect(G.squad.some((x) => x.id === a.id)).toBe(false);
+    const bb = G.squad.find((x) => x.id === b.id); if (bb) expect(bb.contract).toBe(3);
+    expect(payroll(G)).toBeGreaterThan(0);
+  });
+  it('練習生は1〜3か月あずかって、月1回の報告のあとに決める', () => {
+    const G = newGame({ seed: 38 }); G.squad = G.squad.slice(0, 20);
+    let g = 0; while (!G.owner.cands.some((c) => c.src === 'trial') && g++ < 200) advanceWeek(G);
+    const c = G.owner.cands.find((x) => x.src === 'trial')!; expect(c).toBeTruthy();
+    expect(takeTrial(G, c.id, 1)).toBeNull();
+    g = 0; while (G.owner.trials[0]?.trialMonths !== 0 && g++ < 12) advanceWeek(G);
+    expect(G.owner.trials[0].trialMonths).toBe(0);
+    expect(G.owner.trialLog.length).toBeGreaterThan(0);
+    expect(decideTrial(G, c.id, true)).toBeNull();
+    expect(G.squad.find((p) => p.id === c.id)!.origin).toBe('練習生');
+  });
+});

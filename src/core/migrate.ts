@@ -8,7 +8,18 @@ import { simulateMatch } from './match';
 import { defaultEmblem } from './emblem';
 
 import { startYouth } from './youth';
+import { initOwner } from './owner';
+import { sponsorYear } from './finance';
 export const MIGRATIONS: Record<number, (s: any) => any> = {
+  /* 版3（段階3）→ 版4（お金・施設・人・移籍と契約） */
+  3: (s: any) => {
+    const r = new Rng((s.rng ^ 0x27d4eb2d) >>> 0);
+    s.owner = initOwner(r, s.ids, s.club.pref);
+    const tier = s.clubs.find((c: any) => c.me)?.tier ?? 3;
+    s.owner.sponsor = sponsorYear(tier, s.club.pref, s.owner.pop);
+    for (const p of s.squad) { p.contract ??= 2; p.salary ??= 300; }
+    return s;
+  },
   /* 版2（段階2）→ 版3（ユース・引退・ポテンシャルの上下） */
   2: (s: any) => {
     const r = new Rng((s.rng ^ 0x5bd1e995) >>> 0);

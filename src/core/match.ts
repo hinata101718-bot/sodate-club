@@ -7,7 +7,7 @@ import type { Line, Manager, MatchView, Player, Token, ViewItem } from './types'
 import { narrate } from './narrate';
 
 export type Policy = '若手多め' | 'ふつう' | '勝ち優先';
-export interface TeamIn { id: number; name: string; me: boolean; color: string; squad: Player[]; mgr: Manager; policy?: Policy; }
+export interface TeamIn { id: number; name: string; me: boolean; color: string; squad: Player[]; mgr: Manager; policy?: Policy; injMul?: number; }
 export interface MatchOpts { record?: boolean; label?: string; big?: boolean; cup?: boolean; neutral?: boolean; title?: string; }
 export interface OnPl { p: Player; pos: Pos; sub: boolean; }
 interface Side {
@@ -387,7 +387,7 @@ function record(r: Rng, sides: Side[], log: Chance[], label: string) {
       p.played = true;
       if (p.apt[x.pos] < 3) p.aptXp[x.pos] = (p.aptXp[x.pos] || 0) + 1;
       let f = 24 * (1.25 - p.a[STA] / 100); if (p.bad.includes('スタミナ切れ')) f *= 1.3; p.fat = clamp(p.fat + f, 0, 100);
-      let ir = 0.012 * (1 + p.fat / 120); if (p.bad.includes('スペ体質')) ir *= 2.2; if (p.sp.includes('ケガをしにくい')) ir *= 0.45;
+      let ir = 0.012 * (1 + p.fat / 120) * (s.t.injMul ?? 1); if (p.bad.includes('スペ体質')) ir *= 2.2; if (p.sp.includes('ケガをしにくい')) ir *= 0.45;
       if (r.next() < ir) { p.inj = r.int(1, 5); p.injNew = true; }
     }
   }

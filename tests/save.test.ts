@@ -62,3 +62,18 @@ describe('版2（段階2）のセーブの変換', () => {
     expect(G.season).toBe(2);
   });
 });
+
+describe('版3（段階3）のセーブの変換', () => {
+  it('お金・施設・人が足され、そのまま続けて遊べる', () => {
+    const kv = memoryKV(); kv.setItem(AUTO_KEY, readFileSync(__dirname + '/fixtures/save-v3.json', 'utf8'));
+    const raw = JSON.parse(kv.getItem(AUTO_KEY)!);
+    expect(raw.state.version).toBe(3);
+    const G = loadFrom(kv, AUTO_KEY)!;
+    expect(G.version).toBe(SAVE_VERSION);
+    expect(G.owner.money).toBeGreaterThan(0);
+    expect(G.owner.fac.field).toBe(1);
+    expect(G.youth.length).toBe(raw.state.youth.length);
+    for (let i = 0; i < 30; i++) advanceWeek(G);
+    expect(G.season).toBe(2);
+  });
+});

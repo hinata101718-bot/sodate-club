@@ -31,7 +31,7 @@ const { chromium } = require('playwright');
     if (await pg.$('#mAll')) { await pg.click('#mAll'); }
     await pg.click('#layer .dock .btn.primary', { timeout: 3000 }).catch(() => {});
   }
-  for (const t of ['squad', 'table', 'home']) { const n = await pg.$(`[data-tab="${t}"]`); if (n) { await n.click(); maxW = Math.max(maxW, await pg.evaluate(() => document.documentElement.scrollWidth)); } }
+  for (const t of ['squad', 'youth', 'people', 'fac', 'money', 'home']) { const n = await pg.$(`[data-tab="${t}"]`); if (n) { await n.click(); maxW = Math.max(maxW, await pg.evaluate(() => document.documentElement.scrollWidth)); } }
   const sub = await pg.textContent('#clubSub');
   console.log('sub:', sub, '| maxScrollWidth', maxW, '| errors', errs.length); errs.slice(0, 10).forEach((e) => console.log(e));
   if (process.env.SHOT) await pg.screenshot({ path: process.env.SHOT });

@@ -3,13 +3,15 @@ import { advanceToDecision, advanceWeek, answerOffer, newGame, standings, myTier
 import { CUP_ROUND_NAMES, monthOf, isWindow } from '../core/calendar';
 import { openNewClub } from './newclub';
 import { youthHTML, bindYouth } from './youthview';
+import { peopleHTML, facHTML, moneyHTML, transferHTML, bindOwner } from './ownerview';
+import { listPlayer, renewalOffer, setRenew } from '../core/owner';
 import { ovr } from '../core/player';
 import { STYLES } from '../core/constants';
 import { obeyWord } from '../core/staff';
 import { mgrShort, type Policy } from '../core/match';
 import { AUTO_KEY, listSlots, loadFrom, removeSave, safeStorage, saveTo, type KV } from '../core/save';
 import type { Player } from '../core/types';
-import { $, $$, closeSheet, esc, posTag, sheet, toast, val } from './dom';
+import { $, $$, closeSheet, esc, posTag, sheet, toast, val, yen } from './dom';
 import { applyClubColor, applyThemeMode } from './theme';
 import { emblemSVG } from './emblem';
 import { openMatch } from './matchview';
@@ -48,9 +50,10 @@ export function render() {
   const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
   $('#clubSub').textContent = `${G.club.city} ・ ${myTier(G)}部${pl ? ` ${myRank(G)}位` : ''} ・ ${G.season}年目 ${monthOf(G.week)}月`;
   const v = $('#view');
-  const views: Record<string, () => string> = { home: homeHTML, squad: squadHTML, youth: () => youthHTML(G, promoSel()), table: tableHTML, settings: settingsHTML };
+  const views: Record<string, () => string> = { home: homeHTML, squad: squadHTML, youth: () => youthHTML(G, promoSel()), people: () => peopleHTML(G), fac: () => facHTML(G), money: () => moneyHTML(G), table: tableHTML, settings: settingsHTML };
   v.innerHTML = (views[app.tab] || homeHTML)();
   bindView(v);
+  bindOwner(G, v, (msg) => { if (msg) toast(msg); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
 }
 let selCache: { key: string; set: Set<number> } | null = null;
@@ -88,6 +91,9 @@ function homeHTML(): string {
   const tbl = G.leagues[tier].table[ME];
   const pend = G.pending.map((e, i) => { const p = find(e.pid); if (!p) return ''; return `<div class="item"><span class="grow"><b>${esc(e.club)}</b> から ${esc(p.name)} にオファー（${e.price.toLocaleString()}万円）</span><button class="btn small primary" data-offer="${i}">見る</button></div>`; }).join('');
   const news = (G.news || []).filter(Boolean).map((n) => `<div class="item"><span class="grow">${esc(n)}</span></div>`).join('');
+  const walk = G.owner.cands.filter((c) => c.src === 'trial').length + G.owner.trials.filter((p) => p.trialMonths === 0).length;
+  const scoutN = G.owner.cands.filter((c) => c.src === 'scout').length;
+  const owner = (walk ? `<div class="item"><span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN && G.week % 4 === 1 ? `<div class="item"><span class="grow">スカウトの候補が${scoutN}人</span><button class="btn small ghost" data-go-tr="1">見る</button></div>` : '');
   const promo = G.promo?.open ? `<div class="item"><span class="grow"><b>春の昇格会議</b>：ユースからトップに上げる子を決める（決めずに進むと、コーチのおすすめどおりになる）</span><button class="btn small primary" data-go="youth">決める</button></div>` : '';
   const notes = G.yearNotes?.length && G.week >= 44 ? `<div class="item"><span class="grow">コーチから、選手${G.yearNotes.length}人についてのひとこと</span><button class="btn small ghost" data-act="notes">見る</button></div>` : '';
   const yrep = G.youthLog.length && G.youthLog[G.youthLog.length - 1].season === G.season && G.week >= 8 && G.week % 4 === 1 ? `<div class="item"><span class="grow">ユースの報告会議（${G.youthLog[G.youthLog.length - 1].month}月）</span><button class="btn small ghost" data-go="youth">見る</button></div>` : '';
@@ -97,11 +103,11 @@ function homeHTML(): string {
   const last = G.history[G.history.length - 1];
   return `
   <section class="card"><div class="row"><span class="grow">${tbl.w + tbl.d + tbl.l ? `<span class="goal">${tier}部 ${rank}位</span> <span class="muted">勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</span>` : `<span class="goal">${tier}部 ・ 開幕前</span>`}</span></div>
-    <div class="muted">${dateText(G)}${isWindow(G.week) ? ' ・ 移籍の期間' : ''}</div></section>
+    <div class="muted">${dateText(G)}${isWindow(G.week) ? ' ・ 移籍の期間' : ''} ・ お金 ${yen(G.owner.money)}${G.owner.debt ? `（借金 ${yen(G.owner.debt)}）` : ''}</div></section>
   <section class="card"><h2>次の目標</h2><div class="goal">${esc(currentGoal(G))}</div>
     ${last ? `<div class="muted">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
-  <section class="card">${nextHTML(G)}</section>
-  ${pend || promo || notes || yrep || news || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${promo}${pend}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
+  <section class="card">${nextHTML(G)}<button class="btn small ghost" data-go="table" style="margin-top:10px">順位表・大会・記録を見る</button></section>
+  ${pend || promo || owner || notes || yrep || news || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${promo}${pend}${owner}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
   <div class="btns">
     <button class="btn primary" data-act="week">1週進む</button>
     <button class="btn ghost" data-act="skip">次に決めることまで進む</button>
@@ -113,15 +119,19 @@ function homeHTML(): string {
     <div class="muted" style="margin-top:8px">監督：${esc(G.mgr.name)} ・ ${esc(G.mgr.style)}（${esc(STYLES[G.mgr.style].note)}）・ 並び方 ${G.mgr.forms.join(' / ')}</div>
   </section>`;
 }
+let squadView = 'top';
 function squadHTML(): string {
   const G = app.G;
   const order: Record<string, number> = { GK: 0, CB: 1, SB: 2, DM: 3, CM: 4, AM: 5, WG: 6, ST: 7 };
   const list = [...G.squad].sort((a, b) => order[a.pos] - order[b.pos] || ovr(b) - ovr(a));
-  return `<section class="card"><h2>トップチーム ${list.length}人</h2><div class="plist">${list.map(plRow).join('')}</div></section>`;
+  const n = G.pending.length + G.owner.cands.length + G.owner.trials.filter((p) => !p.trialMonths).length;
+  const seg = `<div class="seg" role="group" aria-label="選手の画面"><button data-sv="top" aria-pressed="${squadView === 'top'}">トップチーム</button><button data-sv="tr" aria-pressed="${squadView === 'tr'}">移籍・候補${n ? `（${n}）` : ''}</button></div>`;
+  if (squadView === 'tr') return seg + transferHTML(G);
+  return seg + `<section class="card"><h2>トップチーム ${list.length}人</h2><div class="plist">${list.map(plRow).join('')}</div></section>`;
 }
 export function plRow(p: Player): string {
   const o = ovr(p);
-  return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.req ? ' <span class="tag">起用を依頼中</span>' : ''}${p.retiring ? ' <span class="tag bad">今季で引退</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
+  return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.req ? ' <span class="tag">起用を依頼中</span>' : ''}${p.retiring ? ' <span class="tag bad">今季で引退</span>' : ''}${p.listed ? ' <span class="tag away">売りに出している</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
 }
 let tableView = 'mine';
 function tableHTML(): string {
@@ -172,7 +182,9 @@ function settingsHTML(): string {
 function bindView(v: HTMLElement) {
   const G = app.G;
   $$<HTMLElement>('[data-act]', v).forEach((b) => b.addEventListener('click', () => act(b.dataset.act!)));
+  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { squadView = 'tr'; setTab('squad'); }));
   $$<HTMLElement>('[data-go]', v).forEach((b) => b.addEventListener('click', () => setTab(b.dataset.go!)));
+  $$<HTMLElement>('[data-sv]', v).forEach((b) => b.addEventListener('click', () => { squadView = b.dataset.sv!; render(); }));
   $$<HTMLElement>('[data-tv]', v).forEach((b) => b.addEventListener('click', () => { tableView = b.dataset.tv!; render(); }));
   $$<HTMLElement>('[data-pol]', v).forEach((b) => b.addEventListener('click', () => { G.policy = b.dataset.pol as Policy; sfx('tap'); autosave(); render(); }));
   $$<HTMLElement>('[data-pid]', v).forEach((b) => b.addEventListener('click', () => showPlayer(+b.dataset.pid!, render)));
@@ -192,7 +204,19 @@ export function showPlayer(id: number, back: () => void) {
     report: (app.G.lastReport || []).find((r) => r.pid === id) || null,
     coachName: 'コーチ', coachSkill: 0.6, mgrName: mgrShort(app.G.mgr), mgrObeyWord: obeyWord(app.G.mgr),
     onReq: (pl) => { pl.req = !pl.req; autosave(); }, back,
+    extraHTML: contractHTML(p),
+    bindExtra: (root) => {
+      root.querySelector('#pSell')?.addEventListener('click', () => { listPlayer(app.G, p.id, !p.listed); autosave(); showPlayer(id, back); });
+      root.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => { const v = b.dataset.renew!; setRenew(app.G, p.id, v === 'no' ? 1 : +v, v === 'no'); autosave(); showPlayer(id, back); }));
+    },
   });
+}
+function contractHTML(p: Player): string {
+  const G = app.G; const d = G.owner.renew[p.id]; const off = renewalOffer(p);
+  const renew = p.contract <= 1 && G.week >= 44 ? `<h3>契約更新（今年で切れる）</h3><div class="muted small">更新すると給料は 年${off.salary.toLocaleString()}万円 になる。決めないときは、${off.years}年で更新する。</div>
+    <div class="seg" role="group" aria-label="契約の年数" style="margin-top:6px">${[1, 2, 3, 4].map((y) => `<button data-renew="${y}" aria-pressed="${!!d && !d.no && d.years === y}">${y}年</button>`).join('')}<button data-renew="no" aria-pressed="${!!d?.no}">更新しない</button></div>` : p.contract <= 1 ? '<div class="muted small">契約は今年で切れる。12月の契約更新の時期に、更新するかを決める。</div>' : '';
+  return `<section class="card"><h2>契約と移籍</h2><div>あと${p.contract}年 ・ 年${p.salary.toLocaleString()}万円</div>${renew}
+    <button class="btn ${p.listed ? 'primary' : 'ghost'} wide" id="pSell" style="margin-top:10px">${p.listed ? '売りに出すのをやめる' : '売りに出す'}</button><div class="muted small" style="margin-top:6px">売りに出すと、移籍の期間に買い手を探す。買い手が見つかると、オファーとして届く。</div></section>`;
 }
 function afterWeek(res: ReturnType<typeof advanceWeek>) {
   autosave(); render();
@@ -234,7 +258,7 @@ function openOffer(i: number) {
     <section class="card"><div><b>${esc(e.club)}</b> が ${esc(p.name)}（${p.age}歳 ・ ${p.pos} ・ 総合力 ${ovr(p)}）を <b>${e.price.toLocaleString()}万円</b> でほしいと言っている。</div>
     <div class="muted" style="margin-top:6px">受けると、選手はクラブを去る。値段の交渉はできない。</div>
     <div class="btns" style="margin-top:12px"><button class="btn primary" id="oYes">受ける</button><button class="btn ghost" id="oNo">断る</button></div></section>`);
-  $('#oYes').addEventListener('click', () => { answerOffer(G, i, true); autosave(); closeSheet(); render(); toast(`${p.name} が移籍した`); });
+  $('#oYes').addEventListener('click', () => { const e2 = answerOffer(G, i, true); autosave(); closeSheet(); render(); toast(e2 ?? `${p.name} が移籍した`); });
   $('#oNo').addEventListener('click', () => { answerOffer(G, i, false); autosave(); closeSheet(); render(); });
 }
 export { soundOn };
