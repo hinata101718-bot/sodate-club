@@ -2,7 +2,9 @@
 
 もとになるもの：docs/new/kikaku.md（企画書）、docs/new/hearing.md（ヒアリング記録）、docs/feedback.md（試作の感想）、prototype/index.html（試作）
 
-どの夜のあとも、最初から遊べる状態で main に入れる。各夜の指示書は docs/nightN.md に、その夜の前に書く。
+どの段階のあとも、最初から遊べる状態で main に入れる。
+
+**問81で、5段階を1つの指示書（docs/night1.md）にまとめて一気に作ることに決まった。**
 
 | 夜 | 作るもの | 終わったら遊べること |
 |---|---|---|
