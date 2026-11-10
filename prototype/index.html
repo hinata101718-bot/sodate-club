@@ -87,6 +87,9 @@ tr.down td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 .chip.good{border-color:var(--club)}
 .chip.bad{border-color:var(--danger);color:var(--danger)}
 .chip.new{background:var(--glow);border-color:var(--gold)}
+.spbtn{min-height:44px;padding:6px 14px;font-size:14px;cursor:pointer;font-family:var(--f-body)}
+.spbtn[aria-pressed="true"]{background:var(--glow);border-color:var(--gold);color:var(--fg)}
+.spdesc{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:14px;color:var(--fg)}
 .apt{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;text-align:center;font-size:12px}
 .apt b{display:block;font-size:15px}
 .sheet{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -236,6 +239,22 @@ const SP_BY_POS={
  AM:['キラーパス','ミドルシューター','広い視野','プレースキッカー','チャンスメーカー'],
  WG:['ドリブラー','スピードスター','カットイン','正確なクロス','仕掛け屋'],
  ST:['冷静沈着','ゴール前の嗅覚','パワーヘッダー','PKの名手','点取り屋','フィジカルドリブル']};
+/* 特殊能力の効果（選手の画面で押すと出る：感想 20） */
+const SP_DESC={
+ 'PKの名手':'PKのとき、シュートが大きく上がる','ミドルシューター':'ミドルシュートのとき、シュートが上がる','パワーヘッダー':'クロスとセットプレーで、ヘディングのシュートが上がる',
+ '冷静沈着':'GKと1対1になったとき、シュートが少し上がる','ゴール前の嗅覚':'こぼれ球のとき、IQとスピードが上がる','キラーパス':'崩しのとき、パスが上がる',
+ '正確なクロス':'クロスのとき、パスが上がる','広い視野':'崩しとカウンターの起点でIQが上がり、決定機が少し生まれやすくなる','ロングフィード':'ロングボールとカウンターの起点で、パス（GKならキック）が上がる',
+ 'プレースキッカー':'セットプレーでけるとき、パスが上がる','ドリブラー':'ドリブル突破のとき、ドリブルが上がる','スピードスター':'抜け出しとカウンターのとき、スピードが上がる',
+ 'カットイン':'ドリブル突破のあとのシュートが上がる','フィジカルドリブル':'ドリブル突破中の競り合いで、フィジカルが上がる','ボール奪取':'相手のドリブル突破と崩しで、ディフェンスが上がる',
+ 'エアバトル':'相手のクロス・セットプレー・ロングボールで、フィジカルが上がる','カバーリング':'相手の抜け出しとカウンターで、IQが上がり追いつきやすい','シュートブロック':'相手のミドルシュートとこぼれ球で、ディフェンスが上がる',
+ 'PKストッパー':'相手のPKで、セービングが大きく上がる','ビッグセーブ':'1対1や近い距離からのシュートで、セービングが上がる','素早い飛び出し':'相手の抜け出しとカウンターで、飛び出しが上がる',
+ 'ハイボール処理':'相手のクロスとセットプレーで、ハイボールが上がる','エンジン':'後半、疲れによる力の下がり方が小さい','スーパーサブ':'途中から出たとき、全部の能力が少し上がる',
+ 'ケガをしにくい':'ケガをする確率が下がる','安定感':'調子の波が小さく、不調になりにくい','立ち上がりに強い':'最初の15分、全部の能力が少し上がる',
+ '点取り屋':'シュートで終わる場面に関わりやすい。そのかわり、パスを出す役にはなりにくい','チャンスメーカー':'崩しの場面が起きやすくなる。そのかわり、自分ではシュートを打ちにくい',
+ '仕掛け屋':'ドリブル突破の場面が起きやすくなる。そのかわり、奪われてカウンターを受けることもある','キャンプで化ける':'春のキャンプでの伸びが大きい','練習の虫':'コーチが組む練習での伸びが大きい',
+ '実戦で伸びる':'試合に出たときの伸びが大きい','吸収力':'若手の経験不足がすぐ消える',
+ 'スタミナ切れ':'後半の力の下がり方が大きい','スペ体質':'ケガをしやすい','ムラっけ':'調子の波が大きい','スロースターター':'最初の15分は力が下がる',
+ '判断が遅い':'崩しとカウンターでIQが下がる','空中戦が苦手':'クロス・セットプレー・ロングボールでフィジカルが下がる'};
 const SP_ANY=['エンジン','スーパーサブ','ケガをしにくい','安定感','キャンプで化ける','練習の虫','実戦で伸びる','吸収力'];
 const BAD=['スタミナ切れ','スペ体質','ムラっけ','スロースターター','判断が遅い','空中戦が苦手'];
 
@@ -912,11 +931,14 @@ function openPlayer(id, back){
     <div class="row">${posTag(p.pos)}<span class="muted">${p.age}歳 ・ ${p.height}cm ・ 利き足 ${p.foot} ・ ${esc(p.pref)}出身 ・ ${esc(p.origin)}</span></div>
     <section class="card"><h2>能力</h2>${radarSVG(p)}<div class="attrs" style="margin-top:8px">${order.map(i=>{ const v=Math.floor(p.a[i]); const u=rep?rep.ups[i]:0; return `<div class="attr ${u>=2?'glow':''}"><span class="k">${L[i]}</span><span><span class="v ${colorOf(v)}">${v}</span>${u>0?`<span class="up">+${u}</span>`:''}</span></div>`; }).join('')}</div></section>
     <section class="card"><h2>ポジション適性</h2><div class="apt">${POS.map(x=>`<div>${x}<b>${APT[p.apt[x]]}</b></div>`).join('')}</div></section>
-    <section class="card"><h2>特殊能力</h2><div class="chips">${p.sp.length?p.sp.map(s=>`<span class="chip good">${esc(s)}</span>`).join(''):'<span class="muted">まだない</span>'}${p.bad.map(s=>`<span class="chip bad">${esc(s)}</span>`).join('')}</div></section>
+    <section class="card"><h2>特殊能力</h2><div class="chips">${p.sp.length?p.sp.map(s=>`<button class="chip good spbtn" data-sp="${esc(s)}">${esc(s)}</button>`).join(''):'<span class="muted">まだない</span>'}${p.bad.map(s=>`<button class="chip bad spbtn" data-sp="${esc(s)}">${esc(s)}</button>`).join('')}</div><div id="spDesc" class="spdesc muted" hidden></div>${(p.sp.length||p.bad.length)?'<div class="muted small" style="margin-top:6px">押すと効果がわかります</div>':''}</section>
     <section class="card"><h2>フィジカルコーチのひとこと</h2><div>${hint}</div></section>
     <section class="card"><h2>記録</h2><div class="muted">通算 ${p.apps}試合 ${p.goals}点 ・ 初出場 ${p.firstApp||'まだ'} ・ 初ゴール ${p.firstGoal||'まだ'}</div></section>
     <section class="card"><h2>監督への頼み</h2><button class="btn ${p.req?'primary':'ghost'}" id="pReq" style="width:100%">${p.req?'起用の依頼を取り下げる':'この選手を試合で使ってほしい'}</button><div class="muted small" style="margin-top:6px">早瀬監督は、頼みをわりと素直に聞いてくれる。</div></section>
   </div></div><div class="dock"><div class="in2" style="grid-template-columns:1fr"><button class="btn primary" id="pBack">もどる</button></div></div>`;
+  layer.querySelectorAll('.spbtn').forEach(b=>b.addEventListener('click',()=>{ const d=$('#spDesc'); const s=b.dataset.sp; const same=d.dataset.cur===s&&!d.hidden;
+    layer.querySelectorAll('.spbtn').forEach(x=>x.setAttribute('aria-pressed',String(x===b&&!same)));
+    if(same){ d.hidden=true; return; } d.dataset.cur=s; d.innerHTML=`<b>${esc(s)}</b>：${esc(SP_DESC[s]||'効果はあとで決めます')}${p.bad.includes(s)?'<br><span class="small">試合に出たり、コーチがよかったりすると、克服できることがある。</span>':''}`; d.hidden=false; }));
   $('#pReq').addEventListener('click',()=>{ p.req=!p.req; save(); openPlayer(id,back); });
   $('#pBack').addEventListener('click',()=>{ layer.innerHTML=''; if(back) back(); else render(); });
 }
