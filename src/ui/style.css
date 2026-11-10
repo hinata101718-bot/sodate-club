@@ -25,7 +25,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--club)}
 button{font:inherit;color:inherit}
 input,select{font:inherit;font-size:16px}
-.app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+/* ホーム画面から全画面で開くと、上の時計の帯の分だけ見出しが下にずれ、中身の上が隠れていた。帯の分だけ全体を下げておく */
+.app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--club);color:var(--club-ink);
   padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:10px}
 .crest{width:40px;height:44px;flex:none;display:block}
