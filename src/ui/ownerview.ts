@@ -9,6 +9,8 @@ import { ovr } from '../core/player';
 import { Rng } from '../core/rng';
 import type { Manager } from '../core/types';
 import { $$, esc, posTag, val, yen } from './dom';
+import { marketHTML, bindMarket } from './marketview';
+import { condText, scoutCond } from '../core/market';
 
 const stars = (s: number) => '★'.repeat(skillStars(s)) + '☆'.repeat(5 - skillStars(s));
 const mgrCard = (m: Manager, btn = '') => `<div class="slot" style="flex-direction:column;align-items:stretch;gap:4px"><div class="row"><b class="grow">${esc(m.name)}</b><span class="small">${m.age}歳 ・ 年${m.salary.toLocaleString()}万円</span></div>
@@ -21,8 +23,8 @@ export function peopleHTML(G: GameState): string {
     <div class="muted small">受け持ち：${esc(COACH_NOTE[k])}</div>${c ? `<div class="small">${esc(c.name)}（${c.age}歳）・ ${skillWord(c.skill)} ・ 年${c.salary.toLocaleString()}万円</div>` : ''}
     ${cw ? `<div class="row wrap">${c ? `<button class="btn small ghost" data-fire-coach="${k}">やめてもらう</button>` : ''}<button class="btn small ghost" data-coach-market="${k}">候補を見る</button></div>` : ''}</div>`; }).join('');
   const market = coachMarketRole ? `<section class="card"><h2>${COACH_NAME[coachMarketRole]}の候補</h2><div class="list">${o.market.coach[coachMarketRole].map((c) => `<div class="slot"><div class="grow"><b>${esc(c.name)}</b> <span class="small">${c.age}歳</span><div class="small"><span style="color:var(--gold)">${stars(c.skill)}</span> ${skillWord(c.skill)} ・ 年${c.salary.toLocaleString()}万円</div></div><button class="btn small primary" data-hire-coach="${coachMarketRole}:${c.id}">雇う</button></div>`).join('')}</div></section>` : '';
-  const scouts = o.scouts.map((s) => `<div class="slot"><div class="grow"><b>${esc(s.name)}</b> <span class="small">${s.age}歳</span><div class="small"><span style="color:var(--gold)">${stars(s.skill)}</span> ${skillWord(s.skill)} ・ ${esc(s.region)}に顔が広い${s.pos ? ` ・ ${s.pos}を見る目がある` : ''} ・ 年${s.salary.toLocaleString()}万円</div></div><button class="btn small ghost" data-fire-scout="${s.id}">やめてもらう</button></div>`).join('') || '<div class="muted">いない</div>';
-  const smarket = o.market.scout.map((s) => `<div class="slot"><div class="grow"><b>${esc(s.name)}</b><div class="small"><span style="color:var(--gold)">${stars(s.skill)}</span> ${esc(s.region)}${s.pos ? ` ・ ${s.pos}` : ''} ・ 年${s.salary.toLocaleString()}万円</div></div><button class="btn small primary" data-hire-scout="${s.id}" ${o.scouts.length >= 3 ? 'disabled' : ''}>雇う</button></div>`).join('');
+  const scouts = o.scouts.map((s) => `<div class="slot"><div class="grow"><b>${esc(s.name)}</b> <span class="small">${s.age}歳</span><div class="small"><span style="color:var(--gold)">${stars(s.skill)}</span> ${skillWord(s.skill)} ・ 年${s.salary.toLocaleString()}万円</div><div class="muted small">探す条件：${esc(condText(scoutCond(s)))}</div><div class="row wrap" style="margin-top:4px"><button class="btn small primary" data-go-cond="1">探す条件を決める</button><button class="btn small ghost" data-fire-scout="${s.id}">やめてもらう</button></div></div></div>`).join('') || '<div class="muted">いない</div>';
+  const smarket = o.market.scout.map((s) => `<div class="slot"><div class="grow"><b>${esc(s.name)}</b><div class="small"><span style="color:var(--gold)">${stars(s.skill)}</span> ${skillWord(s.skill)} ・ 年${s.salary.toLocaleString()}万円</div></div><button class="btn small primary" data-hire-scout="${s.id}" ${o.scouts.length >= 3 ? 'disabled' : ''}>雇う</button></div>`).join('');
   return `<section class="card"><h2>監督</h2>${mgrCard(G.mgr)}<div class="muted small" style="margin-top:6px">試合の作戦・交代・練習はオーナーは決めない。伝えられるのは、ホームの「若手の使い方の方針」と、選手の画面の「この選手を使ってほしい」だけ。</div>
       <button class="btn small ghost" data-act="mgrmarket" style="margin-top:8px">ほかの監督の候補を見る</button></section>
     ${showMgr ? `<section class="card"><h2>監督の候補</h2><div class="muted small">入れかえると、いまの監督に年俸の半分（${(Math.round(G.mgr.salary / 20) * 10).toLocaleString()}万円）を払う。</div><div class="list" style="margin-top:6px">${o.market.mgr.map((m) => mgrCard(m, `<button class="btn small primary" data-hire-mgr="${m.id}">この監督にする</button>`)).join('')}</div></section>` : ''}
@@ -72,6 +74,7 @@ export function transferHTML(G: GameState): string {
   return `${offers ? `<section class="card"><h2>オファー</h2><div class="list">${offers}</div><div class="muted small" style="margin-top:6px">値段の交渉はできない。受けるか断るかだけ。</div></section>` : ''}
     <section class="card"><h2>移籍</h2><div class="muted">${win ? '<b>いまは移籍の期間</b>（夏：7〜8月、冬：12月）。' : '移籍の期間は、夏（7〜8月）と冬（12月）。'}トップ ${G.squad.length}人（25人まで）。</div>
       ${listed.length ? `<div class="small" style="margin-top:6px">売りに出している：${listed.map((p) => esc(p.name)).join('、')}（移籍の期間に買い手を探す）</div>` : '<div class="muted small" style="margin-top:6px">選手を売りに出すときは、選手の画面の「売りに出す」を押す。</div>'}</section>
+    ${marketHTML(G)}
     <section class="card"><h2>練習生</h2><div class="list">${cand('trial')}${trials}${!trials && !cand('trial') ? '<div class="muted">「テストを受けさせてください」と、ときどきやってくる。1〜3か月あずかって、月1回の報告で伸び方を見てから決める。</div>' : ''}</div></section>`;
 }
 function lastTrial(G: GameState, id: number) { const r = [...G.owner.trialLog].reverse().find((x) => x.lines.some((l) => l.pid === id)); const l = r?.lines.find((x) => x.pid === id); return l ? ` ・ ${l.words} ${l.arrow}` : ''; }
@@ -95,4 +98,5 @@ export function bindOwner(G: GameState, root: HTMLElement, done: (msg?: string |
   on('data-tsign', (id) => decideTrial(G, +id, true) ?? '練習生を取った');
   on('data-tno', (id) => { decideTrial(G, +id, false); });
   $$<HTMLElement>('[data-detail]', root).forEach((b) => b.addEventListener('click', () => openCand(+b.dataset.detail!)));
+  bindMarket(G, root, done);
 }

@@ -39,6 +39,9 @@ export interface PlayerViewOpts {
   mgrName?: string; mgrObeyWord?: string;
   onReq?: (p: Player) => void;
   extraHTML?: string;
+  /** コーチのひとことの代わりに出す（他クラブの選手：スカウトのひとこと。ポテンシャルは見せない） */
+  hintHTML?: string;
+  hideRecords?: boolean;
   bindExtra?: (root: HTMLElement) => void;
   back: () => void;
 }
@@ -56,9 +59,9 @@ export function openPlayer(p: Player, o: PlayerViewOpts) {
     <section class="card"><h2>ポジション適性</h2><div class="apt">${POS.map((x) => `<div>${x}<b>${APT[p.apt[x]]}</b></div>`).join('')}</div>
       <div class="muted small" style="margin-top:6px">${p.pos}：${POS_NOTE[p.pos]}。◎はそのままの力、○は少し下がる、△はかなり下がる、×は大きく下がる。そのポジションで出ていると伸びる。</div></section>
     <section class="card"><h2>特殊能力</h2><div class="chips">${p.sp.length ? p.sp.map((s) => `<button class="chip good spbtn" data-sp="${esc(s)}" aria-pressed="false">${esc(s)}</button>`).join('') : '<span class="muted">まだない</span>'}${p.bad.map((s) => `<button class="chip bad spbtn" data-sp="${esc(s)}" aria-pressed="false">${esc(s)}</button>`).join('')}</div><div id="spDesc" class="spdesc" hidden></div>${p.sp.length || p.bad.length ? '<div class="muted small" style="margin-top:6px">押すと効果がわかります</div>' : ''}</section>
-    <section class="card"><h2>${esc(o.coachName || 'コーチ')}のひとこと</h2><div>${hintFor(p, o.coachSkill ?? 0.6)}</div></section>
-    <section class="card"><h2>記録</h2><dl class="kv"><dt>通算</dt><dd>${p.apps}試合 ${p.goals}点</dd><dt>今シーズン</dt><dd>${p.seasonApps}試合 ${p.seasonGoals}点</dd><dt>初出場</dt><dd>${esc(p.firstApp || 'まだ')}</dd><dt>初ゴール</dt><dd>${esc(p.firstGoal || 'まだ')}</dd><dt>契約</dt><dd>あと${p.contract}年 ・ 年${p.salary.toLocaleString()}万円</dd></dl>
-      <h3>伸びの記録</h3>${hist}</section>
+    ${o.hintHTML ?? `<section class="card"><h2>${esc(o.coachName || 'コーチ')}のひとこと</h2><div>${hintFor(p, o.coachSkill ?? 0.6)}</div></section>`}
+    ${o.hideRecords ? '' : `<section class="card"><h2>記録</h2><dl class="kv"><dt>通算</dt><dd>${p.apps}試合 ${p.goals}点</dd><dt>今シーズン</dt><dd>${p.seasonApps}試合 ${p.seasonGoals}点</dd><dt>初出場</dt><dd>${esc(p.firstApp || 'まだ')}</dd><dt>初ゴール</dt><dd>${esc(p.firstGoal || 'まだ')}</dd><dt>契約</dt><dd>あと${p.contract}年 ・ 年${p.salary.toLocaleString()}万円</dd></dl>
+      <h3>伸びの記録</h3>${hist}</section>`}
     ${o.onReq ? `<section class="card"><h2>監督への頼み</h2><button class="btn ${p.req ? 'primary' : 'ghost'} wide" id="pReq">${p.req ? '起用の依頼を取り下げる' : 'この選手を試合で使ってほしい'}</button><div class="muted small" style="margin-top:6px">${esc(o.mgrName || '監督')}は、${esc(o.mgrObeyWord || '')}。</div></section>` : ''}
     ${o.extraHTML || ''}
   </div></div><div class="dock"><div class="in2 one"><button class="btn primary" id="pBack">もどる</button></div></div>`;

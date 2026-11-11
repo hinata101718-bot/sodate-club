@@ -17,6 +17,8 @@ import { emblemSVG } from './emblem';
 import { openMatch } from './matchview';
 import { openReport } from './report';
 import { openPlayer } from './playerview';
+import { mv } from './marketview';
+import { marketValue } from '../core/market';
 import { setSound, soundOn, sfx } from './sound';
 
 export const app = { G: null as unknown as GameState, kv: null as unknown as KV, tab: 'home' };
@@ -54,6 +56,7 @@ export function render() {
   v.innerHTML = (views[app.tab] || homeHTML)();
   bindView(v);
   bindOwner(G, v, (msg) => { if (msg) toast(msg); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
+  $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { squadView = 'tr'; mv.sub = 'cond'; setTab('squad'); }));
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
 }
 let selCache: { key: string; set: Set<number> } | null = null;
@@ -92,8 +95,8 @@ function homeHTML(): string {
   const pend = G.pending.map((e, i) => { const p = find(e.pid); if (!p) return ''; return `<div class="item"><span class="grow"><b>${esc(e.club)}</b> から ${esc(p.name)} にオファー（${e.price.toLocaleString()}万円）</span><button class="btn small primary" data-offer="${i}">見る</button></div>`; }).join('');
   const news = (G.news || []).filter(Boolean).map((n) => `<div class="item"><span class="grow">${esc(n)}</span></div>`).join('');
   const walk = G.owner.cands.filter((c) => c.src === 'trial').length + G.owner.trials.filter((p) => p.trialMonths === 0).length;
-  const scoutN = 0;
-  const owner = (walk ? `<div class="item"><span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN && G.week % 4 === 1 ? `<div class="item"><span class="grow">スカウトの候補が${scoutN}人</span><button class="btn small ghost" data-go-tr="1">見る</button></div>` : '');
+  const scoutN = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.season === G.season && k.week === G.week - 1).length;
+  const owner = (walk ? `<div class="item"><span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN ? `<div class="item"><span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">移籍市場を見る</button></div>` : '');
   const promo = G.promo?.open ? `<div class="item"><span class="grow"><b>春の昇格会議</b>：ユースからトップに上げる子を決める（決めずに進むと、コーチのおすすめどおりになる）</span><button class="btn small primary" data-go="youth">決める</button></div>` : '';
   const notes = G.yearNotes?.length && G.week >= 44 ? `<div class="item"><span class="grow">コーチから、選手${G.yearNotes.length}人についてのひとこと</span><button class="btn small ghost" data-act="notes">見る</button></div>` : '';
   const yrep = G.youthLog.length && G.youthLog[G.youthLog.length - 1].season === G.season && G.week >= 8 && G.week % 4 === 1 ? `<div class="item"><span class="grow">ユースの報告会議（${G.youthLog[G.youthLog.length - 1].month}月）</span><button class="btn small ghost" data-go="youth">見る</button></div>` : '';
@@ -182,7 +185,7 @@ function settingsHTML(): string {
 function bindView(v: HTMLElement) {
   const G = app.G;
   $$<HTMLElement>('[data-act]', v).forEach((b) => b.addEventListener('click', () => act(b.dataset.act!)));
-  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { squadView = 'tr'; setTab('squad'); }));
+  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { squadView = 'tr'; mv.sub = 'known'; setTab('squad'); }));
   $$<HTMLElement>('[data-go]', v).forEach((b) => b.addEventListener('click', () => setTab(b.dataset.go!)));
   $$<HTMLElement>('[data-sv]', v).forEach((b) => b.addEventListener('click', () => { squadView = b.dataset.sv!; render(); }));
   $$<HTMLElement>('[data-tv]', v).forEach((b) => b.addEventListener('click', () => { tableView = b.dataset.tv!; render(); }));
@@ -220,7 +223,7 @@ function contractHTML(p: Player): string {
   const G = app.G; const d = G.owner.renew[p.id]; const off = renewalOffer(p);
   const renew = p.contract <= 1 && G.week >= 44 ? `<h3>契約更新（今年で切れる）</h3><div class="muted small">更新すると給料は 年${off.salary.toLocaleString()}万円 になる。決めないときは、${off.years}年で更新する。</div>
     <div class="seg" role="group" aria-label="契約の年数" style="margin-top:6px">${[1, 2, 3, 4].map((y) => `<button data-renew="${y}" aria-pressed="${!!d && !d.no && d.years === y}">${y}年</button>`).join('')}<button data-renew="no" aria-pressed="${!!d?.no}">更新しない</button></div>` : p.contract <= 1 ? '<div class="muted small">契約は今年で切れる。12月の契約更新の時期に、更新するかを決める。</div>' : '';
-  return `<section class="card"><h2>契約と移籍</h2><div>あと${p.contract}年 ・ 年${p.salary.toLocaleString()}万円</div>${renew}
+  return `<section class="card"><h2>契約と移籍</h2><div>あと${p.contract}年 ・ 年${p.salary.toLocaleString()}万円</div><div>市場の値段（いま売るとだいたい）：<b>${yen(marketValue(p, myTier(G)))}</b></div>${renew}
     <button class="btn ${p.listed ? 'primary' : 'ghost'} wide" id="pSell" style="margin-top:10px">${p.listed ? '売りに出すのをやめる' : '売りに出す'}</button><div class="muted small" style="margin-top:6px">売りに出すと、移籍の期間に買い手を探す。買い手が見つかると、オファーとして届く。</div></section>`;
 }
 function afterWeek(res: ReturnType<typeof advanceWeek>) {

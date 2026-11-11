@@ -88,7 +88,7 @@ function learn(G: GameState, p: Player, club: string, src: KnownSrc, full: boole
   const mk = G.owner.mk; const old = mk.known[p.id];
   /* くわしい情報を、対戦で見ただけの情報で上書きしない（同じシーズンなら） */
   if (old && old.full && !full && old.season === G.season) return;
-  mk.known[p.id] = { pid: p.id, full, season: G.season, week: G.week, src, ovr: ovr(p), a: full ? p.a.map((v) => Math.floor(v)) : undefined, age: p.age, club, ...extra };
+  mk.known[p.id] = { pid: p.id, full, season: G.season, week: G.week, src, ovr: ovr(p), a: full ? [...p.a] : undefined, age: p.age, club, ...extra };
 }
 /** 対戦したクラブの先発（強い順の11人）は、名前・ポジション・だいたいの強さだけわかる */
 export function seeOpponent(G: GameState, c: Club) {

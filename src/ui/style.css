@@ -192,3 +192,7 @@ tr.down td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 .crest.big,svg.big{width:96px;height:106px;display:block;margin:0 auto}
 svg.mini{width:34px;height:38px}
 .seg.tight button{min-width:0;padding:0 2px}
+/* 移籍市場（夜2） */
+.selw{display:flex;flex-direction:column;gap:2px;flex:1;min-width:140px}
+.sel{min-height:44px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:inherit;padding:0 8px;width:100%}
+.seg.wide9 button{min-width:58px;flex:1 0 auto;padding:0 6px}
