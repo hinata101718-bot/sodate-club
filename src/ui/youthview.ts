@@ -10,13 +10,16 @@ export function youthHTML(G: GameState, sel: Set<number>): string {
   if (G.promo?.open) return promoHTML(G, sel);
   const rep = G.youthLog[G.youthLog.length - 1];
   const lineOf = (p: Player) => rep?.lines.find((l) => l.pid === p.id);
-  const byGrade = [3, 2, 1].map((g) => {
-    const list = G.youth.filter((p) => p.grade === g);
-    return `<section class="card"><h2>${g}年（${list.length}人）</h2><div class="plist">${list.map((p) => { const l = lineOf(p); return `<button class="pl" data-yid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname">${esc(p.name)}</span><br><span class="pmeta">${p.age}歳 ・ ${esc(p.pref)}${l ? ` ・ ${esc(l.words)} ${l.arrow}` : ''}</span></span><span class="small" style="color:var(--gold)">${l ? stars(l.stars) : ''}</span></button>`; }).join('')}</div></section>`;
-  }).join('');
-  const repCard = rep ? `<section class="card"><h2>${rep.month}月の報告会議</h2><div>${esc(rep.coach)}</div><button class="btn small ghost" data-act="ylog" style="margin-top:8px">報告をくわしく見る</button></section>` : `<section class="card"><h2>報告会議</h2><div class="muted">毎月はじめ（3月〜12月）に、ユースコーチから報告がある。数字は見せず、伸び方を言葉と矢印で伝えてくれる。</div></section>`;
-  return `<section class="card"><h2>ユース ・ ${G.youth.length}人</h2><div class="muted">数字が見えるのは、毎年2月はじめの「春の昇格会議」のときだけ。★はユースコーチの見立て（どこまで伸びそうか）。</div></section>${repCard}${byGrade}`;
+  /* 問91：学年を上で切りかえ、1人1行（押すと伸び方とくわしく見るボタン） */
+  const seg = `<div class="seg" role="group" aria-label="学年">${[3, 2, 1].map((g) => `<button data-ygr="${g}" aria-pressed="${yGrade === g}">${g}年（${G.youth.filter((p) => p.grade === g).length}）</button>`).join('')}</div><div style="height:10px"></div>`;
+  const list = G.youth.filter((p) => p.grade === yGrade);
+  const rows = list.map((p) => { const l = lineOf(p); const key = `y:${p.id}`; const open = yOpen === key;
+    return `<div class="srow-wrap"><button class="srow" data-yopen="${key}" aria-expanded="${open}">${posTag(p.pos)}<span class="grow sname">${esc(p.name)}</span>${l ? `<span class="small">${l.arrow}</span><span class="small" style="color:var(--gold)">${stars(l.stars)}</span>` : ''}<span class="chev" aria-hidden="true">${open ? '▲' : '▼'}</span></button>
+      ${open ? `<div class="sdetail"><div class="small">${p.age}歳 ・ ${esc(p.pref)}${l ? ` ・ <b>${esc(l.words)} ${l.arrow}</b>` : ''}</div>${l ? `<div class="muted small">「${esc(l.comment)}」</div>` : ''}<button class="btn small ghost" data-yid="${p.id}" style="margin-top:6px;align-self:flex-start">くわしく見る</button></div>` : ''}</div>`; }).join('');
+  const repCard = rep ? `<section class="card"><h2>${rep.month}月の報告会議</h2><div>${esc(rep.coach)}</div><button class="btn small ghost" data-act="ylog" style="margin-top:8px">報告をくわしく見る</button></section>` : `<section class="card"><h2>報告会議</h2><div class="muted small">毎月はじめ（3月〜12月）に、ユースコーチから報告がある。</div></section>`;
+  return `${repCard}${seg}<section class="card"><h2>${yGrade}年</h2><div class="slist">${rows || '<div class="muted">いない</div>'}</div><div class="muted small" style="margin-top:8px">★はユースコーチの見立て（どこまで伸びそうか）。数字が見えるのは、2月の「春の昇格会議」のときだけ。</div></section>`;
 }
+let yGrade = 3; let yOpen = '';
 function promoHTML(G: GameState, sel: Set<number>): string {
   const room = 25 - G.squad.length;
   const list = [...G.youth].sort((a, b) => (b.grade || 0) - (a.grade || 0) || ovr(b) - ovr(a));
@@ -36,6 +39,8 @@ export function bindYouth(G: GameState, root: HTMLElement, sel: Set<number>, rer
   $$<HTMLElement>('[data-psel]', root).forEach((b) => b.addEventListener('click', () => { const id = +b.dataset.psel!; if (sel.has(id)) sel.delete(id); else sel.add(id); rerender(); }));
   $$<HTMLElement>('[data-act="promo"]', root).forEach((b) => b.addEventListener('click', () => { done(decidePromo(G, [...sel])); }));
   $$<HTMLElement>('[data-act="ylog"]', root).forEach((b) => b.addEventListener('click', () => openYouthLog(G, rerender)));
+  $$<HTMLElement>('[data-ygr]', root).forEach((b) => b.addEventListener('click', () => { yGrade = +b.dataset.ygr!; yOpen = ''; rerender(); }));
+  $$<HTMLElement>('[data-yopen]', root).forEach((b) => b.addEventListener('click', () => { yOpen = yOpen === b.dataset.yopen ? '' : b.dataset.yopen!; rerender(); }));
   $$<HTMLElement>('[data-yid]', root).forEach((b) => b.addEventListener('click', () => openYouthPlayer(G, +b.dataset.yid!, rerender)));
 }
 export function openYouthLog(G: GameState, back: () => void) {
