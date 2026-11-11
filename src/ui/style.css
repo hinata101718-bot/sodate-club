@@ -470,3 +470,16 @@ nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
 .ovr.big{min-width:60px;min-height:56px}.ovr.big .v[class*="c-"]{width:58px;height:54px;font-size:32px}
 /* まだくわしく調べていない選手の「60〜65」は、メダルにせずそのまま */
 .ovr .v:not([class*="c-"]){font-family:var(--f-num);font-style:italic;font-size:20px;color:var(--muted)}
+/* 背景の絵（チャッピーで描いたもの）。クラブの色は上からうすく重ねる */
+.hero.hero-img{background:linear-gradient(100deg,color-mix(in srgb,var(--club) 88%,#000) 0%,color-mix(in srgb,var(--club) 55%,transparent) 48%,rgba(0,0,0,.05) 100%),url(/img/stadium.webp) center 62%/cover no-repeat,var(--club);color:#fff}
+.hero.hero-img .hero-goal,.hero.hero-img .hero-note{background:rgba(0,0,0,.38);backdrop-filter:blur(2px)}
+.hubart{height:132px;border-radius:16px;margin-bottom:12px;background-size:cover;background-position:center;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.hubart::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,color-mix(in srgb,var(--club) 45%,transparent) 100%)}
+.hubart-training{background-image:url(/img/training.webp)}
+.hubart-office{background-image:url(/img/office.webp)}
+.hubart-trophy{background-image:url(/img/trophy.webp)}
+.meetart{height:110px;margin:0}
+.sheet.cere-sheet{background:linear-gradient(rgba(10,10,25,.35),rgba(10,10,25,.55)),url(/img/stage.webp) center top/cover fixed no-repeat,#1b1b2b}
+.sheet.cere-sheet .bar h2,.sheet.cere-sheet .bar .muted{color:#fff}
+.sheet.cere-sheet .cere-open,.sheet.cere-sheet .cere-card{background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(3px)}
+@media (prefers-color-scheme:dark){.hubart{filter:brightness(.85)}}

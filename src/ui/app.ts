@@ -132,6 +132,7 @@ function promoSel(): Set<number> {
 
 /** ホームの看板に描くスタジアム（飾り） */
 const STADIUM_SVG = `<svg class="hero-bg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><g fill="currentColor"><path d="M0 160V96q200-58 400 0v64z" opacity=".22"/><path d="M0 160v-40q200-40 400 0v40z" opacity=".3"/><rect x="40" y="18" width="4" height="70" opacity=".35"/><rect x="356" y="18" width="4" height="70" opacity=".35"/><rect x="28" y="10" width="28" height="12" rx="2" opacity=".5"/><rect x="344" y="10" width="28" height="12" rx="2" opacity=".5"/></g><g stroke="currentColor" fill="none" opacity=".35"><ellipse cx="200" cy="150" rx="150" ry="22"/><path d="M200 128v44"/><ellipse cx="200" cy="150" rx="22" ry="6"/></g></svg>`;
+void STADIUM_SVG;
 function nextHTML(G: GameState): string {
   const e = eventOf(G);
   const oppLine = (opp: number, home: boolean | null, extra = '') => { const c = clubById(G, opp); return `<div class="next-match">${home == null ? '<span class="tag">中立</span>' : `<span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span>`}<span class="grow">${esc(c.name)}</span><span class="muted small">${c.tier}部${oppRank(c.id, c.tier)} ・ ${esc(c.mgr.style)}</span></div>${extra}`; };
@@ -190,7 +191,7 @@ function homeHTML(): string {
   const hasMatch = hasMyMatch(G);
   void owner;
   return `
-  <section class="hero">${STADIUM_SVG}
+  <section class="hero hero-img">
     <div class="hero-in">${emblemSVG(G.club.emblem, 'hero-crest')}<div class="grow">
       <div class="hero-rank">${tbl.w + tbl.d + tbl.l ? `${tier}部 <b>${rank}</b><small>位</small>` : `${tier}部 <small>開幕前</small>`}</div>
       ${tbl.w + tbl.d + tbl.l ? `<div class="hero-pts">勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</div>` : ''}</div></div>
@@ -246,7 +247,8 @@ function hubHTML(g: string): string {
       ['rec', 'リーグの歴史', G.history.length ? `${G.history.length}年ぶん` : '1年目が終わるとのる', ICON.rec],
     ],
   };
-  return `<div class="hub hub-${g}">${tiles[g].map(([k, l, s, ic]) => `<button class="hubtile" data-go="${k}"><span class="hic">${ic}</span><span class="hl">${l}</span><span class="hs">${esc(s)}</span></button>`).join('')}</div>`;
+  const art: Record<string, [string, string]> = { team: ['training', '練習場'], biz: ['office', 'クラブハウス'], league: ['trophy', 'クラブの歴史'] };
+  return `<div class="hubart hubart-${art[g][0]}" role="img" aria-label="${art[g][1]}の絵"></div><div class="hub hub-${g}">${tiles[g].map(([k, l, s, ic]) => `<button class="hubtile" data-go="${k}"><span class="hic">${ic}</span><span class="hl">${l}</span><span class="hs">${esc(s)}</span></button>`).join('')}</div>`;
 }
 const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 export const ICON: Record<string, string> = {

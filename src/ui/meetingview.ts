@@ -31,7 +31,7 @@ export function openMeeting(G: GameState, done: () => void) {
       body = m.kind === 'year' ? `<section class="card"><h2>決まったこと</h2><dl class="kv"><dt>来年の目標</dt><dd>${esc(m.goals![m.pick.goal].text)}（${m.goals![m.pick.goal].level}）</dd><dt>強化方針</dt><dd>${m.pick.policy === '若手多め' ? '若手を育てる' : m.pick.policy === '勝ち優先' ? '勝ちを優先' : 'バランス'}</dd><dt>補強の予算</dt><dd>${yen(m.budgets![m.pick.budget])}まで</dd><dt>監督の評価</dt><dd>${evalWord(G.mgrEval ?? 60)}</dd></dl>
         <div class="muted small" style="margin-top:6px">このあと12月は、契約の更新と冬の移籍の期間。</div></section>` : `<section class="card"><h2>${esc(m.title)}は終わり</h2><div class="muted">また来月。</div></section>`;
     }
-    sheet(`<div class="bar"><h2>${esc(m.title)}</h2><span class="muted small">${Math.min(k + 1, n + 1)} / ${n + 1}</span></div><div class="meet">${body}</div>`,
+    sheet(`<div class="bar"><h2>${esc(m.title)}</h2><span class="muted small">${Math.min(k + 1, n + 1)} / ${n + 1}</span></div><div class="hubart hubart-office meetart" role="img" aria-label="会議室の絵"></div><div class="meet">${body}</div>`,
       `<div class="in2">${last ? '' : '<button class="btn ghost" id="mtSkip">最後まで飛ばす</button>'}<button class="btn primary" id="mtNext">${last ? '閉じる' : '次へ'}</button></div>`);
     $('#mtNext').addEventListener('click', () => { if (last) { closeMeeting(G); done(); } else { k++; show(); } });
     $('#mtSkip')?.addEventListener('click', () => { k = n; show(); });

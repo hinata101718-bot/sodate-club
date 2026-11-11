@@ -24,8 +24,9 @@ export function openCeremony(G: GameState, done: () => void) {
     if (s.kind === 'end') { const my = [...mine, ...others, ...c.xi].filter((a) => a.me);
       body = `<section class="card"><h2>表彰式のまとめ</h2>${my.length ? `<div class="list">${my.map((a) => `<div class="row"><span class="tag gold">${esc(a.title)}</span><b class="grow">${esc(a.name)}</b></div>`).join('')}</div>${c.effects.length ? `<div class="muted small" style="margin-top:8px">${c.effects.map(esc).join('<br>')}<br>クラブの人気も上がった。</div>` : ''}` : '<div class="muted">今年は、自分のクラブの選手は選ばれなかった。来年こそ。</div>'}</section>`; }
     const last = k === steps.length - 1;
-    sheet(`<div class="bar"><h2>年末の表彰式</h2><span class="muted small">${k + 1} / ${steps.length}</span></div><div class="cere">${body}</div>`,
+    const sh = sheet(`<div class="bar"><h2>年末の表彰式</h2><span class="muted small">${k + 1} / ${steps.length}</span></div><div class="cere">${body}</div>`,
       `<div class="in2">${last ? '' : '<button class="btn ghost" id="cSkip">最後まで飛ばす</button>'}<button class="btn primary" id="cNext">${last ? '閉じる' : '次へ'}</button></div>`);
+    sh.classList.add('cere-sheet');
     if (party) { confetti(); sfx('goal'); }
     $('#cNext').addEventListener('click', () => { if (last) { closeCeremony(G); done(); } else { k++; show(); } });
     $('#cSkip')?.addEventListener('click', () => { k = steps.length - 1; show(); });
