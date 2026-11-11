@@ -205,7 +205,7 @@ function myAfter(G: GameState, v: MatchView) {
   /* 3連敗したら、監督からメッセージ（問112） */
   const my = v.home.me ? v.score[0] - v.score[1] : v.score[1] - v.score[0];
   G.streak = my < 0 ? (G.streak ?? 0) + 1 : 0;
-  if (G.streak === 3) mail(G, '監督', G.mgr.name, '3連敗について', 'オーナー、3連敗です。申し訳ありません。並び方と先発を見直して、立て直します。頼みがあれば、試合前の画面から出してください。');
+  if (G.streak === 3) mail(G, '監督', G.mgr.name, '3連敗について', '3連敗です。申し訳ありません。並び方と先発を見直して、次の試合で立て直します。起用の頼みがあれば、試合前に言ってください。');
   if (o.length) {
     const ok = o.filter((x) => x.heard); const ng = o.filter((x) => !x.heard);
     if (G.snap) { G.snap.ord[0] += o.length; G.snap.ord[1] += ok.length; }
@@ -302,12 +302,12 @@ export function advanceWeek(G: GameState): WeekResult {
     /* コーチからの急ぎの知らせ（問112）：覚醒・長いケガ */
     const coachName = (G.owner?.coaches.phys ?? G.owner?.coaches.off)?.name ?? G.mgr.name;
     for (const e of report) { const p = G.squad.find((x) => x.id === e.pid); if (!p) continue;
-      if (e.awake) { G.snap?.awake.push(p.name); mail(G, 'コーチ', coachName, `${p.name}が覚醒`, `オーナー、${p.name}（${p.pos}）が覚醒しました！ 練習で見違えるような動きです。週の報告で、どこが伸びたか見てください。`); }
-      if (e.injNew && p.inj >= 4) mail(G, 'コーチ', coachName, `${p.name}のケガ`, `${p.name}（${p.pos}）がケガをしました。治るまで、あと${p.inj}週ほどかかります。`); }
+      if (e.awake) { G.snap?.awake.push(p.name); mail(G, 'コーチ', coachName, `${p.name}が覚醒`, `オーナー、${p.name}（${p.pos}）が覚醒しました！ 今週の練習は、まるで別人です。どこが伸びたかは、週の報告にまとめておきます。`); }
+      if (e.injNew && p.inj >= 4) mail(G, 'コーチ', coachName, `${p.name}のケガ`, `${p.name}（${p.pos}）がケガをしました。もどってくるまで、${p.inj}週ほどかかりそうです。`); }
     if (!isOff(w)) youthWeek(r, G.youth, youthCoachSkill(G), ctx.field, isCamp(w));
     /* スカウトの報告は、メッセージで届く（問112） */
     if (w % 4 === 0) { const sc = G.owner?.scouts[0]?.name ?? 'スカウト'; for (const l of scoutMonth(G, r)) mail(G, 'スカウト', sc, /売り込み/.test(l) ? '売り込みに来た選手' : 'スカウトの報告', l); }
-    if (w % 4 === 2 && G.owner) for (const l of monthBond(G)) { const nm = l.split('（')[0]; const p = G.squad.find((x) => x.name === nm); mail(G, '選手', nm, '少しお話があります', 'オーナー、少しお話があります。もっと試合に出たいです。このままなら、移籍させてください。', { pid: p?.id, kind: 'wantOut' }); }
+    if (w % 4 === 2 && G.owner) for (const l of monthBond(G)) { const nm = l.split('（')[0]; const p = G.squad.find((x) => x.name === nm); mail(G, '選手', nm, '少しお話があります', 'もっと試合に出たいです。このまま出番がないなら、移籍させてください。', { pid: p?.id, kind: 'wantOut' }); }
     if (w === AWARD_WEEK) releaseFree(G, r);
     if (w === 24 || w === AWARD_WEEK) news.push(...freeNews(G, r));
     if (w === 25 || w === AWARD_WEEK + 1) news.push(...aiTransfers(G, r));
@@ -416,7 +416,7 @@ function yearEnd(G: GameState, r: Rng): string[] {
   if (G.owner) {
     const judged = judgeGoal(G, tier, rank); out.push(...judged);
     G.meet = yearMeeting(G, judged);
-    if ((G.mgrEval ?? 60) < 25) mail(G, '監督', G.mgr.name, '今年の結果について', '目標に大きく届かず、申し訳ありません。クラブのためになるなら、監督の交代も考えてください。');
+    if ((G.mgrEval ?? 60) < 25) mail(G, '監督', G.mgr.name, '今年の結果について', '目標に大きく届かず、申し訳ありません。クラブのためなら、私を代えてもらってかまいません。');
   }
   void r;
   return out;
