@@ -206,3 +206,5 @@ svg.mini{width:34px;height:38px}
 .hubtile:active{background:var(--club-soft)}
 .crumb{display:flex;align-items:center;gap:10px;margin:2px 0 10px}
 .crumb h2{margin:0;font-size:18px}
+.selrow{display:flex;gap:8px}.selrow .selw{min-width:0;flex:1}.selrow .sel{padding:0 4px}
+.seg button{white-space:nowrap;padding:0 4px}

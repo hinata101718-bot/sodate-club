@@ -54,7 +54,7 @@ export function render() {
   $('#crest').innerHTML = emblemSVG(G.club.emblem);
   $('#clubName').textContent = G.club.name;
   const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
-  $('#clubSub').textContent = `${G.season}年目 ${monthOf(G.week)}月 ・ ${myTier(G)}部${pl ? ` ${myRank(G)}位` : ''} ・ お金 ${yen(G.owner.money)}`;
+  $('#clubSub').textContent = `${G.season}年目${monthOf(G.week)}月・${myTier(G)}部${pl ? `${myRank(G)}位` : ''}・お金 ${yen(G.owner.money)}`;
   const v = $('#view');
   const views: Record<string, () => string> = { home: homeHTML, team: () => hubHTML('team'), biz: () => hubHTML('biz'), league: () => hubHTML('league'), squad: squadHTML, tr: () => transferHTML(G), youth: () => youthHTML(G, promoSel()), people: () => peopleHTML(G), fac: () => facHTML(G), money: () => moneyHTML(G), table: tableHTML, cup: () => cupHTML(G), rec: () => recordHTML(G), settings: settingsHTML };
   const grp = GROUP_OF[app.tab];

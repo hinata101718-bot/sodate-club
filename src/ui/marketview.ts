@@ -52,12 +52,13 @@ export function marketHTML(G: GameState): string {
   };
   list.sort(sorters[mv.sort] ?? sorters.ovr);
   const all = list.length; const shown = mv.more ? list : list.slice(0, 40);
-  const filt = `<div class="seg wide9" role="group" aria-label="ポジション"><button data-mv-pos="" aria-pressed="${mv.pos === ''}">全部</button>${POS.map((p) => `<button data-mv-pos="${p}" aria-pressed="${mv.pos === p}">${p}</button>`).join('')}</div>
-    <div class="row wrap" style="margin-top:8px;gap:8px">
-      ${mv.sub === 'known' ? `<label class="selw"><span class="small muted">いるところ</span><select class="sel" data-mv-where>${[['', '全部'], ['1', '1部'], ['2', '2部'], ['3', '3部'], ['ama', '高校・大学'], ['free', 'フリー']].map(([k, l]) => `<option value="${k}" ${mv.where === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}
-      <label class="selw"><span class="small muted">並べかえ</span><select class="sel" data-mv-sort>${[['ovr', '強い順'], ['age', '若い順'], ['value', '値段の高い順'], ['new', '新しい情報から']].map(([k, l]) => `<option value="${k}" ${mv.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>`;
+  /* 問87：絞りこみは1行に3つ（ポジション・いるところ・並べかえ） */
+  const sel = (attr: string, label: string, cur: string, opts: string[][]) => `<label class="selw"><span class="small muted">${label}</span><select class="sel" ${attr}>${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  const filt = `<div class="selrow">${sel('data-mv-posel', 'ポジション', mv.pos, [['', '全部'], ...POS.map((p) => [p, p])])}
+      ${mv.sub === 'known' ? sel('data-mv-where', 'いるところ', mv.where, [['', '全部'], ['1', '1部'], ['2', '2部'], ['3', '3部'], ['ama', '高校・大学'], ['free', 'フリー']]) : ''}
+      ${sel('data-mv-sort', '並べかえ', mv.sort, [['ovr', '強い順'], ['age', '若い順'], ['value', '高い順'], ['new', '新しい順']])}</div>`;
   const empty = mv.sub === 'free' ? 'フリーの選手の情報は、移籍の期間（7月・12月のはじめ）にお知らせで届く。スカウトが見つけてくることもある。' : 'まだ知っている選手がいない（条件に合う選手もいない）。スカウトが毎月調べてくるほか、対戦した相手の先発や、年末に表彰された選手もここに出る。';
-  return head + `<section class="card"><h2>${mv.sub === 'free' ? 'フリーの選手' : '知っている選手'}（${all}人）</h2><div class="muted small">知らない選手は出てこない。くわしく知りたい選手は、スカウトの条件を合わせて調べてもらおう。</div><div style="margin-top:8px">${filt}</div>
+  return head + `<section class="card"><h2>${mv.sub === 'free' ? 'フリーの選手' : '知っている選手'}（${all}人）</h2><div style="margin-top:4px">${filt}</div>
     <div class="plist" style="margin-top:8px">${shown.map((r) => rowHTML(G, r)).join('') || `<div class="muted">${empty}</div>`}</div>
     ${all > shown.length ? `<button class="btn small ghost wide" data-mv-more="1" style="margin-top:8px">のこり${all - shown.length}人も見る</button>` : ''}</section>`;
 }
@@ -131,6 +132,7 @@ export function bindMarket(G: GameState, root: HTMLElement, done: (msg?: string 
   on('data-mv-more', () => { mv.more = true; });
   on('data-unbid', (v) => { cancelBid(G, +v); return '申し込みをやめた'; });
   $$<HTMLSelectElement>('[data-mv-where]', root).forEach((s) => s.addEventListener('change', () => { mv.where = s.value; mv.more = false; done(null); }));
+  $$<HTMLSelectElement>('[data-mv-posel]', root).forEach((s) => s.addEventListener('change', () => { mv.pos = s.value as Pos | ''; mv.more = false; done(null); }));
   $$<HTMLSelectElement>('[data-mv-sort]', root).forEach((s) => s.addEventListener('change', () => { mv.sort = s.value; done(null); }));
   $$<HTMLElement>('[data-known]', root).forEach((b) => b.addEventListener('click', () => openKnown(G, +b.dataset.known!, done)));
   const scout = (id: string) => G.owner.scouts.find((s) => s.id === +id)!;
