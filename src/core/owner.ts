@@ -1,4 +1,5 @@
 /* オーナーが決めること（企画書 4・9-2〜9-4・10・11・12）：人を雇う・お金・施設・移籍と契約 */
+import { mail } from './meeting';
 import { Rng, clamp } from './rng';
 import { POS, type Pos } from './constants';
 import { PREFS, prefByName, prefScale } from './data/prefs';
@@ -96,6 +97,11 @@ export function weekMoney(G: GameState, homeGate: { oppTier: number; cup: boolea
     const need = Math.ceil(-o.money / 1000) * 1000; const got = borrow(G, need);
     if (got > 0) out.push(`お金が足りないので、銀行から ${got.toLocaleString()}万円を借りた。`);
     if (o.money < 0 && !o.warnedDebt) { o.warnedDebt = true; out.push('借金が上限に達した。選手を売るか、施設づくりをがまんしてお金をためよう。'); }
+    /* 50シーズンのテストで見つけた：借金が上限でもお金がマイナスのまま進めた。月の終わりに給料の支払いが遅れ、選手の気持ちが下がる */
+    if (o.money < 0 && G.week % 4 === 3) {
+      for (const p of G.squad) { p.love = Math.max(0, (p.love ?? 40) - 3); p.unrest = Math.min(100, (p.unrest ?? 0) + 6); }
+      mail(G, '経理', G.front?.acct ?? '経理', '給料の支払いが遅れています', `借金が上限まで来ていて、お金が ${Math.round(-o.money).toLocaleString()}万円足りません。選手の給料の支払いが遅れていて、選手たちの気持ちが下がっています。給料の高い選手を売るか、契約を見直してください。`);
+    }
   } else o.warnedDebt = false;
   return out;
 }

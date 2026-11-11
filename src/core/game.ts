@@ -393,6 +393,7 @@ export function answerOffer(G: GameState, i: number, accept: boolean): string | 
   if (accept && G.squad.length <= 16) return 'トップが16人より少なくなると試合ができなくなるので、受けられない。';
   if (accept) {
     const p = G.squad.find((x) => x.id === e.pid);
+    if (p && p.pos === 'GK' && G.squad.filter((x) => x.pos === 'GK').length <= 2) return 'キーパーが2人より少なくなると試合が組めなくなるので、受けられない。先にキーパーを獲ろう。';
     if (p && refusesToLeave(p, G.season)) { G.pending.splice(i, 1); return `${p.name} は「このクラブに残りたい」と言って、移籍を断った。`; }
     G.squad = G.squad.filter((x) => x.id !== e.pid);
     if (G.owner) earn(G, 'sales', e.price);

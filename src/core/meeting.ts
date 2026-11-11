@@ -77,7 +77,7 @@ export function goalOptions(G: GameState, tier: number, season: number, ahead = 
   const e = expectedRank(G, tier) - ahead; const cap = tier < 3 ? 10 : 12;
   let hard = clamp(e - 3, 1, cap), just = clamp(e, 1, cap), easy = clamp(e + 3, 1, cap);
   if (tier > 1 && hard <= 2) hard = tier === 1 ? hard : 2;
-  if (just <= hard) just = Math.min(cap, hard + 2);
+  if (just <= hard) just = Math.min(cap, hard + 1);
   if (easy <= just) easy = Math.min(cap, just + 2);
   if (just <= hard) hard = Math.max(1, just - 1);
   if (easy <= just) just = Math.max(hard + 1, easy - 1);
