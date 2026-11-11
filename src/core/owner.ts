@@ -9,13 +9,15 @@ import { growPlayer, DEFAULT_CTX, type GrowCtx } from './growth';
 import { monthlyReport, type YouthReport } from './youth';
 import type { Manager, Player } from './types';
 import type { GameState } from './game';
-import { TIER_LVL } from './world';
+import { initMarket, newMarketSeason, type MarketState } from './market';
 
 export interface Cand { id: number; p: Player; src: 'scout' | 'club' | 'trial'; fee: number; note: string; from: string; clubId?: number; scout?: string; until: number; }
 export interface OwnerState {
   money: number; debt: number; ledger: Ledger; lastLedger: Ledger | null; pop: number; sponsor: number;
   fac: Record<FacKey, number>; build: { key: FacKey; weeks: number; total: number } | null;
-  coaches: Record<CoachRole, Coach | null>; scouts: Scout[]; wish: { pos: Pos | null; maxAge: number | null };
+  coaches: Record<CoachRole, Coach | null>; scouts: Scout[];
+  /** 移籍市場（知っている選手・フリー・申し込み） */
+  mk: MarketState;
   market: { mgr: Manager[]; coach: Record<CoachRole, Coach[]>; scout: Scout[] };
   cands: Cand[]; trials: Player[]; trialLog: YouthReport[]; renew: Record<number, { years: number; salary: number; no?: boolean }>;
   warnedDebt: boolean;
@@ -29,7 +31,7 @@ export function initOwner(r: Rng, ids: { n: number }, pref: string): OwnerState 
   const o: OwnerState = {
     money: Math.round((8000 + prefScale(pref) * 4000) / 100) * 100, debt: 0, ledger: emptyLedger(), lastLedger: null, pop: Math.round(15 + prefScale(pref) * 10), sponsor: 0,
     fac: { field: 1, youth: 1, stadium: 1, medical: 1, dorm: 0 }, build: null,
-    coaches, scouts: [makeScout(r, ids, 0.35)], wish: { pos: null, maxAge: null },
+    coaches, scouts: [makeScout(r, ids, 0.35)], mk: initMarket(),
     market: { mgr: [], coach: { off: [], def: [], gk: [], phys: [], youth: [] }, scout: [] },
     cands: [], trials: [], trialLog: [], renew: {}, warnedDebt: false,
   };
@@ -133,47 +135,6 @@ export function hireScout(G: GameState, id: number): string | null {
 }
 export function fireScout(G: GameState, id: number) { const s = G.owner.scouts.find((x) => x.id === id); if (!s) return; G.owner.scouts = G.owner.scouts.filter((x) => x !== s); G.owner.market.scout.push(s); }
 
-/* ---------- スカウトが毎月持ってくる候補（企画書 9-2） ---------- */
-export function scoutMonth(G: GameState, r: Rng): string[] {
-  const o = G.owner; const out: string[] = [];
-  o.cands = o.cands.filter((c) => c.until > absWeek(G) && c.src !== 'scout');
-  for (const s of o.scouts) {
-    const n = 1 + (r.next() < s.skill ? 1 : 0) + (r.next() < s.skill * 0.6 ? 1 : 0);
-    for (let i = 0; i < n; i++) {
-      const pos = o.wish.pos ?? (s.pos && r.next() < 0.7 ? s.pos : r.pick(POS));
-      const maxAge = o.wish.maxAge ?? 22;
-      const age = r.int(17, Math.max(17, Math.min(22, maxAge)));
-      const regionPrefs = PREFS.filter((p) => p.region === s.region).map((p) => p.name);
-      const pref = r.next() < 0.7 ? r.pick(regionPrefs) : r.pick(PREFS).name;
-      const lvl = 40 + r.int(0, 10) + (age - 17) * 1.5 + (tierOf(G) < 3 ? 4 : 0);
-      const p = makePlayer(r, G.ids, lvl, pos, { age, nSp: r.next() < 0.3 ? 1 : 0, exp: age >= 20 ? 10 : 0, pref, origin: 'スカウト' });
-      /* 腕のいいスカウトほど、隠れた原石を持ってくる（問30） */
-      const gem = r.next() < 0.04 + s.skill * 0.16;
-      p.pot = clamp(Math.round(ovr(p) + 6 + r.next() * 10 + s.skill * 10 + (gem ? r.int(8, 16) : 0)), 40, 88);
-      if (p.gStart < age - 2) p.gStart = age - r.int(0, 2);
-      p.contract = 3; p.salary = salaryFor(ovr(p));
-      const fee = Math.round((100 + r.next() * 300 + (p.pot - 60) * 8) / 10) * 10;
-      o.cands.push({ id: p.id, p, src: 'scout', fee: Math.max(50, fee), note: scoutNote(p, s.skill, r), from: age <= 18 ? '高校生' : '大学生', scout: s.name, until: absWeek(G) + 4 });
-    }
-  }
-  if (o.scouts.length) out.push(`スカウトが候補を${o.cands.filter((c) => c.src === 'scout').length}人持ってきた。`);
-  return out;
-}
-function scoutNote(p: Player, skill: number, r: Rng): string {
-  const room = p.pot - ovr(p) + (r.next() > 0.45 + skill * 0.55 ? r.int(-10, 10) : 0);
-  const g = p.sp.find((s) => ['練習の虫', 'キャンプで化ける', '実戦で伸びる', '吸収力', '学ぶ力', '衰えにくい'].includes(s));
-  const base = room >= 25 ? '化けるかもしれない。ほかのクラブに取られる前に' : room >= 15 ? '伸びしろがある。数年かけて育てたい' : room >= 8 ? 'まじめな子。少しずつ伸びそうだ' : 'すぐに使えるが、上はそれほど高くないかもしれない';
-  return g && skill >= 0.5 ? `${base}。${g === '練習の虫' ? 'あいつは練習の虫です' : `「${g}」の気配がある`}` : base;
-}
-/** 他のクラブで出番のない若手（企画書 9-3）：移籍の期間にだけ */
-export function clubYoung(G: GameState, r: Rng): string[] {
-  const o = G.owner; o.cands = o.cands.filter((c) => c.src !== 'club');
-  const pool: { p: Player; c: (typeof G.clubs)[number] }[] = [];
-  for (const c of G.clubs) if (!c.me && c.tier <= Math.max(1, tierOf(G) - 0) ) for (const p of c.squad) if (p.age <= 22 && p.seasonApps <= 4) pool.push({ p, c });
-  r.shuffle(pool);
-  for (const { p, c } of pool.slice(0, 5)) o.cands.push({ id: p.id, p, src: 'club', fee: Math.max(200, Math.round((Math.pow(Math.max(0, ovr(p) - 35), 2) * 1.2) / 100) * 100), note: `${c.tier}部の${c.name}で、出番がない`, from: c.name, clubId: c.id, until: absWeek(G) + (G.week >= 44 ? 48 - G.week : 32 - G.week) });
-  return pool.length ? ['他のクラブで出番のない若手の情報が届いた。'] : [];
-}
 /** 自分から売り込みに来る子（企画書 9-4）：1シーズンに1〜3人ほど */
 export function maybeWalkIn(G: GameState, r: Rng): string[] {
   if (r.next() > 0.045) return [];
@@ -182,23 +143,6 @@ export function maybeWalkIn(G: GameState, r: Rng): string[] {
   p.pot = clamp(ovr(p) + r.int(4, 26), 40, 86); p.salary = salaryFor(ovr(p)); p.contract = 2;
   G.owner.cands.push({ id: p.id, p, src: 'trial', fee: 0, note: '「テストを受けさせてください」', from: `${p.pref}から`, until: absWeek(G) + 4 });
   return [`${p.name}（${age}歳・${pos}）が「テストを受けさせてください」とやってきた。`];
-}
-export function signCand(G: GameState, id: number, r: Rng): string | null {
-  const o = G.owner; const c = o.cands.find((x) => x.id === id); if (!c) return '見つからない。';
-  if (G.squad.length >= 25) return 'トップは25人まで。誰かを売りに出してから獲ろう。';
-  if (c.src === 'club' && !inWindow(G)) return '他のクラブの選手は、移籍の期間にしか獲れない。';
-  if (o.money < c.fee) return 'お金が足りない。';
-  pay(G, 'buy', c.fee);
-  if (c.src === 'club' && c.clubId != null) {
-    const club = G.clubs.find((x) => x.id === c.clubId)!;
-    const i = club.squad.indexOf(club.squad.find((x) => x.id === c.p.id)!);
-    if (i >= 0) { const np = makePlayer(r, G.ids, TIER_LVL[club.tier] - 2, c.p.pos, { age: r.int(19, 28) }); np.num = c.p.num; club.squad[i] = np; }
-    c.p.origin = '他クラブから'; c.p.contract = 3; c.p.salary = salaryFor(ovr(c.p));
-  }
-  c.p.num = 0; c.p.req = false; c.p.listed = false; c.p.hist = c.p.hist || [];
-  G.squad.push(c.p); assignNumbers(G.squad);
-  o.cands = o.cands.filter((x) => x !== c);
-  return null;
 }
 export function dropCand(G: GameState, id: number) { G.owner.cands = G.owner.cands.filter((x) => x.id !== id); }
 /** 練習生として1〜3か月預かる */
@@ -227,7 +171,7 @@ export function trialWeek(G: GameState, r: Rng, ctx: GrowCtx): string[] {
 }
 
 /* ---------- 移籍と契約（企画書 12） ---------- */
-export const inWindow = (G: GameState) => (G.week >= 24 && G.week <= 31) || G.week >= 44;
+export { marketOpen as inWindow } from './market';
 export function listPlayer(G: GameState, id: number, on: boolean) { const p = G.squad.find((x) => x.id === id); if (p) p.listed = on; }
 /** 契約更新の案（冬の契約更新の時期にまとめて決める）。更新すると給料が上がることがある */
 export function renewalOffer(p: Player): { years: number; salary: number } {
@@ -257,6 +201,7 @@ export function newOwnerSeason(G: GameState, r: Rng): string[] {
   o.lastLedger = o.ledger; o.ledger = emptyLedger();
   o.sponsor = sponsorYear(tierOf(G), G.club.pref, o.pop);
   o.cands = o.cands.filter((c) => c.src === 'trial');
-  void r; return [`今年のスポンサー収入は ${o.sponsor.toLocaleString()}万円の見こみ。`];
+  newMarketSeason(G, r);
+  return [`今年のスポンサー収入は ${o.sponsor.toLocaleString()}万円の見こみ。`];
 }
 export { FAC_KEYS, prefByName };

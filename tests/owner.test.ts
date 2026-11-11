@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { advanceWeek, newGame, answerOffer, type GameState } from '../src/core/game';
-import { borrow, repay, startBuild, signCand, takeTrial, decideTrial, setRenew, hireScout, hireCoach, coachWindow, payroll } from '../src/core/owner';
+import { borrow, repay, startBuild, takeTrial, decideTrial, setRenew, hireScout, hireCoach, coachWindow, payroll } from '../src/core/owner';
 import { debtCap, facCost } from '../src/core/finance';
 import { Rng } from '../src/core/rng';
+import { bid } from '../src/core/market';
 
 const toWeek = (G: GameState, w: number, s: number) => { let g = 0; while (!(G.week === w && G.season === s) && g++ < 400) advanceWeek(G); };
 
@@ -46,14 +47,15 @@ describe('人を雇う（企画書 10）', () => {
     toWeek(G, 45, 1);
     expect(hireCoach(G, 'off', G.owner.market.coach.off[0].id)).toBeNull();
   });
-  it('スカウトは毎月候補を持ってきて、獲るとトップに入る', () => {
+  it('スカウトは毎月選手を調べてきて、高校生・大学生は獲るとすぐトップに入る', () => {
     const G = newGame({ seed: 35 }); G.owner.money = 1e6;
+    G.owner.scouts[0].cond = { pos: [], region: null, vmin: null, vmax: 0, amin: null, amax: null };
     toWeek(G, 9, 1);
     G.squad = G.squad.slice(0, 22);
-    const c = G.owner.cands.find((x) => x.src === 'scout')!;
-    expect(c).toBeTruthy();
-    expect(signCand(G, c.id, new Rng(1))).toBeNull();
-    expect(G.squad.some((p) => p.id === c.id)).toBe(true);
+    const k = Object.values(G.owner.mk.known).find((x) => x.p)!;
+    expect(k).toBeTruthy();
+    expect(bid(G, k.pid, 0, new Rng(1))).toBeNull();
+    expect(G.squad.some((p) => p.id === k.pid)).toBe(true);
   });
 });
 

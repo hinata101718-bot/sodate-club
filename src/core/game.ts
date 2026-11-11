@@ -8,16 +8,16 @@ import { prefByName } from './data/prefs';
 import { defaultEmblem, type Emblem } from './emblem';
 import { makeWorld, nudgeToTier, TIER_LVL, type Club } from './world';
 import { AWARD_WEEK, CUP_ROUND_NAMES, WEEKS, isCamp, isOff, isWindow, monthOf, seasonSchedule, weekOfMonth } from './calendar';
-void inWindow;
 import { makeFixtures } from './fixtures';
 import type { Manager, MatchView, Player, ReportEntry } from './types';
 import type { Pos } from './constants';
 import { intake, monthlyReport, recommend, startYouth, youthWeek, type YouthReport } from './youth';
-import { initOwner, growCtx, gkCtx, youthSkill, weekMoney, popResult, scoutMonth, clubYoung, maybeWalkIn, trialWeek, inWindow, rollContracts, newOwnerSeason, refreshMarket, earn, type OwnerState } from './owner';
+import { initOwner, growCtx, gkCtx, youthSkill, weekMoney, popResult, maybeWalkIn, trialWeek, rollContracts, newOwnerSeason, refreshMarket, earn, type OwnerState } from './owner';
+import { scoutMonth, resolveBids, seeOpponent, learnAward, releaseFree, freeNews, aiTransfers, marketValue } from './market';
 import { sponsorYear, leaguePrize, CUP_PRIZE } from './finance';
 
 export { makeFixtures };
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export interface Row { p: number; w: number; d: number; l: number; gf: number; ga: number; }
 export interface Offer { type: 'offer'; pid: number; club: string; price: number; clubId?: number; listed?: boolean; }
 export interface CupTie { a: number; b: number; w?: number; s?: [number, number]; pk?: [number, number] | null; }
@@ -168,7 +168,7 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
       if (STATS.on) STATS.matches.push({ tier: t, hs: teamStrength(hc.me ? G.squad : hc.squad), as: teamStrength(ac.me ? G.squad : ac.squad), sh, sa });
       th.gf += sh; th.ga += sa; ta.gf += sa; ta.ga += sh;
       if (sh > sa) { th.w++; th.p += 3; ta.l++; } else if (sh < sa) { ta.w++; ta.p += 3; th.l++; } else { th.d++; ta.d++; th.p++; ta.p++; }
-      if (isMine) { mine = res.view; if (G.owner) { popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); if (h === ME) homeInfo = { oppTier: t, cup: false }; } }
+      if (isMine) { mine = res.view; if (G.owner) { seeOpponent(G, h === ME ? ac : hc); popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); if (h === ME) homeInfo = { oppTier: t, cup: false }; } }
     }
   }
   void tier;
@@ -202,7 +202,7 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
     const isMine = t.a === ME || t.b === ME;
     const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `勝ち抜きの大会 ${CUP_ROUND_NAMES[round]}` });
     t.s = res.score; t.pk = res.pk; t.w = res.winner === 0 ? t.a : t.b;
-    if (isMine) { mine = res.view; if (G.owner) { const meA = t.a === ME; popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); if (meA && !final) homeInfo = { oppTier: clubById(G, t.b).tier, cup: true }; } }
+    if (isMine) { mine = res.view; if (G.owner) { const meA = t.a === ME; seeOpponent(G, clubById(G, meA ? t.b : t.a)); popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); if (meA && !final) homeInfo = { oppTier: clubById(G, t.b).tier, cup: true }; } }
   }
   G.cup.rounds[round] = ties; G.cup.round = round + 1;
   if (final) G.cup.champion = ties[0].w!;
@@ -216,6 +216,7 @@ export function advanceWeek(G: GameState): WeekResult {
   try {
     const w = G.week;
     if (G.promo?.open) news.push(...applyPromo(G, r, G.promo.rec));
+    if (G.owner) news.push(...resolveBids(G, r));
     homeInfo = null;
     let match: MatchView | null = null;
     const li = G.sched.league.indexOf(w); const ci = G.sched.cup.indexOf(w);
@@ -238,7 +239,9 @@ export function advanceWeek(G: GameState): WeekResult {
     if (!isOff(w)) youthWeek(r, G.youth, youthCoachSkill(G), ctx.field, isCamp(w));
     if (!isOff(w)) news.push(...trialWeek(G, r, ctx));
     if (w % 4 === 0) news.push(...scoutMonth(G, r));
-    if (w === 24 || w === 44) news.push(...clubYoung(G, r));
+    if (w === AWARD_WEEK) releaseFree(G, r);
+    if (w === 24 || w === AWARD_WEEK) news.push(...freeNews(G, r));
+    if (w === 25 || w === AWARD_WEEK + 1) news.push(...aiTransfers(G, r));
     if (w >= 8 && w <= 43) news.push(...maybeWalkIn(G, r));
     news.push(...weekMoney(G, homeInfo));
     if (w >= 8 && w % 4 === 0) {
@@ -267,7 +270,7 @@ function maybeOffer(G: GameState, r: Rng) {
   const p = r.pick(cands);
   const buyers = G.clubs.filter((c) => !c.me && c.tier <= Math.max(1, myTier(G)));
   const c = r.pick(buyers);
-  G.pending.push({ type: 'offer', pid: p.id, club: c.name, clubId: c.id, price: offerPrice(p) });
+  G.pending.push({ type: 'offer', pid: p.id, club: c.name, clubId: c.id, price: offerPrice(p, myTier(G)) });
 }
 /** 売りに出した選手に、買い手が見つかる */
 function listedOffers(G: GameState, r: Rng) {
@@ -275,11 +278,11 @@ function listedOffers(G: GameState, r: Rng) {
     if (!p.listed || G.pending.some((e) => e.pid === p.id) || r.next() > 0.3) continue;
     const t = Math.max(1, Math.min(3, myTier(G) + (ovr(p) >= 70 ? -1 : ovr(p) < 55 ? 1 : 0)));
     const c = r.pick(G.clubs.filter((x) => !x.me && x.tier === t));
-    G.pending.push({ type: 'offer', pid: p.id, club: c.name, clubId: c.id, price: Math.round(offerPrice(p) * (0.8 + r.next() * 0.3) / 100) * 100, listed: true });
+    G.pending.push({ type: 'offer', pid: p.id, club: c.name, clubId: c.id, price: Math.round(offerPrice(p, myTier(G)) * (0.8 + r.next() * 0.3) / 100) * 100, listed: true });
   }
 }
-/** 選手の値段（万円）。強いほど、若いほど高い */
-export function offerPrice(p: Player): number { const o = ovr(p); return Math.max(300, Math.round((Math.pow(Math.max(0, o - 35), 2) * 3.2 * (p.age <= 23 ? 1.5 : p.age >= 30 ? 0.6 : 1)) / 100) * 100); }
+/** 選手の値段（万円）：移籍市場の相場と同じ（強いほど、若いほど、契約が長いほど、上の段ほど高い） */
+export function offerPrice(p: Player, tier = 3): number { return Math.max(300, marketValue(p, tier)); }
 export function answerOffer(G: GameState, i: number, accept: boolean): string | null {
   const e = G.pending[i]; if (!e) return null;
   if (accept && G.squad.length <= 16) return 'トップが16人より少なくなると試合ができなくなるので、受けられない。';
@@ -312,7 +315,7 @@ function yearEnd(G: GameState, r: Rng): string[] {
     const mvp = [...played].sort((a, b) => score(b.p) - score(a.p))[0];
     const top = [...played].sort((a, b) => b.p.seasonGoals - a.p.seasonGoals || score(b.p) - score(a.p))[0];
     const young = played.filter((x) => x.p.age <= 21).sort((a, b) => score(b.p) - score(a.p))[0];
-    const add = (title: string, x: { p: Player; club: number } | undefined, detail: string) => { if (x) awards.push({ title, tier: t, name: x.p.name, club: nameOf(x.club), me: x.club === ME, detail }); };
+    const add = (title: string, x: { p: Player; club: number } | undefined, detail: string) => { if (x && x.club !== ME && G.owner) learnAward(G, x.p, clubById(G, x.club)); if (x) awards.push({ title, tier: t, name: x.p.name, club: nameOf(x.club), me: x.club === ME, detail }); };
     add('リーグで一番の選手', mvp, mvp ? `${mvp.p.seasonApps}試合 ${mvp.p.seasonGoals}点` : '');
     add('得点王', top, top ? `${top.p.seasonGoals}点` : '');
     add('一番の若手', young, young ? `${young.p.age}歳 ・ ${young.p.seasonApps}試合` : '');
@@ -477,7 +480,7 @@ export function advanceToDecision(G: GameState, maxWeeks = 8): SkipResult {
     const res = advanceWeek(G); weeks++;
     all.push(...res.report); if (res.match) last = res.match; news.push(...res.news);
     if (res.seasonEnd) { seasonEnd = true; break; }
-    if (G.pending.length || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
+    if (G.pending.length || res.news.some((l) => l.startsWith('移籍の結果')) || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
   }
   G.news = news;
   return { weeks, report: mergeReports(all), lastMatch: last, seasonEnd, news };

@@ -4,7 +4,7 @@ import { myTier, answerOffer } from '../core/game';
 import { STYLES, POS, type Pos } from '../core/constants';
 import { COACH_NAME, COACH_NOTE, COACH_ROLES, growWord, obeyWord, skillStars, skillWord, youthWord, type CoachRole } from '../core/staff';
 import { FAC_KEYS, FAC_NAME, FAC_NOTE, MAX_FAC, MONEY_NAME, INCOME_KEYS, EXPENSE_KEYS, STADIUM_CAP, debtCap, facCost, facWeeks, gate, sponsorYear, type FacKey } from '../core/finance';
-import { borrow, coachWindow, decideTrial, dropCand, fireCoach, fireScout, hireCoach, hireManager, hireScout, inWindow, payroll, repay, signCand, staffPay, startBuild, takeTrial } from '../core/owner';
+import { borrow, coachWindow, decideTrial, dropCand, fireCoach, fireScout, hireCoach, hireManager, hireScout, inWindow, payroll, repay, staffPay, startBuild, takeTrial } from '../core/owner';
 import { ovr } from '../core/player';
 import { Rng } from '../core/rng';
 import type { Manager } from '../core/types';
@@ -29,8 +29,6 @@ export function peopleHTML(G: GameState): string {
     <section class="card"><h2>コーチ（5人）</h2>${cw ? '' : '<div class="muted small">コーチの入れかえは、年に1回、冬（12月）にまとめて行う。</div>'}<div class="list" style="margin-top:6px">${coaches}</div></section>
     ${market}
     <section class="card"><h2>スカウト（3人まで）</h2><div class="list">${scouts}</div>
-      <h3>ほしい選手の希望</h3><div class="seg tight" role="group" aria-label="ポジション">${[['', 'おまかせ'], ...POS.map((p) => [p, p])].map(([k, l]) => `<button data-wish-pos="${k}" aria-pressed="${(o.wish.pos ?? '') === k}">${l}</button>`).join('')}</div>
-      <div class="seg" role="group" aria-label="年齢" style="margin-top:6px">${[['', '年齢はおまかせ'], ['18', '18歳以下で'], ['20', '20歳以下で']].map(([k, l]) => `<button data-wish-age="${k}" aria-pressed="${String(o.wish.maxAge ?? '') === k}">${l}</button>`).join('')}</div>
       <h3>雇えるスカウト</h3><div class="list">${smarket}</div></section>`;
 }
 let coachMarketRole: CoachRole | null = null; let showMgr = false;
@@ -74,8 +72,6 @@ export function transferHTML(G: GameState): string {
   return `${offers ? `<section class="card"><h2>オファー</h2><div class="list">${offers}</div><div class="muted small" style="margin-top:6px">値段の交渉はできない。受けるか断るかだけ。</div></section>` : ''}
     <section class="card"><h2>移籍</h2><div class="muted">${win ? '<b>いまは移籍の期間</b>（夏：7〜8月、冬：12月）。' : '移籍の期間は、夏（7〜8月）と冬（12月）。'}トップ ${G.squad.length}人（25人まで）。</div>
       ${listed.length ? `<div class="small" style="margin-top:6px">売りに出している：${listed.map((p) => esc(p.name)).join('、')}（移籍の期間に買い手を探す）</div>` : '<div class="muted small" style="margin-top:6px">選手を売りに出すときは、選手の画面の「売りに出す」を押す。</div>'}</section>
-    <section class="card"><h2>スカウトの候補（毎月）</h2><div class="list">${cand('scout') || '<div class="muted">今月の候補はいない。スカウトを雇うと、毎月候補を持ってくる。</div>'}</div></section>
-    <section class="card"><h2>他のクラブで出番のない若手</h2><div class="list">${cand('club') || '<div class="muted">移籍の期間（7月・12月のはじめ）に情報が届く。</div>'}</div></section>
     <section class="card"><h2>練習生</h2><div class="list">${cand('trial')}${trials}${!trials && !cand('trial') ? '<div class="muted">「テストを受けさせてください」と、ときどきやってくる。1〜3か月あずかって、月1回の報告で伸び方を見てから決める。</div>' : ''}</div></section>`;
 }
 function lastTrial(G: GameState, id: number) { const r = [...G.owner.trialLog].reverse().find((x) => x.lines.some((l) => l.pid === id)); const l = r?.lines.find((x) => x.pid === id); return l ? ` ・ ${l.words} ${l.arrow}` : ''; }
@@ -89,14 +85,11 @@ export function bindOwner(G: GameState, root: HTMLElement, done: (msg?: string |
   $$<HTMLElement>('[data-act="mgrmarket"]', root).forEach((b) => b.addEventListener('click', () => { showMgr = !showMgr; done(null); }));
   on('data-hire-scout', (id) => hireScout(G, +id) ?? '雇った');
   on('data-fire-scout', (id) => { fireScout(G, +id); });
-  on('data-wish-pos', (v) => { G.owner.wish.pos = (v || null) as Pos | null; });
-  on('data-wish-age', (v) => { G.owner.wish.maxAge = v ? +v : null; });
   on('data-build', (k) => startBuild(G, k as FacKey) ?? '強化を始めた');
   on('data-borrow', (v) => { const got = borrow(G, +v); return got ? `${got.toLocaleString()}万円借りた` : 'これ以上は借りられない'; });
   on('data-repay', (v) => { const a = repay(G, v === 'all' ? G.owner.debt : +v); return a ? `${a.toLocaleString()}万円返した` : '返せるお金がない'; });
   on('data-offer-yes', (i) => answerOffer(G, +i, true) ?? '移籍が決まった');
   on('data-offer-no', (i) => { answerOffer(G, +i, false); });
-  on('data-sign', (id) => { const r = new Rng(G.rng); const e = signCand(G, +id, r); G.rng = r.s; return e ?? '獲った'; });
   on('data-drop', (id) => { dropCand(G, +id); });
   on('data-trial', (v) => { const [id, m] = v.split(':'); return takeTrial(G, +id, +m) ?? '練習生としてあずかった'; });
   on('data-tsign', (id) => decideTrial(G, +id, true) ?? '練習生を取った');

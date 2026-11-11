@@ -3,7 +3,8 @@
 import { newGame, advanceWeek, myTier, STATS, ME } from '../src/core/game';
 import { ovr, teamStrength } from '../src/core/player';
 import { pickLineup, chooseForm } from '../src/core/match';
-import { startBuild, signCand, hireScout } from '../src/core/owner';
+import { startBuild, hireScout } from '../src/core/owner';
+import { bid } from '../src/core/market';
 import { facCost, FAC_KEYS } from '../src/core/finance';
 import { Rng } from '../src/core/rng';
 
@@ -23,7 +24,7 @@ for (const seed of seeds) {
       awake += res.report.filter((x) => x.awake).length;
       /* おまかせのオーナー */
       for (const k of FAC_KEYS) { const nx = G.owner.fac[k] + 1; if (!G.owner.build && nx <= 5 && G.owner.money > facCost(k, nx) * 1.6 && G.owner.debt === 0) startBuild(G, k); }
-      for (const c of [...G.owner.cands]) if (c.src === 'scout' && c.p.pot - ovr(c.p) >= 18 && G.squad.length < 24 && G.owner.money > 3000) signCand(G, c.id, r);
+      for (const k of Object.values(G.owner.mk.known)) if (k.p && k.p.pot - ovr(k.p) >= 18 && G.squad.length < 24 && G.owner.money > 3000) bid(G, k.pid, 0, r);
       if (G.week === 20) {
         for (const t of [1, 2, 3]) {
           const cs = G.clubs.filter((c) => c.tier === t && !c.me);

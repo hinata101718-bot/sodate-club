@@ -10,7 +10,23 @@ import { defaultEmblem } from './emblem';
 import { startYouth } from './youth';
 import { initOwner } from './owner';
 import { sponsorYear } from './finance';
+import { initMarket, anyCond } from './market';
+import { ovr } from './player';
 export const MIGRATIONS: Record<number, (s: any) => any> = {
+  /* 版4（夜1）→ 版5（夜2：移籍市場）。「ほしい選手の希望」はスカウトの条件に、スカウトの候補は「知っている選手」に変える */
+  4: (s: any) => {
+    const o = s.owner; o.mk = initMarket();
+    const wish = o.wish ?? { pos: null, maxAge: null };
+    for (const sc of o.scouts ?? []) sc.cond = { ...anyCond(), pos: wish.pos ? [wish.pos] : [], amax: wish.maxAge ?? null };
+    for (const sc of o.market?.scout ?? []) sc.cond ??= anyCond();
+    for (const c of o.cands ?? []) {
+      if (c.src === 'scout') o.mk.known[c.p.id] = { pid: c.p.id, full: true, season: s.season, week: s.week, src: 'scout', ovr: ovr(c.p), a: c.p.a.map((v: number) => Math.floor(v)), age: c.p.age, club: c.from === '高校生' ? '高校' : '大学', note: c.note, scout: c.scout, p: c.p, from: c.from, fee: c.fee };
+      else if (c.src === 'club') o.mk.known[c.p.id] = { pid: c.p.id, full: true, season: s.season, week: s.week, src: 'scout', ovr: ovr(c.p), a: c.p.a.map((v: number) => Math.floor(v)), age: c.p.age, club: c.from, note: c.note };
+    }
+    o.cands = (o.cands ?? []).filter((c: any) => c.src === 'trial');
+    delete o.wish;
+    return s;
+  },
   /* 版3（段階3）→ 版4（お金・施設・人・移籍と契約） */
   3: (s: any) => {
     const r = new Rng((s.rng ^ 0x27d4eb2d) >>> 0);

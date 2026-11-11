@@ -92,7 +92,7 @@ function homeHTML(): string {
   const pend = G.pending.map((e, i) => { const p = find(e.pid); if (!p) return ''; return `<div class="item"><span class="grow"><b>${esc(e.club)}</b> から ${esc(p.name)} にオファー（${e.price.toLocaleString()}万円）</span><button class="btn small primary" data-offer="${i}">見る</button></div>`; }).join('');
   const news = (G.news || []).filter(Boolean).map((n) => `<div class="item"><span class="grow">${esc(n)}</span></div>`).join('');
   const walk = G.owner.cands.filter((c) => c.src === 'trial').length + G.owner.trials.filter((p) => p.trialMonths === 0).length;
-  const scoutN = G.owner.cands.filter((c) => c.src === 'scout').length;
+  const scoutN = 0;
   const owner = (walk ? `<div class="item"><span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN && G.week % 4 === 1 ? `<div class="item"><span class="grow">スカウトの候補が${scoutN}人</span><button class="btn small ghost" data-go-tr="1">見る</button></div>` : '');
   const promo = G.promo?.open ? `<div class="item"><span class="grow"><b>春の昇格会議</b>：ユースからトップに上げる子を決める（決めずに進むと、コーチのおすすめどおりになる）</span><button class="btn small primary" data-go="youth">決める</button></div>` : '';
   const notes = G.yearNotes?.length && G.week >= 44 ? `<div class="item"><span class="grow">コーチから、選手${G.yearNotes.length}人についてのひとこと</span><button class="btn small ghost" data-act="notes">見る</button></div>` : '';
