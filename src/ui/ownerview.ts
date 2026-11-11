@@ -60,18 +60,21 @@ export function moneyHTML(G: GameState): string {
   const L = o.ledger; const P = o.lastLedger;
   const inSum = INCOME_KEYS.reduce((s, k) => s + L[k], 0), outSum = EXPENSE_KEYS.reduce((s, k) => s + L[k], 0);
   const g = gate(t, G.club.pref, o.pop, o.fac.stadium, t, false);
+  /* 問89：合計だけを出し、押すと内訳が開く（右の小さい数字は去年） */
+  const mrow = (key: string, label: string, sum: number, keys: readonly string[]) => `<div class="srow-wrap"><button class="srow" data-mopen="${key}" aria-expanded="${moneyOpen === key}"><span class="grow sname">${label}</span><b>${yen(sum)}</b><span class="chev" aria-hidden="true">${moneyOpen === key ? '▲' : '▼'}</span></button>
+    ${moneyOpen === key ? `<div class="sdetail"><table><tbody>${keys.map((k) => `<tr><td class="l">${MONEY_NAME[k as keyof typeof MONEY_NAME]}</td><td>${yen(L[k as keyof typeof L])}</td><td class="muted small">${P ? `去年 ${yen(P[k as keyof typeof P])}` : ''}</td></tr>`).join('')}</tbody></table>
+    ${key === 'out' ? `<div class="muted small" style="margin-top:4px">給料は1年で、選手 ${yen(payroll(G))}、監督・コーチ・スカウト ${yen(staffPay(G))}</div>` : ''}</div>` : ''}</div>`;
   return `<section class="card"><h2>いまのお金</h2><div class="goal" style="font-size:24px;${o.money < 0 ? 'color:var(--danger)' : ''}">${yen(o.money)}</div>
       <dl class="kv" style="margin-top:6px"><dt>借金</dt><dd>${yen(o.debt)}（上限 ${yen(cap)}）</dd><dt>人気</dt><dd>${Math.round(o.pop)} / 100</dd><dt>ホームの試合のお客さん</dt><dd>約${g.fans.toLocaleString()}人（入場料 約${yen(g.money)}）</dd><dt>今年のスポンサー</dt><dd>${yen(o.sponsor)}</dd></dl></section>
-    <section class="card"><h2>今年の入ってくるお金と出ていくお金</h2><table><tbody>
-      ${INCOME_KEYS.map((k) => `<tr><td class="l">${MONEY_NAME[k]}</td><td>${yen(L[k])}</td><td class="muted">${P ? yen(P[k]) : ''}</td></tr>`).join('')}
-      <tr><td class="l"><b>入ってくるお金</b></td><td><b>${yen(inSum)}</b></td><td></td></tr>
-      ${EXPENSE_KEYS.map((k) => `<tr><td class="l">${MONEY_NAME[k]}</td><td>${yen(L[k])}</td><td class="muted">${P ? yen(P[k]) : ''}</td></tr>`).join('')}
-      <tr><td class="l"><b>出ていくお金</b></td><td><b>${yen(outSum)}</b></td><td></td></tr>
-    </tbody></table><div class="muted small" style="margin-top:6px">右の小さい数字は去年。給料は1年で、選手 ${yen(payroll(G))}、監督・コーチ・スカウト ${yen(staffPay(G))}。来年のスポンサーの見こみ：${yen(sponsorYear(t, G.club.pref, o.pop))}。</div></section>
+    <section class="card"><h2>今年のお金の出入り</h2><div class="slist">
+      ${mrow('in', '入ってくるお金', inSum, INCOME_KEYS)}${mrow('out', '出ていくお金', outSum, EXPENSE_KEYS)}
+      <div class="srow" style="cursor:default"><span class="grow sname">差し引き</span><b style="${inSum - outSum < 0 ? 'color:var(--danger)' : ''}">${inSum - outSum >= 0 ? '+' : '−'}${yen(Math.abs(inSum - outSum))}</b></div></div>
+      <div class="muted small" style="margin-top:6px">来年のスポンサーの見こみ：${yen(sponsorYear(t, G.club.pref, o.pop))}</div></section>
     <section class="card"><h2>銀行</h2><div class="muted">お金が足りなくなると、自動で借りる。上限まで借りると、それ以上は借りられない（ゲームオーバーにはならない）。利息は1年に3%。</div>
-      <div class="btns three" style="margin-top:8px"><button class="btn small ghost" data-borrow="5000">5000万円借りる</button><button class="btn small ghost" data-repay="5000">5000万円返す</button><button class="btn small ghost" data-repay="all">全部返す</button></div></section>`;
+      <div class="btns three" style="margin-top:8px"><button class="btn small ghost" data-borrow="5000">5000万借りる</button><button class="btn small ghost" data-repay="5000">5000万返す</button><button class="btn small ghost" data-repay="all">全部返す</button></div></section>`;
 }
 
+let moneyOpen = '';
 export function transferHTML(G: GameState): string {
   const o = G.owner; const win = inWindow(G);
   const offers = G.pending.map((e, i) => { const p = G.squad.find((x) => x.id === e.pid); if (!p) return ''; return `<div class="slot"><div class="grow"><b>${esc(e.club)}</b> から ${esc(p.name)}（${p.pos}・${ovr(p)}）に ${yen(e.price)}</div><button class="btn small primary" data-offer-yes="${i}">受ける</button><button class="btn small ghost" data-offer-no="${i}">断る</button></div>`; }).join('');
@@ -119,4 +122,5 @@ export function bindOwner(G: GameState, root: HTMLElement, done: (msg?: string |
   on('data-trv', (v) => { trView = v as typeof trView; });
   on('data-stv', (v) => { staffView = v as typeof staffView; openRow = ''; });
   on('data-open', (v) => { openRow = openRow === v ? '' : v; });
+  on('data-mopen', (v) => { moneyOpen = moneyOpen === v ? '' : v; });
 }
