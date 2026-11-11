@@ -122,7 +122,11 @@ function homeHTML(): string {
     <button class="btn primary" data-act="week">1週進む</button>
     <button class="btn ghost" data-act="skip">次に決めることまで進む</button>
   </div>
-  <section class="card"><h2>${esc(mgrShort(G.mgr))}への方針（若手の使い方）</h2>
+`;
+}
+/** 監督への方針（問84：トップチームの画面に置く） */
+function policyHTML(G: GameState): string {
+  return `  <section class="card"><h2>${esc(mgrShort(G.mgr))}への方針（若手の使い方）</h2>
     <div class="seg" role="group" aria-label="若手の使い方">
       ${(['若手多め', 'ふつう', '勝ち優先'] as Policy[]).map((x) => `<button data-pol="${x}" aria-pressed="${G.policy === x}">${x}</button>`).join('')}
     </div>
@@ -133,7 +137,7 @@ function squadHTML(): string {
   const G = app.G;
   const order: Record<string, number> = { GK: 0, CB: 1, SB: 2, DM: 3, CM: 4, AM: 5, WG: 6, ST: 7 };
   const list = [...G.squad].sort((a, b) => order[a.pos] - order[b.pos] || ovr(b) - ovr(a));
-  return `<section class="card"><h2>${list.length}人</h2><div class="plist">${list.map(plRow).join('')}</div></section>`;
+  return policyHTML(G) + `<section class="card"><h2>${list.length}人</h2><div class="plist">${list.map(plRow).join('')}</div></section>`;
 }
 /** チーム・経営・リーグの入り口：大きなアイコンと、ひとことの様子だけ（くわしくは押してから：問82のD） */
 function hubHTML(g: string): string {
