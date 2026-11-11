@@ -1,6 +1,6 @@
 /* 経営会議（問113〜116）：報告する人が1人ずつ出てきて、タップで次へ。年の会議では目標・方針・予算を選ぶ。
    メッセージの受け取り箱（問112） */
-import { closeMeeting, evalWord } from '../core/meeting';
+import { closeMeeting, evalWord, type Msg } from '../core/meeting';
 import { answerWantOut } from '../core/bond';
 import type { GameState } from '../core/game';
 import type { Policy } from '../core/match';
@@ -42,19 +42,30 @@ export function openMeeting(G: GameState, done: () => void) {
   show();
 }
 
-export function openInbox(G: GameState, back: () => void, save: () => void) {
+/** メッセージから飛べる先（古いメッセージは題名から決める） */
+export type MsgGo = { to: 'scout' | 'player' | 'squad' | 'people'; pid?: number; label: string };
+function goOf(G: GameState, x: Msg): MsgGo | null {
+  if (x.from === 'スカウト') return { to: 'scout', label: 'スカウトの報告を見る' };
+  const pid = x.pid ?? G.squad.find((p) => x.title.startsWith(p.name))?.id;
+  if (pid != null && G.squad.some((p) => p.id === pid)) return { to: 'player', pid, label: 'この選手を見る' };
+  if (x.from === '監督' && /連敗/.test(x.title)) return { to: 'squad', label: 'トップチームを見る' };
+  if (x.from === '監督') return { to: 'people', label: 'スタッフを見る' };
+  return null;
+}
+export function openInbox(G: GameState, back: () => void, save: () => void, go: (g: MsgGo) => void = () => {}) {
   let open = -1;
   const draw = () => {
     const box = G.inbox ?? [];
     const rows = box.map((x, i) => { const p = x.kind === 'wantOut' && x.pid != null ? G.squad.find((q) => q.id === x.pid && q.wantOut) : undefined;
       return `<div class="srow-wrap"><button class="srow mrow ${x.read ? '' : 'unread'}" data-mi="${i}" aria-expanded="${open === i}">${face(x.from)}<span class="grow" style="min-width:0"><span class="sname">${x.read ? '' : '<span class="dot" aria-label="読んでいない"></span>'}${esc(x.title)}</span><br><span class="pmeta">${esc(x.from)} ${esc(x.who)} ・ ${esc(x.at)}</span></span></button>
-        ${open === i ? `<div class="sdetail"><div class="talk-bubble">${esc(x.body)}</div>${p ? `<div class="row" style="gap:6px;margin-top:6px"><button class="btn small primary" data-mwo="${p.id}:keep">残ってもらう</button><button class="btn small ghost" data-mwo="${p.id}:sell">売りに出す</button></div>` : ''}</div>` : ''}</div>`; }).join('');
+        ${open === i ? `<div class="sdetail"><div class="talk-bubble">${esc(x.body)}</div>${p ? `<div class="row" style="gap:6px;margin-top:6px"><button class="btn small primary" data-mwo="${p.id}:keep">残ってもらう</button><button class="btn small ghost" data-mwo="${p.id}:sell">売りに出す</button></div>` : ''}${goOf(G, x) ? `<button class="btn small primary wide" data-mgo="${i}" style="margin-top:8px">${goOf(G, x)!.label} ▶</button>` : ''}</div>` : ''}</div>`; }).join('');
     sheet(`<div class="bar"><h2>メッセージ</h2><span class="muted small">${box.filter((x) => !x.read).length}件 読んでいない</span></div>
       <div class="slist">${rows || '<div class="card muted">まだメッセージはない。選手・監督・コーチ・スカウトから届く。</div>'}</div>`,
       `<div class="in2">${box.some((x) => !x.read) ? '<button class="btn ghost" id="ibAll">全部読んだことにする</button>' : ''}<button class="btn primary" id="ibBack">もどる</button></div>`);
     $('#ibBack').addEventListener('click', back);
     $('#ibAll')?.addEventListener('click', () => { for (const x of box) x.read = true; save(); draw(); });
     $$<HTMLElement>('[data-mi]').forEach((b) => b.addEventListener('click', () => { const i = +b.dataset.mi!; open = open === i ? -1 : i; box[i].read = true; save(); draw(); }));
+    $$<HTMLElement>('[data-mgo]').forEach((b) => b.addEventListener('click', () => { const g = goOf(G, box[+b.dataset.mgo!]); if (g) go(g); }));
     $$<HTMLElement>('[data-mwo]').forEach((b) => b.addEventListener('click', () => { const [id, a] = b.dataset.mwo!.split(':'); const r = new Rng(G.rng); const msg = answerWantOut(G, +id, a === 'sell', r.next()); G.rng = r.s; toast(msg); save(); draw(); }));
   };
   draw();

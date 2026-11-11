@@ -483,3 +483,7 @@ nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
 .sheet.cere-sheet .bar h2,.sheet.cere-sheet .bar .muted{color:#fff}
 .sheet.cere-sheet .cere-open,.sheet.cere-sheet .cere-card{background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(3px)}
 @media (prefers-color-scheme:dark){.hubart{filter:brightness(.85)}}
+/* 週の報告：総合力の動き */
+.ovup{flex:none;font-size:13px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--ok) 16%,var(--card));color:var(--fg);margin-right:6px;white-space:nowrap}
+.ovup b{font-size:15px}
+.ovup.down{background:color-mix(in srgb,var(--danger) 16%,var(--card))}

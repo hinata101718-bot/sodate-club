@@ -1,6 +1,7 @@
 /* 週の報告：伸びた項目が光る（+2以上。問25・感想 5）／大きな覚醒は全画面（「覚醒！！」、台詞なし：感想 6・7） */
 import type { Player, ReportEntry } from '../core/types';
 import { AT_F, AT_K } from '../core/constants';
+import { ovr } from '../core/player';
 import { $, esc, posTag } from './dom';
 import { sfx } from './sound';
 
@@ -10,13 +11,16 @@ export function openReport(rep: ReportEntry[], find: (id: number) => Player | un
   const body = list.length ? list.map((r) => {
     const p = find(r.pid)!; const L = p.pos === 'GK' ? AT_K : AT_F;
     const lits = r.ups.map((u, i) => (u !== 0 ? `<span class="${u >= 2 ? 'lit' : ''}">${L[i]} ${r.after[i]} ${u > 0 ? `<b style="color:var(--ok)">+${u}</b>` : `<b style="color:var(--danger)">${u}</b>`}</span>` : '')).join('');
+    /* 総合力が動いたら、どれくらい動いたかも出す（感想） */
+    const o0 = ovr({ ...p, a: r.before }), o1 = ovr({ ...p, a: r.after }); const od = o1 - o0;
+    const ovTag = od ? `<span class="ovup ${od > 0 ? '' : 'down'}">総合 ${o0}→<b>${o1}</b> ${od > 0 ? `+${od}` : od}</span>` : '';
     const notes = [
       r.newSp ? `<span class="chip new">新しい特殊能力「${esc(r.newSp)}」</span>` : '',
       r.cured ? `<span class="chip new">悪い特殊能力「${esc(r.cured)}」を克服</span>` : '',
       r.aptUp ? `<span class="chip new">${r.aptUp}の適性が上がった</span>` : '',
       r.injNew ? `<span class="chip bad">ケガ（${p.inj}週）</span>` : '',
     ].join('');
-    return `<button class="wkp ${r.awake ? 'hot' : ''}" data-pid="${p.id}"><div class="row">${posTag(p.pos)}<span class="grow pname">${esc(p.name)} <span class="pmeta">${p.age}歳</span></span>${r.awake ? '<span class="tag gold">覚醒</span>' : ''}</div>${lits ? `<div class="mini">${lits}</div>` : ''}${notes ? `<div class="chips">${notes}</div>` : ''}</button>`;
+    return `<button class="wkp ${r.awake ? 'hot' : ''}" data-pid="${p.id}"><div class="row">${posTag(p.pos)}<span class="grow pname">${esc(p.name)} <span class="pmeta">${p.age}歳</span></span>${ovTag}${r.awake ? '<span class="tag gold">覚醒</span>' : ''}</div>${lits ? `<div class="mini">${lits}</div>` : ''}${notes ? `<div class="chips">${notes}</div>` : ''}</button>`;
   }).join('') : `<div class="card muted">今週は大きな変化はなかった。</div>`;
   layer.innerHTML = `<div class="sheet" role="dialog" aria-label="${esc(title)}"><div class="in">
     <div class="bar"><h2>${esc(title)}</h2></div>

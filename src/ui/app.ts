@@ -2,7 +2,7 @@
 import { raiseOffer } from '../core/nego';
 import { openRegMeet, openSwap } from './regview';
 import { canSwapOut, REG_SIZE, regd, MAX_SQUAD } from '../core/squad';
-import { openMeeting, openInbox } from './meetingview';
+import { openMeeting, openInbox, type MsgGo } from './meetingview';
 import { unread } from '../core/meeting';
 import { openPrematch } from './prematch';
 import { openCeremony } from './ceremony';
@@ -72,7 +72,7 @@ export function boot() {
   if (g) app.G = g;
   $$<HTMLButtonElement>('.navbtn').forEach((b) => { b.innerHTML = ICON[b.dataset.tab === 'team' ? 'teamNav' : b.dataset.tab!] + b.innerHTML; b.addEventListener('click', () => { setTab(b.dataset.tab!); }); });
   $('#menuBtn').addEventListener('click', () => { setTab('settings'); });
-  $('#mailBtn').addEventListener('click', () => openInbox(app.G, () => { closeSheet(); render(); }, autosave));
+  $('#mailBtn').addEventListener('click', () => openInbox(app.G, () => { closeSheet(); render(); }, autosave, msgGo));
   if (g) render(); else startNew(false);
 }
 /* 下のメニューは4つ（ホーム・チーム・経営・リーグ）。チーム・経営・リーグは、押すと大きなアイコンが並ぶ（問82：サカつくを手本に） */
@@ -410,6 +410,14 @@ function afterWeek(res: ReturnType<typeof advanceWeek>) {
   const run = (i: number) => (i < steps.length ? steps[i](() => run(i + 1)) : finish());
   run(0);
 }
+/** メッセージから、そのページへ飛ぶ（もどると受け取り箱に帰る） */
+function msgGo(g: MsgGo) {
+  const back = () => openInbox(app.G, () => { closeSheet(); render(); }, autosave, msgGo);
+  if (g.to === 'player' && g.pid != null) { showPlayer(g.pid, back); return; }
+  closeSheet();
+  if (g.to === 'scout') { mv.sub = 'known'; setTrView('scout'); setTab('tr'); return; }
+  setTab(g.to);
+}
 function act(a: string) {
   const G = app.G;
   if (a === 'reload') { autosave(); location.reload(); return; }
@@ -428,7 +436,7 @@ function act(a: string) {
     $('#nClose').addEventListener('click', () => { closeSheet(); render(); });
   }
   if (a === 'regm') openRegMeet(G, (msgs) => { autosave(); closeSheet(); render(); toast(msgs[0] ?? '登録した'); }, () => { closeSheet(); render(); });
-  if (a === 'inbox') openInbox(G, () => { closeSheet(); render(); }, autosave);
+  if (a === 'inbox') openInbox(G, () => { closeSheet(); render(); }, autosave, msgGo);
   if (a === 'report') openReport(G.lastReport || [], find, showPlayer, render);
   if (a === 'replay' && G.lastMatch) openMatch(G.lastMatch, G.club.color, null);
   if (a === 'reset') {
