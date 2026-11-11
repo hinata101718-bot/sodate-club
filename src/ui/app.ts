@@ -10,7 +10,7 @@ import { STYLES } from '../core/constants';
 import { obeyWord } from '../core/staff';
 import { mgrShort, type Policy } from '../core/match';
 import { AUTO_KEY, listSlots, loadFrom, removeSave, safeStorage, saveTo, type KV } from '../core/save';
-import type { Player } from '../core/types';
+import type { Player, ReportEntry } from '../core/types';
 import { $, $$, closeSheet, esc, posTag, sheet, toast, val, yen } from './dom';
 import { applyClubColor, applyThemeMode } from './theme';
 import { emblemSVG } from './emblem';
@@ -32,8 +32,32 @@ function writePrefs(p: UiPrefs) { try { app.kv.setItem(PREFS_KEY, JSON.stringify
 export function autosave() { if (!saveTo(app.kv, AUTO_KEY, app.G)) toast('保存できませんでした（ブラウザの保存領域がいっぱいかもしれません）'); }
 const find = (id: number) => app.G.squad.find((p) => p.id === id);
 
+function goBack() {
+  /* 選手の画面などが開いていれば、その「もどる」を押す */
+  const back = document.querySelector<HTMLButtonElement>('#layer #pBack, #layer #mBack, #layer #nClose, #layer [data-close]');
+  if (back) { back.click(); return true; }
+  if ($('#layer').innerHTML.trim()) { closeSheet(); render(); return true; }
+  if (isSub(app.tab)) { setTab(GROUP_OF[app.tab], true); return true; }
+  return false;
+}
+function bindBack() {
+  window.addEventListener('popstate', () => {
+    const wasSub = isSub(app.tab); const hadLayer = !!$('#layer').innerHTML.trim();
+    goBack();
+    /* 画面を閉じただけで、まだページの中にいるときは、もどる先を残しておく */
+    if (hadLayer && wasSub) { try { history.pushState({ tab: app.tab }, ''); } catch { /* */ } }
+  });
+  const standalone = (navigator as unknown as { standalone?: boolean }).standalone || matchMedia('(display-mode: standalone)').matches;
+  if (!standalone) return;
+  let sx = -1, sy = 0;
+  document.addEventListener('touchstart', (e) => { const t = e.touches[0]; sx = t.clientX <= 24 ? t.clientX : -1; sy = t.clientY; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (sx < 0) return; const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = Math.abs(t.clientY - sy); sx = -1;
+    if (dx > 70 && dy < 60) goBack();
+  }, { passive: true });
+}
 export function boot() {
-  app.kv = safeStorage();
+  app.kv = safeStorage(); bindBack();
   const pr = readPrefs(); applyThemeMode(pr.theme); setSound(pr.sound);
   const g = loadFrom(app.kv, AUTO_KEY);
   if (g) app.G = g;
@@ -45,7 +69,11 @@ export function boot() {
 const GROUP_OF: Record<string, string> = { home: 'home', team: 'team', squad: 'team', youth: 'team', tr: 'team', biz: 'biz', fac: 'biz', people: 'biz', money: 'biz', league: 'league', table: 'league', cup: 'league', rec: 'league' };
 const PAGE_TITLE: Record<string, string> = { squad: 'トップチーム', youth: 'ユース', tr: '移籍', fac: '施設', people: 'スタッフ', money: 'お金', table: '順位表', cup: '勝ち抜きの大会', rec: 'リーグの歴史' };
 const GROUP_NAME: Record<string, string> = { team: 'チーム', biz: '経営', league: 'リーグ' };
-export function setTab(t: string) {
+/* 7：もどる操作。入り口から開いたページは、ブラウザの「もどる」（Safariの左のふちのスワイプ）で入り口にもどる。
+   ホーム画面から開いたときはブラウザのもどるがないので、左のふちから右へのスワイプを自分で受けとる */
+const isSub = (t: string) => !!PAGE_TITLE[t] && !!GROUP_OF[t];
+export function setTab(t: string, fromHistory = false) {
+  if (!fromHistory) { try { if (isSub(t) && !isSub(app.tab)) history.pushState({ tab: t }, ''); else history.replaceState({ tab: t }, ''); } catch { /* 古い端末 */ } }
   app.tab = t;
   $$('.navbtn').forEach((b) => b.setAttribute('aria-current', b.dataset.tab === (GROUP_OF[t] ?? t) ? 'page' : 'false'));
   render(); window.scrollTo(0, 0);
@@ -55,7 +83,7 @@ export function render() {
   const G = app.G;
   applyClubColor(G.club.color);
   $('#crest').innerHTML = emblemSVG(G.club.emblem);
-  $('#clubName').textContent = G.club.name;
+  $('#clubName').innerHTML = `${esc(G.club.name)}${isWindow(G.week) ? '<span class="wintag">移籍の期間</span>' : ''}`;
   const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
   const subHead = `${G.season}年目${monthOf(G.week)}月・${myTier(G)}部${pl ? `${myRank(G)}位` : ''}・お金 `;
   /* 問92 C：お金が変わったら、数字がくるくる動く */
@@ -67,6 +95,7 @@ export function render() {
   v.innerHTML = crumb + (views[app.tab] || homeHTML)();
   bindView(v);
   bindOwner(G, v, (msg) => { if (msg) toast(msg); if (msg && msg.includes('を獲った')) confetti(); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
+  $$<HTMLElement>('[data-ssort]', v).forEach((b) => b.addEventListener('click', () => { squadSort = b.dataset.ssort!; render(); }));
   $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTrView('scout'); setTab('tr'); }));
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
 }
@@ -137,7 +166,7 @@ function homeHTML(): string {
   ${pend || promo || owner || notes || yrep || news || lastRep || lastM ? `<section class="card notice band"><h2>今週のお知らせ</h2>${promo}${pend}${owner}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
   <div class="btns">
     <button class="btn primary go" data-act="week">1週進む <span aria-hidden="true">▶</span></button>
-    <button class="btn ghost" data-act="skip">次に決めることまで進む</button>
+    <button class="btn ghost go" data-act="skip">決めるまで進む <span aria-hidden="true">▶▶</span></button>
   </div>
 `;
 }
@@ -150,11 +179,14 @@ function policyHTML(G: GameState): string {
     <div class="muted" style="margin-top:8px">監督：${esc(G.mgr.name)} ・ ${esc(G.mgr.style)}（${esc(STYLES[G.mgr.style].note)}）・ 並び方 ${G.mgr.forms.join(' / ')}</div>
   </section>`;
 }
+let squadSort = 'pos';
 function squadHTML(): string {
   const G = app.G;
   const order: Record<string, number> = { GK: 0, CB: 1, SB: 2, DM: 3, CM: 4, AM: 5, WG: 6, ST: 7 };
-  const list = [...G.squad].sort((a, b) => order[a.pos] - order[b.pos] || ovr(b) - ovr(a));
-  return policyHTML(G) + `<section class="card"><h2>${list.length}人</h2><div class="plist">${list.map(plRow).join('')}</div></section>`;
+  const by: Record<string, (a: Player, b: Player) => number> = { pos: (a, b) => order[a.pos] - order[b.pos] || ovr(b) - ovr(a), ovr: (a, b) => ovr(b) - ovr(a), age: (a, b) => a.age - b.age || ovr(b) - ovr(a) };
+  const list = [...G.squad].sort(by[squadSort]);
+  const seg = `<div class="seg" role="group" aria-label="並べかえ">${[['pos', 'ポジション順'], ['ovr', '強い順'], ['age', '若い順']].map(([k, l]) => `<button data-ssort="${k}" aria-pressed="${squadSort === k}">${l}</button>`).join('')}</div>`;
+  return policyHTML(G) + `<section class="card"><h2>${list.length}人</h2>${seg}<div class="plist" style="margin-top:10px">${list.map(plRow).join('')}</div></section>`;
 }
 /** チーム・経営・リーグの入り口：大きなアイコンと、ひとことの様子だけ（くわしくは押してから：問82のD） */
 function hubHTML(g: string): string {
@@ -294,10 +326,15 @@ function contractHTML(p: Player): string {
     <button class="btn ${p.listed ? 'primary' : 'ghost'} wide" id="pSell" style="margin-top:10px">${p.listed ? '売りに出すのをやめる' : '売りに出す'}</button><div class="muted small" style="margin-top:6px">売りに出すと、移籍の期間に買い手を探す。買い手が見つかると、オファーとして届く。</div></section>`;
 }
 const happy = (news: string[]) => news.some((l) => /来てくれた|昇格|優勝/.test(l));
+/** 週の報告は、何か起きた週だけ開く（覚醒・新しい特殊能力・克服・適性・ケガ・大きな伸び） */
+const notable = (rep: ReportEntry[]) => rep.some((r) => r.awake || r.newSp || r.cured || r.aptUp || r.injNew || r.ups.some((u) => u >= 2));
 function afterWeek(res: ReturnType<typeof advanceWeek>) {
   autosave(); render(); if (happy(res.news)) setTimeout(confetti, res.match ? 0 : 200);
+  const show = notable(res.report); const grew = res.report.filter((r) => r.ups.some((u) => u > 0)).length;
   const rep = () => openReport(res.report, find, showPlayer, render);
-  if (res.match) openMatch(res.match, app.G.club.color, rep); else rep();
+  const quiet = () => { if (grew) toast(`今週は${grew}人が少し伸びた（ホームの「先週の報告」で見られる）`); };
+  if (res.match) openMatch(res.match, app.G.club.color, show ? rep : () => { closeSheet(); render(); quiet(); }, show ? '週の報告へ' : 'ホームへ');
+  else if (show) rep(); else quiet();
 }
 function act(a: string) {
   const G = app.G;

@@ -43,6 +43,8 @@ export interface PlayerViewOpts {
   hintHTML?: string;
   hideRecords?: boolean;
   bindExtra?: (root: HTMLElement) => void;
+  /** 下の帯に、もどるの横に出すボタン（他クラブの選手：候補リスト・申し込み） */
+  dockLabel?: string; onDock?: () => void;
   back: () => void;
 }
 export function openPlayer(p: Player, o: PlayerViewOpts) {
@@ -64,7 +66,7 @@ export function openPlayer(p: Player, o: PlayerViewOpts) {
       <h3>伸びの記録</h3>${hist}</section>`}
     ${o.onReq ? `<section class="card"><h2>監督への頼み</h2><button class="btn ${p.req ? 'primary' : 'ghost'} wide" id="pReq">${p.req ? '起用の依頼を取り下げる' : 'この選手を試合で使ってほしい'}</button><div class="muted small" style="margin-top:6px">${esc(o.mgrName || '監督')}は、${esc(o.mgrObeyWord || '')}。</div></section>` : ''}
     ${o.extraHTML || ''}
-  </div></div><div class="dock"><div class="in2 one"><button class="btn primary" id="pBack">もどる</button></div></div>`;
+  </div></div><div class="dock">${o.dockLabel ? `<div class="in2"><button class="btn ghost" id="pBack">もどる</button><button class="btn primary" id="pDock">${o.dockLabel}</button></div>` : '<div class="in2 one"><button class="btn primary" id="pBack">もどる</button></div>'}</div>`;
   const root = layer.querySelector('.sheet') as HTMLElement;
   $$<HTMLButtonElement>('.spbtn', layer).forEach((b) => b.addEventListener('click', () => {
     const d = $('#spDesc'); const s = b.dataset.sp!; const same = d.dataset.cur === s && !d.hidden;
@@ -78,4 +80,5 @@ export function openPlayer(p: Player, o: PlayerViewOpts) {
   if (o.onReq) $('#pReq').addEventListener('click', () => { o.onReq!(p); openPlayer(p, o); });
   o.bindExtra?.(root);
   $('#pBack').addEventListener('click', () => { layer.innerHTML = ''; o.back(); });
+  if (o.dockLabel && o.onDock) $('#pDock').addEventListener('click', o.onDock);
 }
