@@ -21,6 +21,7 @@ import { mv } from './marketview';
 import { marketValue } from '../core/market';
 import { setSound, soundOn, sfx } from './sound';
 import { buildLabel } from './update';
+import { confetti, countUp } from './fx';
 
 export const app = { G: null as unknown as GameState, kv: null as unknown as KV, tab: 'home' };
 const PREFS_KEY = 'sodate-club:prefs';
@@ -49,20 +50,23 @@ export function setTab(t: string) {
   $$('.navbtn').forEach((b) => b.setAttribute('aria-current', b.dataset.tab === (GROUP_OF[t] ?? t) ? 'page' : 'false'));
   render(); window.scrollTo(0, 0);
 }
+let lastMoney: number | null = null;
 export function render() {
   const G = app.G;
   applyClubColor(G.club.color);
   $('#crest').innerHTML = emblemSVG(G.club.emblem);
   $('#clubName').textContent = G.club.name;
   const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
-  $('#clubSub').textContent = `${G.season}年目${monthOf(G.week)}月・${myTier(G)}部${pl ? `${myRank(G)}位` : ''}・お金 ${yen(G.owner.money)}`;
+  const subHead = `${G.season}年目${monthOf(G.week)}月・${myTier(G)}部${pl ? `${myRank(G)}位` : ''}・お金 `;
+  /* 問92 C：お金が変わったら、数字がくるくる動く */
+  countUp($('#clubSub'), lastMoney ?? G.owner.money, G.owner.money, (m) => subHead + yen(m)); lastMoney = G.owner.money;
   const v = $('#view');
   const views: Record<string, () => string> = { home: homeHTML, team: () => hubHTML('team'), biz: () => hubHTML('biz'), league: () => hubHTML('league'), squad: squadHTML, tr: () => transferHTML(G), youth: () => youthHTML(G, promoSel()), people: () => peopleHTML(G), fac: () => facHTML(G), money: () => moneyHTML(G), table: tableHTML, cup: () => cupHTML(G), rec: () => recordHTML(G), settings: settingsHTML };
   const grp = GROUP_OF[app.tab];
   const crumb = PAGE_TITLE[app.tab] && grp ? `<div class="crumb"><button class="btn small ghost" data-go="${grp}">‹ ${GROUP_NAME[grp]}</button><h2>${PAGE_TITLE[app.tab]}</h2></div>` : '';
   v.innerHTML = crumb + (views[app.tab] || homeHTML)();
   bindView(v);
-  bindOwner(G, v, (msg) => { if (msg) toast(msg); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
+  bindOwner(G, v, (msg) => { if (msg) toast(msg); if (msg && msg.includes('を獲った')) confetti(); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
   $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTrView('scout'); setTab('tr'); }));
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
 }
@@ -97,21 +101,24 @@ function nextHTML(G: GameState): string {
   const [h, m] = txt[e.kind];
   return `<h2>今週</h2><div class="goal">${h}</div><div class="muted">${m}</div>`;
 }
+/** お知らせの種類のアイコン（問92 D） */
+const ni = (k: string) => `<span class="nic nic-${k}">${ICON[k] ?? ICON.bell}</span>`;
+const newsKind = (n: string) => (/移籍|フリー|オファー/.test(n) ? 'tr' : /スカウト/.test(n) ? 'scout' : /万円|お金|スポンサー|借/.test(n) ? 'money' : /ユース|昇格会議/.test(n) ? 'youth' : /ケガ/.test(n) ? 'med' : /施設|工事|強化/.test(n) ? 'fac' : 'bell');
 function homeHTML(): string {
   const G = app.G;
   const rank = myRank(G); const tier = myTier(G);
   const tbl = G.leagues[tier].table[ME];
-  const pend = G.pending.map((e, i) => { const p = find(e.pid); if (!p) return ''; return `<div class="item"><span class="grow"><b>${esc(e.club)}</b> から ${esc(p.name)} にオファー（${e.price.toLocaleString()}万円）</span><button class="btn small primary" data-offer="${i}">見る</button></div>`; }).join('');
-  const news = (G.news || []).filter(Boolean).map((n) => `<div class="item"><span class="grow">${esc(n)}</span></div>`).join('');
+  const pend = G.pending.map((e, i) => { const p = find(e.pid); if (!p) return ''; return `<div class="item">${ni('tr')}<span class="grow"><b>${esc(e.club)}</b> から ${esc(p.name)} にオファー（${e.price.toLocaleString()}万円）</span><button class="btn small primary" data-offer="${i}">見る</button></div>`; }).join('');
+  const news = (G.news || []).filter(Boolean).map((n) => `<div class="item">${ni(newsKind(n))}<span class="grow">${esc(n)}</span></div>`).join('');
   const walk = G.owner.cands.filter((c) => c.src === 'trial').length + G.owner.trials.filter((p) => p.trialMonths === 0).length;
   const scoutN = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.season === G.season && k.week === G.week - 1).length;
-  const owner = (walk ? `<div class="item"><span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN ? `<div class="item"><span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">スカウトの報告を見る</button></div>` : '');
-  const promo = G.promo?.open ? `<div class="item"><span class="grow"><b>春の昇格会議</b>：ユースからトップに上げる子を決める（決めずに進むと、コーチのおすすめどおりになる）</span><button class="btn small primary" data-go="youth">決める</button></div>` : '';
-  const notes = G.yearNotes?.length && G.week >= 44 ? `<div class="item"><span class="grow">コーチから、選手${G.yearNotes.length}人についてのひとこと</span><button class="btn small ghost" data-act="notes">見る</button></div>` : '';
-  const yrep = G.youthLog.length && G.youthLog[G.youthLog.length - 1].season === G.season && G.week >= 8 && G.week % 4 === 1 ? `<div class="item"><span class="grow">ユースの報告会議（${G.youthLog[G.youthLog.length - 1].month}月）</span><button class="btn small ghost" data-go="youth">見る</button></div>` : '';
-  const lastRep = G.lastReport && G.lastReport.length ? `<div class="item"><span class="grow">先週の報告：${G.lastReport.filter((r) => r.ups.some((v) => v > 0)).length}人が伸びた</span><button class="btn small ghost" data-act="report">見る</button></div>` : '';
+  const owner = (walk ? `<div class="item">${ni('team')}<span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN ? `<div class="item">${ni('scout')}<span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">スカウトの報告を見る</button></div>` : '');
+  const promo = G.promo?.open ? `<div class="item">${ni('youth')}<span class="grow"><b>春の昇格会議</b>：ユースからトップに上げる子を決める（決めずに進むと、コーチのおすすめどおりになる）</span><button class="btn small primary" data-go="youth">決める</button></div>` : '';
+  const notes = G.yearNotes?.length && G.week >= 44 ? `<div class="item">${ni('people')}<span class="grow">コーチから、選手${G.yearNotes.length}人についてのひとこと</span><button class="btn small ghost" data-act="notes">見る</button></div>` : '';
+  const yrep = G.youthLog.length && G.youthLog[G.youthLog.length - 1].season === G.season && G.week >= 8 && G.week % 4 === 1 ? `<div class="item">${ni('youth')}<span class="grow">ユースの報告会議（${G.youthLog[G.youthLog.length - 1].month}月）</span><button class="btn small ghost" data-go="youth">見る</button></div>` : '';
+  const lastRep = G.lastReport && G.lastReport.length ? `<div class="item">${ni('chart')}<span class="grow">先週の報告：${G.lastReport.filter((r) => r.ups.some((v) => v > 0)).length}人が伸びた</span><button class="btn small ghost" data-act="report">見る</button></div>` : '';
   const lm = G.lastMatch;
-  const lastM = lm ? `<div class="item"><span class="grow">前の試合 ${esc(lm.home.name)} ${lm.score[0]}-${lm.score[1]} ${esc(lm.away.name)}${lm.pk ? `（PK ${lm.pk.join('-')}）` : ''}</span><button class="btn small ghost" data-act="replay">見どころ</button></div>` : '';
+  const lastM = lm ? `<div class="item">${ni('ball')}<span class="grow">前の試合 ${esc(lm.home.name)} ${lm.score[0]}-${lm.score[1]} ${esc(lm.away.name)}${lm.pk ? `（PK ${lm.pk.join('-')}）` : ''}</span><button class="btn small ghost" data-act="replay">見どころ</button></div>` : '';
   const last = G.history[G.history.length - 1];
   return `
   <section class="card"><h2>いまの位置と目標</h2>
@@ -164,7 +171,7 @@ function hubHTML(g: string): string {
       ['rec', 'リーグの歴史', G.history.length ? `${G.history.length}年ぶん` : '1年目が終わるとのる', ICON.rec],
     ],
   };
-  return `<div class="hub">${tiles[g].map(([k, l, s, ic]) => `<button class="hubtile" data-go="${k}">${ic}<span class="hl">${l}</span><span class="hs">${esc(s)}</span></button>`).join('')}</div>`;
+  return `<div class="hub hub-${g}">${tiles[g].map(([k, l, s, ic]) => `<button class="hubtile" data-go="${k}"><span class="hic">${ic}</span><span class="hl">${l}</span><span class="hs">${esc(s)}</span></button>`).join('')}</div>`;
 }
 const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 export const ICON: Record<string, string> = {
@@ -180,6 +187,11 @@ export const ICON: Record<string, string> = {
   money: svg('<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/>'),
   table: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v16"/>'),
   cup: svg('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M12 13v4"/><path d="M8 20h8"/>'),
+  ball: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/><path d="M12 3v4M21 10l-5 0M3 10h5M8.5 14.5L6 19M15.5 14.5L18 19"/>'),
+  scout: svg('<circle cx="10" cy="10" r="6"/><path d="M15 15l5 5"/>'),
+  chart: svg('<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'),
+  bell: svg('<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
+  med: svg('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/>'),
   rec: svg('<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h7M9 14h7M9 18h4"/>'),
 };
 export function plRow(p: Player): string {
@@ -274,8 +286,9 @@ function contractHTML(p: Player): string {
   return `<section class="card"><h2>契約と移籍</h2><div>あと${p.contract}年 ・ 年${p.salary.toLocaleString()}万円</div><div>市場の値段（いま売るとだいたい）：<b>${yen(marketValue(p, myTier(G)))}</b></div>${renew}
     <button class="btn ${p.listed ? 'primary' : 'ghost'} wide" id="pSell" style="margin-top:10px">${p.listed ? '売りに出すのをやめる' : '売りに出す'}</button><div class="muted small" style="margin-top:6px">売りに出すと、移籍の期間に買い手を探す。買い手が見つかると、オファーとして届く。</div></section>`;
 }
+const happy = (news: string[]) => news.some((l) => /来てくれた|昇格|優勝/.test(l));
 function afterWeek(res: ReturnType<typeof advanceWeek>) {
-  autosave(); render();
+  autosave(); render(); if (happy(res.news)) setTimeout(confetti, res.match ? 0 : 200);
   const rep = () => openReport(res.report, find, showPlayer, render);
   if (res.match) openMatch(res.match, app.G.club.color, rep); else rep();
 }
@@ -285,7 +298,7 @@ function act(a: string) {
   if (a === 'week') { sfx('tap'); afterWeek(advanceWeek(G)); }
   if (a === 'skip') {
     sfx('tap');
-    const r = advanceToDecision(G); autosave(); render();
+    const r = advanceToDecision(G); autosave(); render(); if (happy(r.news)) confetti();
     openReport(r.report, find, showPlayer, render, `${r.weeks}週ぶんの報告`);
   }
   if (a === 'notes') {

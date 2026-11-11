@@ -226,3 +226,33 @@ svg.mini{width:34px;height:38px}
 .badge{display:inline-block;min-width:16px;height:16px;line-height:16px;border-radius:8px;background:var(--danger,#c0392b);color:#fff;font-size:11px;margin-left:2px;padding:0 4px;vertical-align:1px}
 /* 新しい版のお知らせ（感想25） */
 .update-bar{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:60;min-height:48px;border:0;border-radius:12px;background:var(--gold,#c99a2e);color:#1a1a1a;font-size:14px;font-weight:700;padding:8px 12px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
+/* ===== 問92：サカつくらしい楽しさ（見やすさはそのまま、飾りとして足す） ===== */
+/* A：芝のしま模様（うすく）と、スタジアムの看板ふうの帯 */
+body{background:repeating-linear-gradient(180deg,var(--bg) 0 56px,color-mix(in srgb,var(--club) 5%,var(--bg)) 56px 112px) fixed}
+header.top{background:linear-gradient(180deg,color-mix(in srgb,var(--club) 82%,#fff) 0%,var(--club) 55%,color-mix(in srgb,var(--club) 85%,#000) 100%)}
+header.top::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:4px;
+  background:repeating-linear-gradient(90deg,var(--gold) 0 18px,var(--club-ink) 18px 36px);opacity:.9}
+.card h2::before{content:"";display:inline-block;width:4px;height:13px;border-radius:2px;background:var(--club);margin-right:7px;vertical-align:-1px}
+.crumb h2::before{content:none}
+/* D：入り口のタイルの色分け（チームは緑・経営は金・リーグは青） */
+.hub-team{--tc:#2e8b57}.hub-biz{--tc:#c4932a}.hub-league{--tc:#2f6db5}
+.hub-team,.hub-biz,.hub-league{--tc-soft:color-mix(in srgb,var(--tc) 16%,var(--card))}
+.hub .hubtile{border-color:color-mix(in srgb,var(--tc,var(--club)) 40%,var(--line));background:linear-gradient(180deg,var(--tc-soft,var(--card)) 0%,var(--card) 70%)}
+.hub .hic{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--tc,var(--club));color:#fff}
+.hub .hic svg{width:36px;height:36px;color:#fff}
+.factile .hic,.hub .factile svg{color:var(--club)}
+.hub .factile{background:var(--card);border-color:var(--line)}
+.hub .factile[aria-pressed="true"]{border-color:var(--club);background:var(--club-soft)}
+/* D：お知らせの種類アイコン */
+.nic{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--card);color:var(--club)}
+.nic svg{width:18px;height:18px}
+.nic-tr{color:#2f6db5}.nic-money{color:#b8860b}.nic-youth{color:#2e8b57}.nic-ball{color:var(--fg)}.nic-scout{color:#8a4fbf}.nic-med{color:var(--danger)}
+/* C：押したときの弾み */
+.btn,.hubtile,.srow,.pl,.seg button,.navbtn,.nic{transition:transform .09s ease-out}
+.btn:active,.hubtile:active,.srow:active,.pl:active,.seg button:active,.navbtn:active{transform:scale(.95)}
+.navbtn[aria-current="page"] svg{transform:translateY(-2px) scale(1.12);transition:transform .2s}
+/* C：紙ふぶき */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;animation:conf-fall linear forwards}
+@keyframes conf-fall{to{transform:translate(var(--dx),105vh) rotate(var(--rot))}}
+@media (prefers-reduced-motion: reduce){.btn:active,.hubtile:active,.srow:active,.pl:active,.seg button:active,.navbtn:active{transform:none}.navbtn[aria-current="page"] svg{transform:none}}
