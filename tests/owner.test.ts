@@ -61,10 +61,16 @@ describe('人を雇う（企画書 10）', () => {
 
 describe('移籍と契約（企画書 12）・練習生（企画書 9-4）', () => {
   it('オファーを受けると選手が去り、お金が入る', () => {
-    const G = newGame({ seed: 36 }); const p = G.squad[0];
+    const G = newGame({ seed: 36 }); const p = G.squad.find((x) => x.pos !== 'GK')!;
     G.pending.push({ type: 'offer', pid: p.id, club: G.clubs[5].name, clubId: G.clubs[5].id, price: 3000 });
     const m = G.owner.money; answerOffer(G, 0, true);
     expect(G.squad.some((x) => x.id === p.id)).toBe(false); expect(G.owner.money).toBe(m + 3000);
+  });
+  it('キーパーが2人より少なくなるオファーは受けられない（50シーズンのテストで見つけた）', () => {
+    const G = newGame({ seed: 36 }); const gks = G.squad.filter((x) => x.pos === 'GK');
+    G.squad = G.squad.filter((x) => x.pos !== 'GK' || x === gks[0] || x === gks[1]);
+    G.pending.push({ type: 'offer', pid: gks[0].id, club: G.clubs[5].name, clubId: G.clubs[5].id, price: 3000 });
+    expect(answerOffer(G, 0, true)).toContain('キーパー'); expect(G.squad.some((x) => x.id === gks[0].id)).toBe(true);
   });
   it('契約を更新しなかった選手は、年が変わると去る。更新した選手は残る', () => {
     const G = newGame({ seed: 37 });
