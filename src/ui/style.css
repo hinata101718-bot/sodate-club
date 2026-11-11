@@ -385,3 +385,88 @@ button.pp{cursor:pointer}
 .nego-line{align-self:flex-start;max-width:88%;padding:8px 12px;border-radius:14px 14px 14px 4px;background:var(--line);font-size:14px}
 .nego-line.me{align-self:flex-end;border-radius:14px 14px 4px 14px;background:color-mix(in srgb,var(--club) 22%,var(--card))}
 .regend{display:flex;align-items:center;gap:8px}
+/* ===== ゲームらしい見た目（frontend-design）：情報は増やさず、形と質感だけを変える =====
+   いちばんの見せ場は、総合力のメダル（灰・銅・銀・金）。育って色が変わるのを「集める」楽しさにする。
+   ほかは、パネルの段差・テレビ中継ふうのスコア・スポーツの数字の書体で、静かに支える */
+:root{
+  --f-num:"Barlow Condensed","M PLUS Rounded 1c",sans-serif;
+  --ledge:color-mix(in srgb,var(--club) 22%,var(--line));
+  --plate:color-mix(in srgb,var(--club) 72%,#000);
+  --m-bronze:linear-gradient(160deg,#f0b27a 0%,#b06a32 55%,#7e4520 100%);
+  --m-silver:linear-gradient(160deg,#f4f8fb 0%,#a9b8c6 50%,#6f8193 100%);
+  --m-gold:linear-gradient(160deg,#fff3b0 0%,#f2c230 45%,#b98a0c 100%);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ledge:color-mix(in srgb,var(--club) 35%,#000);--plate:color-mix(in srgb,var(--club) 45%,#000)}}
+:root[data-theme="dark"]{--ledge:color-mix(in srgb,var(--club) 35%,#000);--plate:color-mix(in srgb,var(--club) 45%,#000)}
+
+/* 芝：刈りあとのしまを少しはっきり */
+body{background:repeating-linear-gradient(180deg,var(--bg) 0 64px,color-mix(in srgb,var(--club) 8%,var(--bg)) 64px 128px) fixed}
+
+/* パネル：ふちを2px・下に段差（ゲームの板のように） */
+.card,.pl,.srow,.wkp,.hubtile,.slot{border-width:2px;border-color:color-mix(in srgb,var(--club) 14%,var(--line));box-shadow:0 3px 0 var(--ledge)}
+.card.band>h2{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);border-bottom:3px solid var(--gold)}
+.card.band>h2{background:linear-gradient(100deg,var(--plate) 0%,var(--club) 62%,color-mix(in srgb,var(--club) 70%,var(--gold)) 100%)}
+.card>h2:not(:only-child){letter-spacing:.06em}
+.pl{min-height:58px}
+.pl:active,.hubtile:active,.srow:active{box-shadow:0 1px 0 var(--ledge);transform:translateY(2px)}
+
+/* 総合力のメダル（一覧の右はし）。色の境目は企画書8-2のまま */
+.ovr{display:grid;place-items:center;min-width:48px;min-height:44px;flex:none;white-space:nowrap}
+.ovr .v[class*="c-"]{display:grid;place-items:center;width:46px;height:42px;font-family:var(--f-num);font-style:italic;font-weight:800;font-size:24px;letter-spacing:.01em;line-height:1;
+  clip-path:polygon(50% 0,100% 18%,100% 74%,50% 100%,0 74%,0 18%);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.35);padding-right:2px}
+.ovr .v.c-gray{background:color-mix(in srgb,var(--gray) 30%,var(--card));color:var(--fg);text-shadow:none}
+.ovr .v.c-bronze{background:var(--m-bronze)}
+.ovr .v.c-silver{background:var(--m-silver);color:#1f2a33;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+.ovr .v.c-gold{background:var(--m-gold);color:#3a2a00;text-shadow:0 1px 0 rgba(255,255,255,.55);animation:shine 3.2s ease-in-out infinite}
+@keyframes shine{0%,70%,100%{filter:none}80%{filter:brightness(1.25) drop-shadow(0 0 4px #ffd84a)}}
+
+/* 数字はスポーツの書体で（能力・順位・スコア・評価点） */
+.attr .v,.hero-rank b,.score .sc,.rt,.cutin .cs,.awake .from,.awake .to,.pp-sub,.num,.minute{font-family:var(--f-num);font-style:italic;letter-spacing:.01em}
+.attr .v{font-size:26px;line-height:1}
+.attr{border-width:2px;border-left-width:5px;border-left-color:var(--gray)}
+.attr:has(.c-bronze){border-left-color:var(--bronze)}
+.attr:has(.c-silver){border-left-color:var(--silver)}
+.attr:has(.c-gold){border-left-color:var(--gold);background:color-mix(in srgb,var(--gold) 10%,var(--bg))}
+.hero-rank b{font-size:60px;font-weight:800;vertical-align:-6px}
+.rt{font-size:19px;font-weight:800}
+.num{font-size:15px}
+
+/* ボタン：厚みのある段差 */
+.btn.primary{box-shadow:0 4px 0 var(--plate),0 8px 14px color-mix(in srgb,var(--club) 22%,transparent);border-radius:14px}
+.btn.primary:active{transform:translateY(3px);box-shadow:0 1px 0 var(--plate)}
+.btn.ghost{border-width:2px;box-shadow:0 4px 0 var(--ledge);border-radius:14px}
+.btn.ghost:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ledge)}
+.btn.go{font-size:18px;letter-spacing:.04em}
+.seg button{border-width:2px;box-shadow:0 2px 0 var(--ledge)}
+.seg button[aria-pressed="true"]{box-shadow:0 2px 0 var(--plate);font-weight:700}
+
+/* 今週の試合：VS を大きく */
+.vs-mid b{font-family:var(--f-num);font-weight:800;font-size:40px;line-height:1;color:var(--gold);text-shadow:0 2px 0 color-mix(in srgb,var(--gold) 40%,#000)}
+.vs-crest{width:56px;height:62px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+
+/* 試合：テレビ中継ふうのスコア（チームの色は下の線で見せる） */
+.card.score{background:linear-gradient(180deg,color-mix(in srgb,var(--plate) 85%,#fff) 0%,var(--plate) 60%);border:0;border-bottom:4px solid var(--gold);color:#fff;padding:12px 10px;box-shadow:0 4px 0 color-mix(in srgb,var(--plate) 60%,#000)}
+.score .tn{-webkit-text-fill-color:#fff;padding-bottom:5px;border-bottom:4px solid currentColor;font-size:13px}
+.score .sc{font-size:46px;font-weight:800;line-height:1;padding:4px 12px;border-radius:10px;background:rgba(0,0,0,.35);color:#fff}
+.scene{border-width:2px;box-shadow:0 3px 0 var(--ledge)}
+.minute{display:inline-block;font-size:16px;font-weight:800;color:var(--club-ink);background:var(--club);padding:0 8px;border-radius:6px;transform:skewX(-8deg)}
+
+/* 下のメニュー：濃い色の台。選んでいるところは金の線 */
+nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
+.navbtn{color:color-mix(in srgb,#fff 62%,transparent)}
+.navbtn[aria-current="page"]{color:#fff}
+.navbtn[aria-current="page"]::before{background:rgba(255,255,255,.16)}
+.navbtn[aria-current="page"]::after{content:"";position:absolute;bottom:4px;width:22px;height:3px;border-radius:2px;background:var(--gold)}
+
+/* 試合の下の帯も同じ台に */
+.dock{border-top:3px solid var(--gold);background:color-mix(in srgb,var(--plate) 92%,var(--card))}
+.dock .btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.7);box-shadow:0 4px 0 rgba(0,0,0,.35)}
+
+/* ピッチの選手：メダルと同じ六角の札 */
+.pp{border-radius:8px;border-bottom:3px solid rgba(0,0,0,.35);background:rgba(8,30,18,.55)}
+.pp-sub{font-size:15px;font-weight:800}
+
+@media (prefers-reduced-motion: reduce){.ovr .v.c-gold{animation:none}.pl:active,.hubtile:active,.srow:active,.btn:active{transform:none}}
+.ovr.big{min-width:60px;min-height:56px}.ovr.big .v[class*="c-"]{width:58px;height:54px;font-size:32px}
+/* まだくわしく調べていない選手の「60〜65」は、メダルにせずそのまま */
+.ovr .v:not([class*="c-"]){font-family:var(--f-num);font-style:italic;font-size:20px;color:var(--muted)}
