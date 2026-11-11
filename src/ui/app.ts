@@ -20,6 +20,7 @@ import { openPlayer } from './playerview';
 import { mv } from './marketview';
 import { marketValue } from '../core/market';
 import { setSound, soundOn, sfx } from './sound';
+import { buildLabel } from './update';
 
 export const app = { G: null as unknown as GameState, kv: null as unknown as KV, tab: 'home' };
 const PREFS_KEY = 'sodate-club:prefs';
@@ -226,6 +227,7 @@ function settingsHTML(): string {
     <div class="muted small" style="margin-top:8px">自動セーブは、1週進むたびに保存されます。データはこのブラウザの中にだけあります。</div></section>
   <section class="card"><h2>画面</h2><div class="seg" role="group" aria-label="画面の明るさ">${[['auto', '端末に合わせる'], ['light', '明るい'], ['dark', '暗い']].map(([k, l]) => `<button data-theme-set="${k}" aria-pressed="${pr.theme === k}">${l}</button>`).join('')}</div></section>
   <section class="card"><h2>音</h2><div class="seg" role="group" aria-label="効果音">${[['off', 'オフ'], ['on', 'オン']].map(([k, l]) => `<button data-sound="${k}" aria-pressed="${(pr.sound ? 'on' : 'off') === k}">${l}</button>`).join('')}</div><div class="muted small" style="margin-top:6px">ボタン・ゴール・覚醒などの短い効果音だけです。</div></section>
+  <section class="card"><h2>このゲームの版</h2><div class="small">${buildLabel()} に作った版</div><button class="btn small ghost" data-act="reload" style="margin-top:8px">最新の版を読みこみ直す</button><div class="muted small" style="margin-top:6px">セーブはそのまま残ります。</div></section>
   <section class="card"><h2>最初から</h2><div class="confirm" id="resetBox"><button class="btn small danger" data-act="reset">新しいクラブで始める</button></div><div class="muted small" style="margin-top:6px">手動のセーブは消えません。</div></section>`;
 }
 
@@ -279,6 +281,7 @@ function afterWeek(res: ReturnType<typeof advanceWeek>) {
 }
 function act(a: string) {
   const G = app.G;
+  if (a === 'reload') { autosave(); location.reload(); return; }
   if (a === 'week') { sfx('tap'); afterWeek(advanceWeek(G)); }
   if (a === 'skip') {
     sfx('tap');
