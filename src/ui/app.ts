@@ -75,7 +75,9 @@ function promoSel(): Set<number> {
 
 function nextHTML(G: GameState): string {
   const e = eventOf(G);
-  const oppLine = (opp: number, home: boolean | null, extra = '') => { const c = clubById(G, opp); return `<div class="next-match">${home == null ? '<span class="tag">中立</span>' : `<span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span>`}<span class="grow">${esc(c.name)}</span><span class="muted small">${c.tier}部 ・ ${esc(c.mgr.style)}</span></div>${extra}`; };
+  const oppLine = (opp: number, home: boolean | null, extra = '') => { const c = clubById(G, opp); return `<div class="next-match">${home == null ? '<span class="tag">中立</span>' : `<span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span>`}<span class="grow">${esc(c.name)}</span><span class="muted small">${c.tier}部${oppRank(c.id, c.tier)} ・ ${esc(c.mgr.style)}</span></div>${extra}`; };
+  /* 問85：順位表のボタンのかわりに、相手の順位を出す */
+  const oppRank = (id: number, tier: number) => { const rows = standings(G, tier); const r = rows[0] && rows[0].w + rows[0].d + rows[0].l ? rows.findIndex((x) => x.id === id) + 1 : 0; return r ? ` ${r}位` : ''; };
   if (e.kind === 'league') return `<h2>今週の試合 ・ リーグ第${e.round}節</h2>${oppLine(e.opp, e.home)}`;
   if (e.kind === 'cup') {
     const nm = CUP_ROUND_NAMES[e.round];
@@ -116,7 +118,7 @@ function homeHTML(): string {
     <div style="margin-top:4px">目標：<b>${esc(currentGoal(G))}</b></div>
     ${G.owner.debt ? `<div class="muted small">借金 ${yen(G.owner.debt)}</div>` : ''}
     ${last ? `<div class="muted small">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
-  <section class="card">${nextHTML(G)}<button class="btn small ghost" data-go="table" style="margin-top:10px">順位表を見る</button></section>
+  <section class="card">${nextHTML(G)}</section>
   ${pend || promo || owner || notes || yrep || news || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${promo}${pend}${owner}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
   <div class="btns">
     <button class="btn primary" data-act="week">1週進む</button>
