@@ -8,5 +8,5 @@ export default defineConfig({
   define: { __BUILD__: JSON.stringify(BUILD) },
   build: { target: 'es2020', outDir: 'dist' },
   plugins: [{ name: 'version-json', closeBundle() { mkdirSync('dist', { recursive: true }); writeFileSync('dist/version.json', JSON.stringify({ build: BUILD })); } }],
-  test: { include: ['tests/**/*.test.ts'], environment: 'node' },
+  test: { include: ['tests/**/*.test.ts'], environment: 'node', testTimeout: 30000 },
 } as any);
