@@ -16,6 +16,7 @@ import { initOwner, growCtx, gkCtx, youthSkill, weekMoney, popResult, rollContra
 import { afterMyMatch, monthBond, seasonBond, refusesToLeave, ORDER_SHORT, type OrderKind } from './bond';
 import { scoutMonth, resolveBids, learnAward, releaseFree, freeNews, aiTransfers, marketValue } from './market';
 import { sponsorYear, leaguePrize, CUP_PRIZE } from './finance';
+import { ensureMeta, mail, monthMeeting, yearMeeting, judgeGoal, snapshot, potNote, type Msg, type Meeting, type MonthSnap, type Goal } from './meeting';
 
 export { makeFixtures };
 export const SAVE_VERSION = 7;
@@ -58,11 +59,15 @@ export interface GameState {
   /** 春の昇格会議（開いているあいだ） */
   promo: { open: boolean; rec: number[] } | null;
   /** 年末のコーチのひとこと（ポテンシャルが動いたことなど） */
-  yearNotes: { pid: number; name: string; text: string }[];
+  yearNotes: { pid: number; name: string; text: string; d?: number; why?: string }[];
   /** お気に入りの選手の記録（問103：移籍・引退でクラブを去った選手） */
   favLog?: { name: string; pos: string; season: number; text: string }[];
   /** 年末の表彰式（開くのを待っている） */
   cere?: Ceremony | null;
+  /** 問112〜116：メッセージ・経営会議・目標・監督の評価・補強の予算 */
+  inbox?: Msg[]; meet?: Meeting | null; snap?: MonthSnap; front?: { acct: string; sales: string };
+  goal?: Goal; nextGoal?: Goal | null; goalLog?: { season: number; text: string; level: string; ok: boolean }[]; mgrEval?: number; spMul?: number;
+  budget?: { cap: number; spent: number }; yearStart?: { pop: number; fans: [number, number] }; streak?: number;
   /** オーナーが決めること（段階4）：お金・施設・人・移籍 */
   owner: OwnerState;
 }
@@ -108,6 +113,8 @@ export function newGame(o: NewGameOpts = {}): GameState {
   /* 問105：ゲームの始まりは、どの選手も総合力80まで（伸びて81〜88になるのはよい） */
   for (const p of [...G.squad, ...G.clubs.flatMap((c) => c.squad)]) capOvr(p, START_CAP);
   setupSeason(G, r);
+  G.yearStart = { pop: G.owner.pop, fans: [0, 0] };
+  ensureMeta(G);
   G.rng = r.s;
   return G;
 }
@@ -194,8 +201,13 @@ let bondNews: string[] = [];
 function myAfter(G: GameState, v: MatchView) {
   afterMyMatch(G, v.played);
   const o = v.orders ?? [];
+  /* 3連敗したら、監督からメッセージ（問112） */
+  const my = v.home.me ? v.score[0] - v.score[1] : v.score[1] - v.score[0];
+  G.streak = my < 0 ? (G.streak ?? 0) + 1 : 0;
+  if (G.streak === 3) mail(G, '監督', G.mgr.name, '3連敗について', 'オーナー、3連敗です。申し訳ありません。並び方と先発を見直して、立て直します。頼みがあれば、試合前の画面から出してください。');
   if (o.length) {
     const ok = o.filter((x) => x.heard); const ng = o.filter((x) => !x.heard);
+    if (G.snap) { G.snap.ord[0] += o.length; G.snap.ord[1] += ok.length; }
     bondNews.push(`監督への頼み：${o.length}つのうち${ok.length}つを聞いてくれた${ok.length ? `（${ok.map((x) => `${x.name}を${ORDER_SHORT[x.kind as OrderKind]}`).join('・')}）` : ''}${ng.length ? `。聞いてもらえなかった：${ng.map((x) => x.name).join('・')}` : ''}。`);
   }
 }
@@ -259,6 +271,7 @@ export function advanceWeek(G: GameState): WeekResult {
   const favBefore = [...G.squad, ...G.youth].filter((p) => p.fav).map((p) => ({ id: p.id, name: p.name, pos: p.pos, age: p.age, retiring: !!p.retiring }));
   try {
     const w = G.week;
+    ensureMeta(G);
     if (G.promo?.open) news.push(...applyPromo(G, r, G.promo.rec));
     bondNews = [];
     if (G.owner) news.push(...resolveBids(G, r));
@@ -281,9 +294,15 @@ export function advanceWeek(G: GameState): WeekResult {
     const ctx = growCtx(G, isCamp(w)); const gctx = gkCtx(G, ctx);
     if (!isOff(w)) for (const p of G.squad) { const e = growPlayer(r, p, p.pos === 'GK' ? gctx : ctx); if (e) report.push(e); }
     else for (const p of G.squad) { p.fat = 0; p.cond = 0; if (p.inj) p.inj = Math.max(0, p.inj - 2); p.played = false; p.injNew = false; }
+    /* コーチからの急ぎの知らせ（問112）：覚醒・長いケガ */
+    const coachName = (G.owner?.coaches.phys ?? G.owner?.coaches.off)?.name ?? G.mgr.name;
+    for (const e of report) { const p = G.squad.find((x) => x.id === e.pid); if (!p) continue;
+      if (e.awake) { G.snap?.awake.push(p.name); mail(G, 'コーチ', coachName, `${p.name}が覚醒`, `オーナー、${p.name}（${p.pos}）が覚醒しました！ 練習で見違えるような動きです。週の報告で、どこが伸びたか見てください。`); }
+      if (e.injNew && p.inj >= 4) mail(G, 'コーチ', coachName, `${p.name}のケガ`, `${p.name}（${p.pos}）がケガをしました。治るまで、あと${p.inj}週ほどかかります。`); }
     if (!isOff(w)) youthWeek(r, G.youth, youthCoachSkill(G), ctx.field, isCamp(w));
-    if (w % 4 === 0) news.push(...scoutMonth(G, r));
-    if (w % 4 === 2 && G.owner) news.push(...monthBond(G));
+    /* スカウトの報告は、メッセージで届く（問112） */
+    if (w % 4 === 0) { const sc = G.owner?.scouts[0]?.name ?? 'スカウト'; for (const l of scoutMonth(G, r)) mail(G, 'スカウト', sc, /売り込み/.test(l) ? '売り込みに来た選手' : 'スカウトの報告', l); }
+    if (w % 4 === 2 && G.owner) for (const l of monthBond(G)) { const nm = l.split('（')[0]; const p = G.squad.find((x) => x.name === nm); mail(G, '選手', nm, '少しお話があります', 'オーナー、少しお話があります。もっと試合に出たいです。このままなら、移籍させてください。', { pid: p?.id, kind: 'wantOut' }); }
     if (w === AWARD_WEEK) releaseFree(G, r);
     if (w === 24 || w === AWARD_WEEK) news.push(...freeNews(G, r));
     if (w === 25 || w === AWARD_WEEK + 1) news.push(...aiTransfers(G, r));
@@ -298,6 +317,8 @@ export function advanceWeek(G: GameState): WeekResult {
     if (isWindow(w)) { maybeOffer(G, r); listedOffers(G, r); }
     G.lastMatch = match ?? G.lastMatch;
     G.lastReport = mergeReports(report);
+    /* 問113：月の終わりに経営会議（3〜11月）。12月は年に1回の経営会議 */
+    if (w % 4 === 3 && G.owner) { if (w >= 11 && w <= 43) G.meet = monthMeeting(G); G.snap = snapshot(G); }
     G.week++;
     let seasonEnd = false;
     if (G.week >= WEEKS) { news.push(...newSeason(G, r)); seasonEnd = true; news.push(`${G.season}年目が始まった。`); }
@@ -384,7 +405,13 @@ function yearEnd(G: GameState, r: Rng): string[] {
   const cupRes = cupResultText(G);
   G.history.push({ season: G.season, tier, rank, cup: cupRes, awards, xi, promoted: tier > 1 && rank <= 2, relegated: tier < 3 && rank >= 11, champion: champ, cupChampion: G.cup.champion != null ? nameOf(G.cup.champion) : '' });
   /* 節目の目標（成績の目標だけ：企画書 7） */
-  for (const g of GOALS) if (!G.goals.some((x) => x.id === g.id) && g.done(G)) { G.goals.push({ id: g.id, season: G.season }); out.push(`目標を達成した：${g.text}`); }
+  for (const g of GOALS) if (!G.goals.some((x) => x.id === g.id) && g.done(G)) { G.goals.push({ id: g.id, season: G.season }); out.push(`節目の目標を達成した：${g.text}`); }
+  /* 問115・116：今年の目標に届いたか → 年に1回の経営会議 */
+  if (G.owner) {
+    const judged = judgeGoal(G, tier, rank); out.push(...judged);
+    G.meet = yearMeeting(G, judged);
+    if ((G.mgrEval ?? 60) < 25) mail(G, '監督', G.mgr.name, '今年の結果について', '目標に大きく届かず、申し訳ありません。クラブのためになるなら、監督の交代も考えてください。');
+  }
   void r;
   return out;
 }
@@ -452,6 +479,7 @@ export const GOALS: GoalDef[] = [
 ];
 /** いまの目標（段が下がったときは、まず昇格を目標にする） */
 export function currentGoal(G: GameState): string {
+  if (G.owner) { ensureMeta(G); if (G.goal) return G.goal.text; }
   const t = myTier(G);
   const next = GOALS.find((g) => !G.goals.some((x) => x.id === g.id));
   if (t === 3 && (!next || next.id !== 't3up')) return '3部で2位以内に入って、もう一度昇格';
@@ -472,7 +500,9 @@ function potentialAndRetire(G: GameState, r: Rng): string[] {
     if (big && p.age <= 28) d = r.int(2, 5); else if (ok && p.age <= 26) d = r.int(0, 2); else if (few && p.age <= 26) d = -r.int(1, 3);
     if (d) {
       p.pot = clamp(p.pot + d, 30, 88);
-      G.yearNotes.push({ pid: p.id, name: p.name, text: d >= 2 ? '今年の活躍で、あいつはひと皮むけた' : d > 0 ? '試合に出て、少し上が見えてきた' : '出番が少なくて、伸びが止まりかけている' });
+      const why = d > 0 ? `${p.seasonApps}試合・${p.seasonGoals}点${p.seasonRtN ? `・平均 ${((p.seasonRt ?? 0) / p.seasonRtN).toFixed(1)}` : ''}` : `出場${p.seasonApps}試合`;
+      G.yearNotes.push({ pid: p.id, name: p.name, text: potNote(r, p, d), d, why });
+      (p.potLog ??= []).push({ y: G.season, arrow: d >= 3 ? '↑↑' : d > 0 ? '↑' : '↓', why });
     }
   }
   /* 引退：能力が下がってきた選手や、試合に出られなくなった選手から考え始める。下限の年齢はない */
@@ -483,7 +513,6 @@ function potentialAndRetire(G: GameState, r: Rng): string[] {
     if (p.age >= 37) pr += 0.5;
     if (pr > 0 && r.next() < pr) { p.retiring = true; out.push(`${p.name}（${p.age}歳）が、今シーズンかぎりでの引退を決めた。`); }
   }
-  if (G.yearNotes.length) out.push(`コーチから、${G.yearNotes.length}人についてひとことがある。`);
   return out;
 }
 
@@ -557,6 +586,7 @@ function newSeason(G: GameState, r: Rng): string[] {
   G.season++; G.week = 0;
   setupSeason(G, r);
   if (G.owner) out.push(...newOwnerSeason(G, r));
+  if (G.owner) { G.goal = G.nextGoal && G.nextGoal.season === G.season ? G.nextGoal : undefined; G.nextGoal = null; G.yearStart = { pop: G.owner.pop, fans: [0, 0] }; ensureMeta(G); G.snap = snapshot(G); }
   void teamStrength;
   return out;
 }
@@ -569,7 +599,7 @@ export function advanceToDecision(G: GameState, maxWeeks = 8): SkipResult {
     const res = advanceWeek(G); weeks++;
     all.push(...res.report); if (res.match) last = res.match; news.push(...res.news);
     if (res.seasonEnd) { seasonEnd = true; break; }
-    if (G.cere || G.pending.length || res.news.some((l) => l.startsWith('移籍の結果')) || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
+    if (G.cere || G.meet || G.pending.length || res.news.some((l) => l.startsWith('移籍の結果')) || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
   }
   G.news = news;
   return { weeks, report: mergeReports(all), lastMatch: last, seasonEnd, news };

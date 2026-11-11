@@ -83,7 +83,7 @@ export function weekMoney(G: GameState, homeGate: { oppTier: number; cup: boolea
   pay(G, 'salary', Math.round(payroll(G) / 48));
   pay(G, 'staff', Math.round(staffPay(G) / 48));
   earn(G, 'sponsor', Math.round(o.sponsor / 48));
-  if (homeGate) { const g = gate(tierOf(G), G.club.pref, o.pop, o.fac.stadium, homeGate.oppTier, homeGate.cup); earn(G, 'gate', g.money); out.push(`ホームの試合に ${g.fans.toLocaleString()}人のお客さんが来た（入場料 ${g.money.toLocaleString()}万円）。`); }
+  if (homeGate) { const g = gate(tierOf(G), G.club.pref, o.pop, o.fac.stadium, homeGate.oppTier, homeGate.cup); earn(G, 'gate', g.money); if (G.yearStart) { G.yearStart.fans[0] += g.fans; G.yearStart.fans[1]++; } out.push(`ホームの試合に ${g.fans.toLocaleString()}人のお客さんが来た（入場料 ${g.money.toLocaleString()}万円）。`); }
   if (G.week % 4 === 3 && o.debt > 0) pay(G, 'interest', Math.round((o.debt * INTEREST) / 12));
   if (o.build) {
     o.build.weeks--;
@@ -200,7 +200,7 @@ export function rollContracts(G: GameState): string[] {
 export function newOwnerSeason(G: GameState, r: Rng): string[] {
   const o = G.owner;
   o.lastLedger = o.ledger; o.ledger = emptyLedger();
-  o.sponsor = sponsorYear(tierOf(G), G.club.pref, o.pop);
+  o.sponsor = Math.round(sponsorYear(tierOf(G), G.club.pref, o.pop) * (G.spMul ?? 1) / 100) * 100; G.spMul = 1;
   o.cands = o.cands.filter((c) => c.src === 'trial');
   newMarketSeason(G, r);
   return [`今年のスポンサー収入は ${o.sponsor.toLocaleString()}万円の見こみ。`];

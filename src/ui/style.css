@@ -358,3 +358,22 @@ button.pp{cursor:pointer}
 .sdetail[hidden]{display:none}
 .rtmini{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px}
 .pp-sub{max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 問112：メッセージ */
+.top .mailbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-right:6px}
+.top .mailbtn svg{width:22px;height:22px}
+.mbadge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--danger);color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center}
+.mbadge[hidden]{display:none}
+.mface{flex:none;width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-family:var(--f-disp);background:color-mix(in srgb,var(--club) 18%,var(--card));color:var(--club);border:2px solid var(--club)}
+.mrow.unread{border-color:var(--club)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);margin-right:6px;vertical-align:middle}
+/* 問113〜116：経営会議 */
+.meet{display:flex;flex-direction:column;gap:12px}
+.mspeak{display:flex;align-items:center;gap:12px;animation:ceremonyIn .3s ease-out}
+.mspeak .mface{width:56px;height:56px;font-size:22px}
+.mrole{font-size:13px;color:var(--muted);font-weight:700}
+.mwho{font-family:var(--f-disp);font-size:20px;font-weight:800}
+.mbubble p{margin:0 0 6px}.mbubble p:last-child{margin:0}
+.mchoices{display:flex;flex-direction:column;gap:8px}
+.mchoice{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:52px;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.mchoice[aria-pressed="true"]{border-color:var(--club);background:color-mix(in srgb,var(--club) 12%,var(--card))}
+@media (prefers-reduced-motion:reduce){.mspeak{animation:none}}

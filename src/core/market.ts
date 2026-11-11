@@ -248,6 +248,7 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
   if (!marketOpen(G)) return 'プロとフリーの選手は、移籍の期間（7〜8月・12月）にしか申し込めない。';
   const fee = valueOf(w);
   if (G.owner.money - reserved(G) < fee) return 'お金が足りない。';
+  if (G.budget && G.budget.spent + reserved(G) + fee > G.budget.cap) return `補強の予算（${manText(G.budget.cap)}）をこえてしまう。年に1回の経営会議で決めた上限です。`;
   mk.bids.push({ pid, bump: BUMPS.includes(bump) ? bump : 0, fee, salary: offerSalary(w, bump), at: absWeek(G) });
   return null;
 }
@@ -268,7 +269,7 @@ export function resolveBids(G: GameState, r: Rng): string[] {
     if (r.next() >= joinChance(fromTierOf(w), tierOf(G), b.bump)) { out.push(`移籍の結果：${w.club ? `${w.club.name}は売ってくれたが、` : ''}${who}本人が来るのを断った。`); continue; }
     if (G.owner.money < b.fee) { out.push(`移籍の結果：お金が足りなくなっていて、${who}を獲れなかった。`); continue; }
     if (G.squad.length >= 25) { out.push(`移籍の結果：トップが25人いて、${who}を入れられなかった。`); continue; }
-    if (b.fee) { G.owner.money -= b.fee; G.owner.ledger.buy += b.fee; }
+    if (b.fee) { G.owner.money -= b.fee; G.owner.ledger.buy += b.fee; if (G.budget) G.budget.spent += b.fee; }
     if (w.club) replaceInClub(G, w.club, p, r);
     else mk.free = mk.free.filter((x) => x !== p);
     joinBond(p, false); p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = 3; p.salary = b.salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];

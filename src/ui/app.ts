@@ -1,4 +1,6 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
+import { openMeeting, openInbox } from './meetingview';
+import { unread } from '../core/meeting';
 import { openPrematch } from './prematch';
 import { openCeremony } from './ceremony';
 import { hasMyMatch, matchPlan, advanceToDecision, advanceWeek, answerOffer, newGame, standings, myTier, myRank, eventOf, currentGoal, cupAlive, clubName, clubById, dateText, cupResultText, ME, type GameState } from '../core/game';
@@ -67,6 +69,7 @@ export function boot() {
   if (g) app.G = g;
   $$<HTMLButtonElement>('.navbtn').forEach((b) => { b.innerHTML = ICON[b.dataset.tab === 'team' ? 'teamNav' : b.dataset.tab!] + b.innerHTML; b.addEventListener('click', () => { setTab(b.dataset.tab!); }); });
   $('#menuBtn').addEventListener('click', () => { setTab('settings'); });
+  $('#mailBtn').addEventListener('click', () => openInbox(app.G, () => { closeSheet(); render(); }, autosave));
   if (g) render(); else startNew(false);
 }
 /* 下のメニューは4つ（ホーム・チーム・経営・リーグ）。チーム・経営・リーグは、押すと大きなアイコンが並ぶ（問82：サカつくを手本に） */
@@ -92,6 +95,7 @@ export function render() {
   $('#clubName').innerHTML = `${esc(G.club.name)}${isWindow(G.week) ? '<span class="wintag">移籍の期間</span>' : ''}`;
   const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
   /* 問98：「1年目 4月第2週」と、シーズンの進み具合の棒。週が進むと日付がめくれる */
+  { const n = unread(app.G); const b = $('#mailBadge'); b.hidden = !n; b.textContent = n > 9 ? '9+' : String(n); $('#mailBtn').setAttribute('aria-label', n ? `メッセージ（読んでいない ${n}件）` : 'メッセージ'); }
   const sub = $('#clubSub');
   if (!sub.querySelector('#dateTxt')) sub.innerHTML = '<span id="dateTxt" class="flipbox"></span><span id="rankTxt"></span>・お金 <span id="moneyTxt"></span>';
   const date = `${G.season}年目 ${monthOf(G.week)}月第${weekOfMonth(G.week)}週`;
@@ -174,8 +178,10 @@ function homeHTML(): string {
   const lastM = lm ? `<div class="item">${ni('ball')}<span class="grow">前の試合 ${esc(lm.home.name)} ${lm.score[0]}-${lm.score[1]} ${esc(lm.away.name)}${lm.pk ? `（PK ${lm.pk.join('-')}）` : ''}</span><button class="btn small ghost" data-act="replay">見どころ</button></div>` : '';
   const last = G.history[G.history.length - 1];
   /* 問99：上は「タスク」（答えが必要なもの）、下は「ニュース」（読むだけのもの） */
-  const tasks = promo + pend + wants; void walk;
-  const newsBox = (scoutN ? `<div class="item">${ni('scout')}<span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">見る</button></div>` : '') + notes + yrep + news + lastM + lastRep;
+  const nUn = unread(G);
+  const mailT = nUn ? `<div class="item">${ni('bell')}<span class="grow">読んでいないメッセージ <b>${nUn}件</b></span><button class="btn small primary" data-act="inbox">見る</button></div>` : '';
+  const tasks = promo + pend + wants + mailT; void walk;
+  const newsBox = news + lastM + lastRep; void scoutN; void notes; void yrep;
   const hasMatch = hasMyMatch(G);
   void owner;
   return `
@@ -382,15 +388,17 @@ const happy = (news: string[]) => news.some((l) => /来てくれた|昇格|優�
 /** 週の報告は、何か起きた週だけ開く（覚醒・新しい特殊能力・克服・適性・ケガ・大きな伸び） */
 const notable = (rep: ReportEntry[]) => rep.some((r) => r.awake || r.newSp || r.cured || r.aptUp || r.injNew || r.ups.some((u) => u >= 2));
 function afterWeek(res: ReturnType<typeof advanceWeek>) {
-  autosave(); render();
-  /* 問111：年末の表彰式は自動で開く */
-  if (app.G.cere) { openCeremony(app.G, () => { autosave(); closeSheet(); afterWeek({ ...res, match: null }); }); return; }
-  if (happy(res.news)) setTimeout(confetti, res.match ? 0 : 200);
-  const show = notable(res.report); const grew = res.report.filter((r) => r.ups.some((u) => u > 0)).length;
-  const rep = () => openReport(res.report, find, showPlayer, render);
-  const quiet = () => { if (grew) toast(`今週は${grew}人が少し伸びた（ホームの「先週の報告」で見られる）`); };
-  if (res.match) openMatch(res.match, app.G.club.color, show ? rep : () => { closeSheet(); render(); quiet(); }, show ? '週の報告へ' : 'ホームへ');
-  else if (show) rep(); else quiet();
+  autosave(); render(); if (happy(res.news)) setTimeout(confetti, res.match ? 0 : 200);
+  const G = app.G; const show = notable(res.report); const grew = res.report.filter((r) => r.ups.some((u) => u > 0)).length;
+  /* 試合 → 表彰式（問111）→ 経営会議（問113・116）→ 週の報告、の順に開く */
+  const steps: ((next: () => void) => void)[] = [];
+  if (res.match) { const m = res.match; steps.push((n) => openMatch(m, G.club.color, n, '次へ')); }
+  steps.push((n) => (G.cere ? openCeremony(G, () => { autosave(); n(); }) : n()));
+  steps.push((n) => (G.meet ? openMeeting(G, () => { autosave(); n(); }) : n()));
+  if (show) steps.push((n) => openReport(res.report, find, showPlayer, n));
+  const finish = () => { closeSheet(); render(); if (!show && grew) toast(`今週は${grew}人が少し伸びた（ホームの「先週の報告」で見られる）`); };
+  const run = (i: number) => (i < steps.length ? steps[i](() => run(i + 1)) : finish());
+  run(0);
 }
 function act(a: string) {
   const G = app.G;
@@ -399,13 +407,17 @@ function act(a: string) {
   if (a === 'pre') openPrematch(G, () => { closeSheet(); act('week'); }, () => { closeSheet(); render(); }, showPlayer, autosave);
   if (a === 'skip') {
     const r = advanceToDecision(G); autosave(); render(); if (happy(r.news)) confetti();
-    if (G.cere) { openCeremony(G, () => { autosave(); closeSheet(); render(); openReport(r.report, find, showPlayer, render, `${r.weeks}週ぶんの報告`); }); return; }
+    const rep = () => openReport(r.report, find, showPlayer, render, `${r.weeks}週ぶんの報告`);
+    const meet = () => (G.meet ? openMeeting(G, () => { autosave(); rep(); }) : rep());
+    if (G.cere) { openCeremony(G, () => { autosave(); meet(); }); return; }
+    if (G.meet) { meet(); return; }
     openReport(r.report, find, showPlayer, render, `${r.weeks}週ぶんの報告`);
   }
   if (a === 'notes') {
     sheet(`<div class="bar"><h2>コーチのひとこと（年末）</h2></div><div class="list">${G.yearNotes.map((n) => `<div class="card"><b>${esc(n.name)}</b><div>「${esc(n.text)}」</div></div>`).join('')}</div>`, `<div class="in2 one"><button class="btn primary" id="nClose">もどる</button></div>`);
     $('#nClose').addEventListener('click', () => { closeSheet(); render(); });
   }
+  if (a === 'inbox') openInbox(G, () => { closeSheet(); render(); }, autosave);
   if (a === 'report') openReport(G.lastReport || [], find, showPlayer, render);
   if (a === 'replay' && G.lastMatch) openMatch(G.lastMatch, G.club.color, null);
   if (a === 'reset') {
