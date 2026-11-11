@@ -62,6 +62,10 @@ export interface Player {
   trust?: number; love?: number; unrest?: number; wantOut?: boolean;
   /** お気に入り（問103：トップとユース） */
   fav?: boolean;
+  /** アシスト（通算・今季）と、今季の評価点の合計と試合数（問106・110） */
+  ast?: number; seasonAst?: number; seasonRt?: number; seasonRtN?: number;
+  /** 賞をとった名声（市場の値段が上がる。毎年半分になる：問111） */
+  fame?: number;
 }
 
 export interface Manager {
@@ -104,7 +108,10 @@ export interface MatchView {
   /** オーナーの頼みを監督が聞いたか（問93） */
   orders?: { name: string; kind: string; heard: boolean }[];
   /** 自分のクラブの出場選手 */
-  played: { id: number; name: string; pos: Pos; sub: boolean; goals: number }[];
+  played: { id: number; name: string; pos: Pos; sub: boolean; goals: number; ast?: number; rt?: number; min?: number;
+    st?: { pa: number; pc: number; tk: number; sh: number; ot: number; sv: number; dr: number; kp: number } }[];
+  /** その試合でいちばんよかった選手（問108） */
+  mom?: { name: string; me: boolean; rt: number; club: string };
 }
 
 export interface ReportEntry {

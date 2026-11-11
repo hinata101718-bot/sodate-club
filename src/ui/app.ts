@@ -1,5 +1,7 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
-import { advanceToDecision, advanceWeek, answerOffer, newGame, standings, myTier, myRank, eventOf, currentGoal, cupAlive, clubName, clubById, dateText, cupResultText, ME, type GameState } from '../core/game';
+import { openPrematch } from './prematch';
+import { openCeremony } from './ceremony';
+import { hasMyMatch, matchPlan, advanceToDecision, advanceWeek, answerOffer, newGame, standings, myTier, myRank, eventOf, currentGoal, cupAlive, clubName, clubById, dateText, cupResultText, ME, type GameState } from '../core/game';
 import { CUP_ROUND_NAMES, monthOf, weekOfMonth, isWindow, BREAK_WEEKS } from '../core/calendar';
 import { openNewClub } from './newclub';
 import { youthHTML, bindYouth } from './youthview';
@@ -131,7 +133,7 @@ function nextHTML(G: GameState): string {
   if (e.kind === 'league') { const c = clubById(G, e.opp); const me = clubById(G, ME);
     const side = (x: typeof c, sub: string) => `<div class="vs-side">${emblemSVG(x.emblem, 'vs-crest')}<span class="vs-name">${esc(x.name)}</span><span class="vs-sub">${sub}</span></div>`;
     const mine = side(me, `${me.tier}部${oppRank(me.id, me.tier)}`); const theirs = side(c, `${c.tier}部${oppRank(c.id, c.tier)} ・ ${esc(c.mgr.style)}`);
-    return `<h2>今週の試合 ・ リーグ第${e.round}節</h2><div class="vs">${e.home ? mine : theirs}<div class="vs-mid"><b>VS</b><span class="tag ${e.home ? '' : 'away'}">${e.home ? 'ホーム' : 'アウェイ'}</span></div>${e.home ? theirs : mine}</div>`; }
+    return `<h2>今週の試合 ・ リーグ第${e.round}節</h2><div class="vs">${e.home ? mine : theirs}<div class="vs-mid"><b>VS</b><span class="tag ${e.home ? '' : 'away'}">${e.home ? 'ホーム' : 'アウェイ'}</span></div>${e.home ? theirs : mine}</div><div class="muted small" style="text-align:center;margin-top:6px">予定：${matchPlan(G).form}</div>`; }
   if (e.kind === 'cup') {
     const nm = CUP_ROUND_NAMES[e.round];
     if (!cupAlive(G)) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">大会はもう負けている。今週は試合がない。</div>`;
@@ -174,7 +176,7 @@ function homeHTML(): string {
   /* 問99：上は「タスク」（答えが必要なもの）、下は「ニュース」（読むだけのもの） */
   const tasks = promo + pend + wants; void walk;
   const newsBox = (scoutN ? `<div class="item">${ni('scout')}<span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">見る</button></div>` : '') + notes + yrep + news + lastM + lastRep;
-  const ev = eventOf(G); const hasMatch = ev.kind === 'league' || (ev.kind === 'cup' && cupAlive(G));
+  const hasMatch = hasMyMatch(G);
   void owner;
   return `
   <section class="hero">${STADIUM_SVG}
@@ -188,7 +190,7 @@ function homeHTML(): string {
   ${tasks ? `<section class="card notice band"><h2>タスク</h2>${tasks}</section>` : ''}
   ${newsBox ? `<section class="card notice band news"><h2>ニュース</h2>${newsBox}</section>` : ''}
   <div class="btns">
-    <button class="btn primary go" data-act="week">${hasMatch ? '試合へ' : '1週進む'} <span aria-hidden="true">▶</span></button>
+    <button class="btn primary go" data-act="${hasMatch ? 'pre' : 'week'}">${hasMatch ? '試合へ' : '1週進む'} <span aria-hidden="true">▶</span></button>
     <button class="btn ghost go" data-act="skip">決めるまで進む <span aria-hidden="true">▶▶</span></button>
   </div>
 `;
@@ -380,7 +382,10 @@ const happy = (news: string[]) => news.some((l) => /来てくれた|昇格|優�
 /** 週の報告は、何か起きた週だけ開く（覚醒・新しい特殊能力・克服・適性・ケガ・大きな伸び） */
 const notable = (rep: ReportEntry[]) => rep.some((r) => r.awake || r.newSp || r.cured || r.aptUp || r.injNew || r.ups.some((u) => u >= 2));
 function afterWeek(res: ReturnType<typeof advanceWeek>) {
-  autosave(); render(); if (happy(res.news)) setTimeout(confetti, res.match ? 0 : 200);
+  autosave(); render();
+  /* 問111：年末の表彰式は自動で開く */
+  if (app.G.cere) { openCeremony(app.G, () => { autosave(); closeSheet(); afterWeek({ ...res, match: null }); }); return; }
+  if (happy(res.news)) setTimeout(confetti, res.match ? 0 : 200);
   const show = notable(res.report); const grew = res.report.filter((r) => r.ups.some((u) => u > 0)).length;
   const rep = () => openReport(res.report, find, showPlayer, render);
   const quiet = () => { if (grew) toast(`今週は${grew}人が少し伸びた（ホームの「先週の報告」で見られる）`); };
@@ -391,8 +396,10 @@ function act(a: string) {
   const G = app.G;
   if (a === 'reload') { autosave(); location.reload(); return; }
   if (a === 'week') { afterWeek(advanceWeek(G)); }
+  if (a === 'pre') openPrematch(G, () => { closeSheet(); act('week'); }, () => { closeSheet(); render(); }, showPlayer, autosave);
   if (a === 'skip') {
     const r = advanceToDecision(G); autosave(); render(); if (happy(r.news)) confetti();
+    if (G.cere) { openCeremony(G, () => { autosave(); closeSheet(); render(); openReport(r.report, find, showPlayer, render, `${r.weeks}週ぶんの報告`); }); return; }
     openReport(r.report, find, showPlayer, render, `${r.weeks}週ぶんの報告`);
   }
   if (a === 'notes') {

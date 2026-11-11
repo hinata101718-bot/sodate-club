@@ -67,12 +67,20 @@ export function openMatch(m: MatchView, myColor: string, after: (() => void) | n
     if (!feed.querySelector('.endcard')) {
       sc.textContent = m.score.join(' - ');
       const sco = m.scorers.map((s) => `<span class="${s.me ? 'n-me' : 'n-op'}">${esc(s.name)}</span> ${s.min}分`).join('、');
-      const pl = m.played.map((p) => `<div class="row">${posTag(p.pos)}<span class="grow">${esc(p.name)}${p.sub ? ' <span class="muted small">途中から</span>' : ''}</span>${p.goals ? `<b>${p.goals}点</b>` : ''}</div>`).join('');
+      /* 問108：一覧は評価点・ゴール・アシストだけ。押すとその試合のくわしい数字が開く */
+      const rc = (v: number) => (v >= 8 ? 'r-top' : v >= 7 ? 'r-good' : v < 5.5 ? 'r-bad' : '');
+      const momMe = m.mom && m.mom.me ? m.mom.name : '';
+      const pl = m.played.map((p, i) => { const s = p.st; const rt = p.rt ?? 6;
+        return `<div class="srow-wrap"><button class="srow rtrow" data-rt="${i}" aria-expanded="false">${posTag(p.pos)}<span class="grow sname">${esc(p.name)}${p.sub ? ' <span class="muted small">途中から</span>' : ''}${momMe === p.name ? ' <span class="tag gold">MOM</span>' : ''}</span>${p.goals ? `<span class="small">⚽${p.goals > 1 ? p.goals : ''}</span>` : ''}${p.ast ? `<span class="small">A${p.ast > 1 ? p.ast : ''}</span>` : ''}<span class="rt ${rc(rt)}">${rt.toFixed(1)}</span></button>
+          ${s ? `<div class="sdetail rtd" hidden><div class="rtmini"><span>出場 ${p.min ?? 90}分</span><span>パス ${s.pa}本（成功 ${s.pa ? Math.round((s.pc / s.pa) * 100) : 0}%）</span><span>シュート ${s.sh}（枠内 ${s.ot}）</span><span>決定機を作った ${s.kp}</span><span>ボールを奪った ${s.tk}</span><span>ドリブル成功 ${s.dr}</span>${p.pos === 'GK' ? `<span>セーブ ${s.sv}</span>` : ''}</div></div>` : ''}</div>`; }).join('');
+      const mom = m.mom ? `<div class="mom"><span class="tag gold">MOM</span> <span class="${m.mom.me ? 'n-me' : 'n-op'}">${esc(m.mom.name)}</span>（${esc(m.mom.club)}）<b class="rt r-top">${m.mom.rt.toFixed(1)}</b></div>` : '';
       feed.insertAdjacentHTML('beforeend', `<div class="card endcard"><h2>試合のまとめ</h2><div class="goal">試合終了 ${m.score.join(' - ')}${m.pk ? `（PK戦 ${m.pk.join(' - ')}）` : ''}</div>
         <div class="muted">決定機 ${m.chances[0] + m.chances[1]}回（${esc(m.home.name)} ${m.chances[0]}回 ・ ${esc(m.away.name)} ${m.chances[1]}回）</div>
         ${sco ? `<div style="margin-top:6px">得点：${sco}</div>` : ''}
-        ${pl ? `<h3>出場した選手</h3><div class="list">${pl}</div>` : ''}
+        ${mom}
+        ${pl ? `<h3>出場した選手（評価点は10点満点）</h3><div class="slist">${pl}</div><div class="muted small" style="margin-top:4px">選手を押すと、その試合のくわしい数字が出る。</div>` : ''}
         <div class="muted small" style="margin-top:8px">その試合での伸びは、このあとの週の報告で見られます。</div></div>`);
+      feed.querySelectorAll<HTMLElement>('[data-rt]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const d = b.nextElementSibling as HTMLElement | null; if (!d) return; const open = d.hidden; d.hidden = !open; b.setAttribute('aria-expanded', String(open)); }));
     }
     nextBtn.textContent = after ? afterLabel : '閉じる';
   };

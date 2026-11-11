@@ -1,4 +1,6 @@
-/* 試合（企画書 13-2：場面ごとの1対1を積み上げて、結果ができあがる） */
+/* 試合（企画書 13-2：場面ごとの1対1を積み上げて、結果ができあがる）
+   問107：90分を1分ずつ進める。毎分、ボールを持つ選手・パス・奪う・ドリブル・シュートを決め、
+   決定機はこの流れの先に生まれる。数えた本物の数字から、10点満点の評価点を出す（問106・108） */
 import { obeyChance, youthBonus, mgrView } from './bond';
 import { Rng, clamp, sig } from './rng';
 import { APTF, DEF, DRI, FORM, FORM_ATK, IQ, PAS, PHY, SCENE_BASE, SHT, SPD, STA, STYLES, type Pos, type StyleName } from './constants';
@@ -13,12 +15,16 @@ export interface TeamIn { id: number; name: string; me: boolean; color: string; 
   heard?: Map<number, boolean>; }
 export interface MatchOpts { record?: boolean; label?: string; big?: boolean; cup?: boolean; neutral?: boolean; title?: string; }
 export interface OnPl { p: Player; pos: Pos; sub: boolean; }
+/** 1試合の選手ごとの数字（問107） */
+export interface St { pa: number; pc: number; tk: number; sh: number; ot: number; sv: number; dr: number; kp: number; as: number; g: number; dw: number; dl: number; ga: number; from: number; to: number }
+const zeroSt = (from = 0): St => ({ pa: 0, pc: 0, tk: 0, sh: 0, ot: 0, sv: 0, dr: 0, kp: 0, as: 0, g: 0, dw: 0, dl: 0, ga: 0, from, to: 90 });
 interface Side {
   t: TeamIn; home: boolean; day: number; style: StyleName; form: string; on: OnPl[]; bench: Player[]; subs: number; goals: number; str: number; offs: OnPl[]; changed: boolean;
+  st: Map<Player, St>;
 }
 export interface Fire { sp: string; t: string; me: boolean; gk?: boolean }
 interface Chance {
-  min: number; scene: string; k: number; att: OnPl; ok: boolean; goal: boolean; save: boolean; shotAv: number; text: Line[];
+  min: number; scene: string; k: number; att: OnPl; assist: OnPl | null; def: OnPl | null; ok: boolean; goal: boolean; save: boolean; shotAv: number; text: Line[];
   flow?: string | null; mem?: boolean; score?: [number, number]; turnover?: boolean;
 }
 interface Ev { t: number; kind: 'talk' | 'flow' | 'memo'; text: Line; me: boolean; }
@@ -39,7 +45,8 @@ export function youthBias(t: TeamIn): number {
   const pol = t.policy === '若手多め' ? 1.6 : t.policy === '勝ち優先' ? 0.6 : 1;
   return pol * t.mgr.youth;
 }
-export function pickLineup(r: Rng, t: TeamIn, form: string): { lineup: OnPl[]; bench: Player[] } {
+/** assume：試合前の画面の「予定」。頼みは全部聞いてもらえたとして組む（問109） */
+export function pickLineup(r: Rng, t: TeamIn, form: string, assume = false): { lineup: OnPl[]; bench: Player[] } {
   let sq = t.squad.filter((p) => p.inj === 0);
   const slots = FORM[form]; const used = new Set<number>(); const lineup: OnPl[] = [];
   const yb = youthBias(t);
@@ -47,7 +54,7 @@ export function pickLineup(r: Rng, t: TeamIn, form: string): { lineup: OnPl[]; b
   const heard = new Map<number, boolean>();
   if (t.me) {
     const ords = t.squad.filter((p) => p.ord && p.inj === 0); const ch = obeyChance(t.mgr.obey, ords.length);
-    for (const p of ords) heard.set(p.id, r.next() < ch);
+    for (const p of ords) heard.set(p.id, assume || r.next() < ch);
     const out = sq.filter((p) => p.ord?.kind === 'bench' && heard.get(p.id));
     /* 人が足りないときは、使わないでと言われた選手も出す */
     if (sq.length - out.length >= slots.length + 2) sq = sq.filter((p) => !out.includes(p));
@@ -139,7 +146,7 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
     const myS = teamStrength(t.squad), opS = teamStrength((ix ? home : away).squad);
     const form = chooseForm(t.mgr, myS, opS, t.squad);
     const { lineup, bench } = pickLineup(r, t, form);
-    return { t, home: ix === 0 && !opts.neutral, day: (r.next() - 0.5) * 8, style: t.mgr.style, form, on: lineup, bench, subs: 0, goals: 0, str: myS, offs: [], changed: false };
+    return { t, home: ix === 0 && !opts.neutral, day: (r.next() - 0.5) * 8, style: t.mgr.style, form, on: lineup, bench, subs: 0, goals: 0, str: myS, offs: [], changed: false, st: new Map(lineup.map((x) => [x.p, zeroSt()])) };
   });
   const ev: Ev[] = []; const log: Chance[] = [];
   const T = (side: Side, pl: OnPl | Player): Token => ({ t: ('p' in pl ? pl.p : pl).name, me: side.t.me });
@@ -184,14 +191,23 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
     }
     const minutes: { k: number; min: number }[] = [];
     for (let c = 0; c < n; c++) minutes.push({ k: r.next() < share ? 0 : 1, min: t0 + r.int(1, 15) });
-    minutes.push(...pending.splice(0));
+    minutes.push(...pending.splice(0).map((x) => ({ k: x.k, min: Math.max(x.min, t0 + 1) })));
     minutes.sort((x, y) => x.min - y.min);
-    for (const { k, min } of minutes) {
+    const press = sides.map((s) => { const f = s.on.filter((x) => x.pos !== 'GK'); return f.reduce((t, x) => t + x.p.a[DEF] * 0.6 + x.p.a[IQ] * 0.4, 0) / Math.max(1, f.length); });
+    let ci = 0;
+    for (let mm = t0 + 1; mm <= t0 + 15; mm++) {
+      /* この1分のボールの動き。決定機がある分は、その攻めの流れが決定機につながる */
+      const here: { k: number; min: number }[] = [];
+      while (ci < minutes.length && minutes[ci].min <= mm) here.push(minutes[ci++]);
+      if (!here.length) { const k = r.next() < share ? 0 : 1; flow(r, sides[k], sides[1 - k], mm, press[1 - k], false, 11, 5); if (r.next() < 0.85) flow(r, sides[1 - k], sides[k], mm, press[k], false, 7, 2); }
+      for (const { k } of here) flow(r, sides[k], sides[1 - k], mm, press[1 - k], true);
+    for (const { k, min } of here) {
       const A = sides[k], D = sides[1 - k];
       const res = resolveChance(r, A, D, Math.min(90, min));
       if (!res) continue;
       res.k = k;
       log.push(res);
+      chanceStats(A, D, res);
       if (res.turnover && min < 89) pending.push({ k: 1 - k, min: min + 1 });
       if (res.goal) {
         const before: [number, number] = [sides[0].goals, sides[1].goals]; A.goals++;
@@ -200,6 +216,7 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
         if (A.t.me && res.att.p.goals === 0 && !log.some((x) => x !== res && x.goal && x.att.p === res.att.p)) res.mem = true;
         res.score = [sides[0].goals, sides[1].goals];
       }
+    }
     }
     if (pending.length && blk === 5) pending.length = 0;
   }
@@ -210,8 +227,9 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
   if (opts.cup && sides[0].goals === sides[1].goals) pk = shootout(r, sides, ev);
   const score: [number, number] = [sides[0].goals, sides[1].goals];
   const winner: 0 | 1 | null = score[0] > score[1] ? 0 : score[1] > score[0] ? 1 : pk ? (pk[0] > pk[1] ? 0 : 1) : null;
-  if (opts.record) record(r, sides, log, opts.label || '');
-  const view = buildView(sides, log, ev, score, pk, !!opts.big, opts.title || '');
+  const rt = rateAll(sides, score);
+  if (opts.record) record(r, sides, log, opts.label || '', rt);
+  const view = buildView(sides, log, ev, score, pk, !!opts.big, opts.title || '', rt);
   return { score, pk, winner, view };
 }
 
@@ -244,7 +262,7 @@ function doSubs(r: Rng, s: Side, o: Side, ev: Ev[], min: number) {
     if (s.subs >= 5) break;
     const off = cands.filter((x) => on.apt[x.pos] >= 2 && x.pos !== 'GK')[0]; if (!off) continue;
     s.bench = s.bench.filter((b) => b !== on); cands.splice(cands.indexOf(off), 1);
-    const idx = s.on.indexOf(off); s.on[idx] = { p: on, pos: off.pos, sub: true }; s.offs.push(off); s.subs++;
+    const idx = s.on.indexOf(off); s.on[idx] = { p: on, pos: off.pos, sub: true }; s.offs.push(off); s.subs++; subMin(s, off.p, on, min);
     ev.push({ t: min, kind: 'talk', me: false, text: ['交代。', { t: off.p.name, me: true }, ' に代わって、', { t: on.name, me: true }, ' が入る。'] });
     if (on.apps === 0) ev.push({ t: min, kind: 'memo', me: true, text: [{ t: on.name, me: true }, ' が途中出場。これがプロ初出場だ。'] });
   }
@@ -258,7 +276,7 @@ function doSubs(r: Rng, s: Side, o: Side, ev: Ev[], min: number) {
     const score = (p: Player) => posRating(p, off.pos) + (youthTry && p.age <= 21 ? 12 : 0) + (p.sp.includes('スーパーサブ') ? 3 : 0) - p.fat * 0.05 + subOrd(p);
     pool.sort((x, y) => score(y) - score(x));
     const on = pool[0]; s.bench = s.bench.filter((b) => b !== on);
-    const idx = s.on.indexOf(off); s.on[idx] = { p: on, pos: off.pos, sub: true }; s.offs.push(off); s.subs++;
+    const idx = s.on.indexOf(off); s.on[idx] = { p: on, pos: off.pos, sub: true }; s.offs.push(off); s.subs++; subMin(s, off.p, on, min);
     ev.push({ t: min, kind: 'talk', me: false, text: ['交代。', { t: off.p.name, me: s.t.me }, ' に代わって、', { t: on.name, me: s.t.me }, ' が入る。'] });
     if (s.t.me && on.apps === 0) ev.push({ t: min, kind: 'memo', me: true, text: [{ t: on.name, me: true }, ' が途中出場。これがプロ初出場だ。'] });
   }
@@ -411,17 +429,18 @@ function resolveChance(r: Rng, A: Side, D: Side, min: number): Chance | null {
   pf(D, g, 'コーチング', !ok && ['CB', 'SB', 'DM'].includes(def.pos) && r.next() < 0.5);
   pf(D, def, 'クリーンディフェンス', !ok && (scene === 'dribble' || scene === 'through') && r.next() < 0.5);
   const text = narrate(r, scene, A, D, att, assist, def, g, ok, goal, fires, shotFires, headed, rec, gkFired);
-  return { min, scene, k: 0, att, ok, goal, save, shotAv, text, turnover };
+  return { min, scene, k: 0, att, assist: assist && assist !== att ? assist : null, def: def ?? null, ok, goal, save, shotAv, text, turnover };
 }
 function gk(s: Side) { return gkOf(s); }
 
 
 /* ---------- 記録（出場・疲れ・ケガ・ゴール） ---------- */
-function record(r: Rng, sides: Side[], log: Chance[], label: string) {
+function record(r: Rng, sides: Side[], log: Chance[], label: string, rt: Map<Player, number>) {
   for (const s of sides) {
     for (const x of [...s.on, ...s.offs]) {
       const p = x.p;
       p.apps++; p.seasonApps++; p.seasonPerf += 1;
+      const v = rt.get(p); if (v != null) { p.seasonRt = (p.seasonRt ?? 0) + v; p.seasonRtN = (p.seasonRtN ?? 0) + 1; p.seasonPerf += clamp(v - 6.5, -1, 2); }
       p.exp = clamp(p.exp + (p.sp.includes('吸収力') ? 8 : 3), 0, 100);
       if (s.t.me && !p.firstApp) p.firstApp = label;
       p.played = true;
@@ -436,10 +455,11 @@ function record(r: Rng, sides: Side[], log: Chance[], label: string) {
     if (s.t.me && !p.firstGoal) p.firstGoal = label;
     p.goals++; p.seasonGoals++; p.seasonPerf += 2;
   }
+  for (const c of log) if (c.goal && c.assist) { const p = c.assist.p; p.ast = (p.ast ?? 0) + 1; p.seasonAst = (p.seasonAst ?? 0) + 1; p.seasonPerf += 1; }
 }
 
 /* ---------- 画面に渡す形（JSONにできる） ---------- */
-function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, number], pk: [number, number] | null, big: boolean, title: string): MatchView {
+function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, number], pk: [number, number] | null, big: boolean, title: string, rt: Map<Player, number>): MatchView {
   const toItem = (c: Chance): ViewItem => ({
     min: c.min, kind: c.goal ? 'goal' : 'chance', me: sides[c.k].t.me, lines: c.text,
     goal: c.goal ? { scorer: c.att.p.name, score: c.score!, flow: c.flow ?? null, mem: !!c.mem, team: sides[c.k].t.name, me: sides[c.k].t.me } : undefined,
@@ -461,7 +481,7 @@ function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, numbe
   hl.sort((a, b) => a.min - b.min || (a.kind === 'memo' ? -1 : 1));
   const full: ViewItem[] = [...log.map(toItem), ...ev.map(evItem)].sort((x, y) => x.min - y.min || (x.kind === 'talk' && y.kind !== 'talk' ? (x.min >= 90 ? 1 : -1) : 0));
   const meSide = sides.find((s) => s.t.me);
-  const played = meSide ? [...meSide.on.filter((x) => !x.sub), ...meSide.offs, ...meSide.on.filter((x) => x.sub)].map((x) => ({ id: x.p.id, name: x.p.name, pos: x.pos, sub: x.sub, goals: log.filter((c) => c.goal && c.att.p === x.p).length })) : [];
+  const played = meSide ? [...meSide.on.filter((x) => !x.sub), ...meSide.offs, ...meSide.on.filter((x) => x.sub)].map((x) => { const st = meSide.st.get(x.p) ?? zeroSt(); return { id: x.p.id, name: x.p.name, pos: x.pos, sub: x.sub, goals: st.g, ast: st.as, rt: rt.get(x.p) ?? 6, min: Math.max(0, st.to - st.from), st: { pa: st.pa, pc: st.pc, tk: st.tk, sh: st.sh, ot: st.ot, sv: st.sv, dr: st.dr, kp: st.kp } }; }) : [];
   return {
     title,
     home: { name: sides[0].t.name, me: sides[0].t.me, color: sides[0].t.color },
@@ -470,6 +490,82 @@ function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, numbe
     chances: [log.filter((x) => x.k === 0).length, log.filter((x) => x.k === 1).length],
     scorers: goals.map((c) => ({ name: c.att.p.name, min: c.min, me: sides[c.k].t.me })),
     played,
+    mom: momOf(sides, rt),
     orders: meSide ? meSide.t.squad.filter((p) => p.ord && meSide.t.heard?.has(p.id)).map((p) => ({ name: p.name, kind: p.ord!.kind, heard: !!meSide.t.heard!.get(p.id) })) : undefined,
   };
+}
+
+/* ---------- 1分ごとのボールの動き（問107） ---------- */
+const W_HOLD: Record<Pos, number> = { GK: 0.9, CB: 1.25, SB: 1, DM: 1.45, CM: 1.5, AM: 1.2, WG: 0.9, ST: 0.6 };
+const W_WIN: Record<Pos, number> = { GK: 0, CB: 1.3, SB: 1.1, DM: 1.6, CM: 1.1, AM: 0.6, WG: 0.5, ST: 0.3 };
+const FWD: Pos[] = ['AM', 'WG', 'ST'];
+export function stOf(s: { st: Map<Player, St> }, p: Player): St { let x = s.st.get(p); if (!x) { x = zeroSt(); s.st.set(p, x); } return x; }
+function subMin(s: Side, off: Player, on: Player, min: number) { stOf(s, off).to = min; const x = stOf(s, on); x.from = min; x.to = 90; }
+const fv = (side: Side, pl: OnPl, i: number, t: number) => eff(side, pl, i, t, 'flow');
+function winner(r: Rng, D: Side): OnPl {
+  const f = D.on.filter((x) => x.pos !== 'GK');
+  return r.wpick(f.map((x) => [x, W_WIN[x.pos] * Math.pow(Math.max(10, x.p.a[DEF]), 1.5) + 40] as [OnPl, number]));
+}
+/** 1回の攻め：パスをつなぐ。keep のときは、このあと決定機になる（とちゅうで奪われない） */
+function flow(r: Rng, A: Side, D: Side, t: number, press: number, keep: boolean, maxLen = 7, minLen = 2): void {
+  let h = r.wpick(A.on.map((x) => [x, W_HOLD[x.pos]] as [OnPl, number]));
+  const n = r.int(minLen, maxLen);
+  for (let i = 0; i < n; i++) {
+    const sh = stOf(A, h.p);
+    /* 決定機にならないシュート（遠め・角度がない）：点にはならない。枠外・ブロック・キーパーが楽に止める */
+    if (!keep && i >= 1 && (FWD.includes(h.pos) || h.pos === 'CM') && r.next() < (FWD.includes(h.pos) ? 0.1 : 0.035) * (0.6 + h.p.a[SHT] / 100)) {
+      sh.sh++; if (r.next() >= 0.7) { sh.ot++; stOf(D, gkOf(D).p).sv++; }
+      return;
+    }
+    if (FWD.includes(h.pos) && r.next() < 0.16) {
+      const d = winner(r, D);
+      const win = keep || r.next() < sig((fv(A, h, DRI, t) - fv(D, d, DEF, t)) / 14 + 0.25);
+      if (win) sh.dr++; else { stOf(D, d.p).tk++; return; }
+    }
+    const to = r.wpick(A.on.filter((x) => x !== h).map((x) => [x, W_HOLD[x.pos] * (i >= 2 && FWD.includes(x.pos) ? 1.6 : 1) * (x.pos === 'GK' ? 0.6 : 1)] as [OnPl, number]));
+    const pOk = clamp(0.83 + ((fv(A, h, PAS, t) + fv(A, h, IQ, t)) / 2 - press) / 140 - i * 0.012 - (h.pos === 'GK' ? 0.08 : 0) + (FWD.includes(to.pos) ? -0.04 : 0.03), 0.55, 0.97);
+    sh.pa++;
+    if (keep || r.next() < pOk) { sh.pc++; h = to; } else { stOf(D, winner(r, D).p).tk++; return; }
+  }
+}
+function chanceStats(A: Side, D: Side, c: Chance) {
+  const g = gkOf(D);
+  if (c.ok) {
+    const s = stOf(A, c.att.p); s.sh++;
+    if (c.goal) { s.g++; s.ot++; stOf(D, g.p).ga++; if (c.assist) stOf(A, c.assist.p).as++; }
+    else if (c.save) { s.ot++; stOf(D, g.p).sv++; }
+    if (c.assist) stOf(A, c.assist.p).kp++;
+    if (c.def && c.def !== g) stOf(D, c.def.p).dl++;
+  } else if (c.def) { const d = stOf(D, c.def.p); d.dw++; d.tk++; }
+}
+/** 10点満点・0.1きざみの評価点（問106）。試合全体での働き（数えた数字）から決める */
+export function rateOne(st: St, pos: Pos, ga: number, res: number): number {
+  const DEFS: Pos[] = ['CB', 'SB'];
+  let v = 6.0;
+  v += st.g * (DEFS.includes(pos) || pos === 'DM' ? 1.2 : 0.95) + st.as * 0.6 + st.kp * 0.15;
+  v += st.ot * 0.1 - (st.sh - st.ot) * 0.03;
+  v += st.pc * 0.007 - (st.pa - st.pc) * 0.025;
+  v += st.tk * 0.06 + st.dr * 0.08 + st.dw * 0.22 - st.dl * 0.2;
+  if (pos === 'GK') v += st.sv * 0.33 - ga * 0.35 + (ga === 0 ? 0.45 : 0);
+  else if (DEFS.includes(pos)) v += -ga * 0.15 + (ga === 0 ? 0.35 : 0);
+  else if (pos === 'DM') v += -ga * 0.07 + (ga === 0 ? 0.15 : 0);
+  v += res * 0.25;
+  const mins = Math.max(1, st.to - st.from);
+  v = 6 + (v - 6) * Math.min(1, 0.45 + mins / 50);
+  return Math.round(clamp(v, 3, 10) * 10) / 10;
+}
+function rateAll(sides: Side[], score: [number, number]): Map<Player, number> {
+  const out = new Map<Player, number>();
+  sides.forEach((s, k) => {
+    const res = Math.sign(score[k] - score[1 - k]);
+    for (const x of [...s.on, ...s.offs]) { const st = stOf(s, x.p); out.set(x.p, rateOne(st, x.pos, gaWhile(sides[1 - k], st), res)); }
+  });
+  return out;
+}
+/** その選手がピッチにいた間に取られた点 */
+function gaWhile(o: Side, st: St): number { let n = 0; for (const x of o.st.values()) n += x.g; return st.from === 0 && st.to === 90 ? n : Math.round(n * (st.to - st.from) / 90); }
+function momOf(sides: Side[], rt: Map<Player, number>) {
+  let best: { name: string; me: boolean; rt: number; club: string } | undefined; let bv = -1;
+  for (const s of sides) for (const x of [...s.on, ...s.offs]) { const v = (rt.get(x.p) ?? 0) + stOf(s, x.p).g * 0.01; if (v > bv) { bv = v; best = { name: x.p.name, me: s.t.me, rt: rt.get(x.p) ?? 6, club: s.t.name }; } }
+  return best;
 }

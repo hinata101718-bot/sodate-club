@@ -1,7 +1,7 @@
 /* ゲームの状態と、1週ずつ進めるしくみ */
 import { Rng, clamp } from './rng';
 import { makePlayer, makeSquad, ovr, assignNumbers, teamStrength } from './player';
-import { simulateMatch, type Policy, type TeamIn } from './match';
+import { simulateMatch, pickLineup, chooseForm, type Policy, type TeamIn } from './match';
 import { growPlayer, mergeReports, DEFAULT_CTX } from './growth';
 import { makeManager } from './staff';
 import { prefByName } from './data/prefs';
@@ -24,8 +24,10 @@ export interface Offer { type: 'offer'; pid: number; club: string; price: number
 export interface CupTie { a: number; b: number; w?: number; s?: [number, number]; pk?: [number, number] | null; }
 export interface Cup { round: number; rounds: CupTie[][]; champion: number | null; }
 export interface League { ids: number[]; fixtures: [number, number][][]; table: Record<number, Row>; }
-export interface Award { title: string; tier: number; name: string; club: string; me: boolean; detail: string; }
-export interface SeasonRec { season: number; tier: number; rank: number; cup: string; awards: Award[]; promoted: boolean; relegated: boolean; champion: Record<number, string>; cupChampion: string; }
+export interface Award { title: string; tier: number; name: string; club: string; me: boolean; detail: string; pos?: Pos; }
+/** 年末の表彰式（問110・111）：開いていないときは null */
+export interface Ceremony { season: number; tier: number; awards: Award[]; xi: Award[]; effects: string[] }
+export interface SeasonRec { season: number; tier: number; rank: number; cup: string; awards: Award[]; xi?: Award[]; promoted: boolean; relegated: boolean; champion: Record<number, string>; cupChampion: string; }
 export interface GoalRec { id: string; season: number; }
 export interface NewGameOpts { seed?: number; pref?: string; name?: string; color?: string; emblem?: Emblem; }
 export interface GameState {
@@ -59,6 +61,8 @@ export interface GameState {
   yearNotes: { pid: number; name: string; text: string }[];
   /** お気に入りの選手の記録（問103：移籍・引退でクラブを去った選手） */
   favLog?: { name: string; pos: string; season: number; text: string }[];
+  /** 年末の表彰式（開くのを待っている） */
+  cere?: Ceremony | null;
   /** オーナーが決めること（段階4）：お金・施設・人・移籍 */
   owner: OwnerState;
 }
@@ -230,6 +234,24 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
   return mine;
 }
 
+/** 今週、自分のクラブの試合があるか（勝ち抜きの大会で、まだ出番がない回はない） */
+export function hasMyMatch(G: GameState): boolean {
+  const e = eventOf(G);
+  if (e.kind === 'league') return true;
+  if (e.kind !== 'cup' || !cupAlive(G)) return false;
+  if (e.round === 0 && myTier(G) === 1) return false;
+  if (e.round === 1 && myTier(G) === 1 && (clubById(G, ME).prevRank || 99) <= 8) return false;
+  return true;
+}
+/** 試合前の画面（問109）：監督が予定している並び方と先発。頼みは聞いてもらえたとして組む（聞いてくれるかは当日わかる） */
+export function matchPlan(G: GameState): { form: string; lineup: { p: Player; pos: Pos }[]; bench: Player[]; opp: Club | null; home: boolean | null } {
+  const e = eventOf(G); const opp = e.kind === 'league' ? clubById(G, e.opp) : null;
+  const me = teamIn(G, myClub(G));
+  const form = chooseForm(G.mgr, teamStrength(G.squad), opp ? teamStrength(opp.squad) : teamStrength(G.squad), G.squad);
+  const { lineup, bench } = pickLineup(new Rng(1), me, form, true);
+  delete me.heard;
+  return { form, lineup: lineup.map((x) => ({ p: x.p, pos: x.pos })), bench: bench.sort((a, b) => ovr(b) - ovr(a)), opp, home: e.kind === 'league' ? e.home : null };
+}
 /** 1週進める */
 export function advanceWeek(G: GameState): WeekResult {
   const r = new Rng(G.rng);
@@ -337,25 +359,12 @@ export function answerOffer(G: GameState, i: number, accept: boolean): string | 
 /* ---------- 年末（12月）：表彰・記録・節目の目標 ---------- */
 function yearEnd(G: GameState, r: Rng): string[] {
   const out: string[] = [];
-  const awards: Award[] = [];
   const nameOf = (id: number) => clubName(G, id);
-  for (const t of [1, 2, 3]) {
-    const L = G.leagues[t];
-    const all: { p: Player; club: number }[] = [];
-    for (const id of L.ids) for (const p of id === ME ? G.squad : clubById(G, id).squad) all.push({ p, club: id });
-    const score = (p: Player) => ovr(p) + p.seasonGoals * 0.7 + p.seasonApps * 0.25;
-    const played = all.filter((x) => x.p.seasonApps >= 8);
-    const mvp = [...played].sort((a, b) => score(b.p) - score(a.p))[0];
-    const top = [...played].sort((a, b) => b.p.seasonGoals - a.p.seasonGoals || score(b.p) - score(a.p))[0];
-    const young = played.filter((x) => x.p.age <= 21).sort((a, b) => score(b.p) - score(a.p))[0];
-    const add = (title: string, x: { p: Player; club: number } | undefined, detail: string) => { if (x && x.club !== ME && G.owner) learnAward(G, x.p, clubById(G, x.club)); if (x) awards.push({ title, tier: t, name: x.p.name, club: nameOf(x.club), me: x.club === ME, detail }); };
-    add('リーグで一番の選手', mvp, mvp ? `${mvp.p.seasonApps}試合 ${mvp.p.seasonGoals}点` : '');
-    add('得点王', top, top ? `${top.p.seasonGoals}点` : '');
-    add('一番の若手', young, young ? `${young.p.age}歳 ・ ${young.p.seasonApps}試合` : '');
-  }
-  const mine = awards.filter((a) => a.me);
-  if (mine.length) out.push(`年末の表彰：${mine.map((a) => `${a.name}（${a.tier}部の${a.title}）`).join('、')}`);
-  else out.push('年末の表彰が行われた。');
+  const { awards, xi, effects } = seasonAwards(G);
+  const mine = awards.filter((a) => a.me).concat(xi.filter((a) => a.me));
+  if (mine.length) out.push(`年末の表彰式：${mine.map((a) => `${a.name}（${a.title}）`).join('、')}`);
+  else out.push('年末の表彰式が開かれた。');
+  G.cere = { season: G.season, tier: myTier(G), awards, xi, effects };
   out.push(...potentialAndRetire(G, r));
   const tier = myTier(G); const rank = myRank(G);
   if (G.owner) {
@@ -373,12 +382,58 @@ function yearEnd(G: GameState, r: Rng): string[] {
   const champ: Record<number, string> = {};
   for (const t of [1, 2, 3]) champ[t] = nameOf(standings(G, t)[0].id);
   const cupRes = cupResultText(G);
-  G.history.push({ season: G.season, tier, rank, cup: cupRes, awards, promoted: tier > 1 && rank <= 2, relegated: tier < 3 && rank >= 11, champion: champ, cupChampion: G.cup.champion != null ? nameOf(G.cup.champion) : '' });
+  G.history.push({ season: G.season, tier, rank, cup: cupRes, awards, xi, promoted: tier > 1 && rank <= 2, relegated: tier < 3 && rank >= 11, champion: champ, cupChampion: G.cup.champion != null ? nameOf(G.cup.champion) : '' });
   /* 節目の目標（成績の目標だけ：企画書 7） */
   for (const g of GOALS) if (!G.goals.some((x) => x.id === g.id) && g.done(G)) { G.goals.push({ id: g.id, season: G.season }); out.push(`目標を達成した：${g.text}`); }
   void r;
   return out;
 }
+/* ---------- 年末の表彰（問110・111） ---------- */
+export const avgRt = (p: Player) => (p.seasonRtN ? (p.seasonRt ?? 0) / p.seasonRtN : 0);
+const XI_SLOTS: [string, Pos[], number][] = [['GK', ['GK'], 1], ['CB', ['CB'], 2], ['SB', ['SB'], 2], ['MF', ['DM', 'CM', 'AM'], 3], ['FW', ['WG', 'ST'], 3]];
+export function seasonAwards(G: GameState): { awards: Award[]; xi: Award[]; effects: string[] } {
+  const awards: Award[] = []; const xi: Award[] = []; const effects: string[] = [];
+  const mine = myTier(G);
+  const nameOf = (id: number) => clubName(G, id);
+  for (const t of [1, 2, 3]) {
+    const L = G.leagues[t];
+    const all: { p: Player; club: number }[] = [];
+    for (const id of L.ids) for (const p of id === ME ? G.squad : clubById(G, id).squad) all.push({ p, club: id });
+    const reg = all.filter((x) => x.p.seasonApps >= 12);
+    const mvpScore = (p: Player) => avgRt(p) + p.seasonGoals * 0.02 + (p.seasonAst ?? 0) * 0.015 + Math.min(p.seasonApps, 26) * 0.012;
+    const ln = (p: Player) => `平均 ${avgRt(p).toFixed(2)} ・ ${p.seasonApps}試合 ${p.seasonGoals}点 ${p.seasonAst ?? 0}アシスト`;
+    const add = (title: string, x: { p: Player; club: number } | undefined, detail: string, list = awards) => {
+      if (!x) return;
+      if (x.club !== ME && G.owner) learnAward(G, x.p, clubById(G, x.club));
+      list.push({ title, tier: t, name: x.p.name, club: nameOf(x.club), me: x.club === ME, detail, pos: x.p.pos });
+      if (x.club === ME) gainAward(G, x.p, title, effects);
+    };
+    const mvp = [...reg].sort((a, b) => mvpScore(b.p) - mvpScore(a.p))[0];
+    const top = [...all].filter((x) => x.p.seasonGoals > 0).sort((a, b) => b.p.seasonGoals - a.p.seasonGoals || a.p.seasonApps - b.p.seasonApps || avgRt(b.p) - avgRt(a.p))[0];
+    add('シーズンMVP', mvp, mvp ? ln(mvp.p) : '');
+    add('得点王', top, top ? `${top.p.seasonGoals}点（${top.p.seasonApps}試合）` : '');
+    if (t !== mine) continue;
+    const ast = [...all].filter((x) => (x.p.seasonAst ?? 0) > 0).sort((a, b) => (b.p.seasonAst ?? 0) - (a.p.seasonAst ?? 0) || avgRt(b.p) - avgRt(a.p))[0];
+    const young = all.filter((x) => x.p.age <= 21 && x.p.seasonApps >= 8).sort((a, b) => avgRt(b.p) + b.p.seasonApps * 0.01 - avgRt(a.p) - a.p.seasonApps * 0.01)[0];
+    add('アシスト王', ast, ast ? `${ast.p.seasonAst}アシスト（${ast.p.seasonApps}試合）` : '');
+    add('ベストヤングプレイヤー賞', young, young ? `${young.p.age}歳 ・ ${ln(young.p)}` : '');
+    const used = new Set<Player>();
+    for (const [, poss, n] of XI_SLOTS) {
+      const c = reg.filter((x) => poss.includes(x.p.pos) && !used.has(x.p)).sort((a, b) => avgRt(b.p) + b.p.seasonApps * 0.01 - avgRt(a.p) - a.p.seasonApps * 0.01).slice(0, n);
+      for (const x of c) { used.add(x.p); add('ベストイレブン', x, `平均 ${avgRt(x.p).toFixed(2)}`, xi); }
+    }
+  }
+  return { awards, xi, effects };
+}
+/** 問111：自分の選手が賞をとると、クラブの人気・その選手の市場の値段・クラブへの愛着が上がる */
+function gainAward(G: GameState, p: Player, title: string, effects: string[]) {
+  const big = title === 'シーズンMVP' ? 2 : title === 'ベストイレブン' ? 0.5 : 1;
+  p.fame = (p.fame ?? 0) + big;
+  p.love = clamp((p.love ?? 40) + 4 * big + 2, 0, 100);
+  if (G.owner) G.owner.pop = Math.min(100, G.owner.pop + Math.round(2 * big + 1));
+  if (title !== 'ベストイレブン' || !effects.length) effects.push(title === 'ベストイレブン' ? 'ベストイレブンに選ばれた選手も、市場の値段と愛着が少し上がった。' : `${p.name}：市場の値段と、クラブへの愛着が上がった。`);
+}
+export function closeCeremony(G: GameState) { G.cere = null; }
 export function cupResultText(G: GameState): string {
   if (G.cup.champion === ME) return '優勝';
   for (let i = 0; i < G.cup.rounds.length; i++) { const t = G.cup.rounds[i].find((x) => x.a === ME || x.b === ME); if (t && t.w != null && t.w !== ME) return `${CUP_ROUND_NAMES[i]}で負け`; }
@@ -486,10 +541,10 @@ function newSeason(G: GameState, r: Rng): string[] {
   }
   for (const m of moves) { const c = clubById(G, m.id); c.tier = m.to; if (!c.me) c.prevRank = 0; }
   /* 選手は1つ年をとる。記録を残す */
-  for (const p of G.squad) { p.hist.push({ y: G.season, ovr: ovr(p), a: p.a.map(Math.floor) }); p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; }
+  for (const p of G.squad) { p.hist.push({ y: G.season, ovr: ovr(p), a: p.a.map(Math.floor) }); p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.seasonAst = 0; p.seasonRt = 0; p.seasonRtN = 0; if (p.fame) p.fame = Math.floor(p.fame * 0.5 * 10) / 10; }
   for (const c of G.clubs) {
     if (c.me) continue;
-    for (const p of c.squad) { p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.inj = 0; p.fat = 0; }
+    for (const p of c.squad) { p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.seasonAst = 0; p.seasonRt = 0; p.seasonRtN = 0; p.inj = 0; p.fat = 0; }
     /* 年をとった選手が何人か去り、新しい選手が入る */
     const leave = c.squad.filter((p) => p.age >= 33 || (p.age >= 30 && r.next() < 0.25)).slice(0, 5);
     for (const p of leave) {
@@ -514,7 +569,7 @@ export function advanceToDecision(G: GameState, maxWeeks = 8): SkipResult {
     const res = advanceWeek(G); weeks++;
     all.push(...res.report); if (res.match) last = res.match; news.push(...res.news);
     if (res.seasonEnd) { seasonEnd = true; break; }
-    if (G.pending.length || res.news.some((l) => l.startsWith('移籍の結果')) || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
+    if (G.cere || G.pending.length || res.news.some((l) => l.startsWith('移籍の結果')) || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
   }
   G.news = news;
   return { weeks, report: mergeReports(all), lastMatch: last, seasonEnd, news };

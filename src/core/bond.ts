@@ -62,12 +62,13 @@ function thinksRegular(G: GameState, p: Player): boolean {
 }
 
 /** 試合のあと：信頼と不満が動く */
-export function afterMyMatch(G: GameState, played: { id: number; sub: boolean; goals: number }[]): void {
+export function afterMyMatch(G: GameState, played: { id: number; sub: boolean; goals: number; rt?: number }[]): void {
   const on = new Map(played.map((x) => [x.id, x]));
   for (const p of G.squad) {
     const c = compat(p, G.mgr); const x = on.get(p.id);
     if (x) {
-      const up = (x.sub ? 1 : 2.5) + x.goals * 3;
+      /* 問106：信頼は評価点で動く（6.5より上なら上がりやすく、低いと上がらない） */
+      const up = Math.max(-2, (x.sub ? 1 : 2.2) + ((x.rt ?? 6.5) - 6.5) * 2.2 + x.goals * 1.5);
       p.trust = clamp(trustOf(p) + up * (c > 0 ? 1.4 : c < 0 ? 0.6 : 1), 0, 100);
       p.unrest = clamp((p.unrest ?? 0) - (x.sub ? 6 : 12), 0, 100);
     } else {
