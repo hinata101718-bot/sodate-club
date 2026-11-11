@@ -111,10 +111,11 @@ function homeHTML(): string {
   const lastM = lm ? `<div class="item"><span class="grow">前の試合 ${esc(lm.home.name)} ${lm.score[0]}-${lm.score[1]} ${esc(lm.away.name)}${lm.pk ? `（PK ${lm.pk.join('-')}）` : ''}</span><button class="btn small ghost" data-act="replay">見どころ</button></div>` : '';
   const last = G.history[G.history.length - 1];
   return `
-  <section class="card"><div class="row"><span class="grow">${tbl.w + tbl.d + tbl.l ? `<span class="goal">${tier}部 ${rank}位</span> <span class="muted">勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</span>` : `<span class="goal">${tier}部 ・ 開幕前</span>`}</span></div>
-    <div class="muted">${dateText(G)}${isWindow(G.week) ? ' ・ 移籍の期間' : ''} ・ お金 ${yen(G.owner.money)}${G.owner.debt ? `（借金 ${yen(G.owner.debt)}）` : ''}</div></section>
-  <section class="card"><h2>次の目標</h2><div class="goal">${esc(currentGoal(G))}</div>
-    ${last ? `<div class="muted">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
+  <section class="card"><h2>いまの位置と目標</h2>
+    <div class="goal">${tbl.w + tbl.d + tbl.l ? `${tier}部 ${rank}位 <span class="muted small">勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</span>` : `${tier}部 ・ 開幕前`}</div>
+    <div style="margin-top:4px">目標：<b>${esc(currentGoal(G))}</b></div>
+    ${G.owner.debt ? `<div class="muted small">借金 ${yen(G.owner.debt)}</div>` : ''}
+    ${last ? `<div class="muted small">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
   <section class="card">${nextHTML(G)}<button class="btn small ghost" data-go="table" style="margin-top:10px">順位表を見る</button></section>
   ${pend || promo || owner || notes || yrep || news || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${promo}${pend}${owner}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
   <div class="btns">
