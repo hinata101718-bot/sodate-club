@@ -1,6 +1,6 @@
 /* 数字のバランスの確かめ：npx vite-node scripts/balance.ts  N=シーズン数 SEEDS=1,2,3
    オーナーは「おまかせ」で遊ぶ：昇格会議はコーチのおすすめ、契約は自動で更新、お金に余裕があれば施設を強化、スカウトの候補で伸びしろのある子を獲る */
-import { newGame, advanceWeek, myTier, STATS, ME } from '../src/core/game';
+import { newGame, advanceWeek, answerOffer, myTier, STATS, ME } from '../src/core/game';
 import { ovr, teamStrength } from '../src/core/player';
 import { pickLineup, chooseForm } from '../src/core/match';
 import { startBuild, hireScout } from '../src/core/owner';
@@ -25,15 +25,20 @@ for (const seed of seeds) {
       /* おまかせのオーナー */
       for (const k of FAC_KEYS) { const nx = G.owner.fac[k] + 1; if (!G.owner.build && nx <= 5 && G.owner.money > facCost(k, nx) * 1.6 && G.owner.debt === 0) startBuild(G, k); }
       for (const k of Object.values(G.owner.mk.known)) if (k.p && k.p.pot - ovr(k.p) >= 18 && G.squad.length < 24 && G.owner.money > 3000) bid(G, k.pid, 0, r);
-      /* 移籍の期間：先発のいちばん弱いところより3以上強い選手が、お金に余裕があれば申し込む */
-      if (marketOpen(G) && G.owner.mk.bids.length === 0) {
+      /* 先発11人に入らない選手へのオファーは受ける（売ったお金で補強する） */
+      for (let i = G.pending.length - 1; i >= 0; i--) { const e = G.pending[i]; const top = [...G.squad].sort((a, b) => ovr(b) - ovr(a)).slice(0, 11); if (!top.some((p) => p.id === e.pid) && G.squad.length > 18) answerOffer(G, i, true); else answerOffer(G, i, false); }
+      /* 移籍の期間：先発のいちばん弱いところより1以上強い選手が、お金に余裕があれば申し込む */
+      if (marketOpen(G)) {
         const idx = playerIndex(G);
-        const best = [...G.squad].sort((a, b) => ovr(b) - ovr(a)).slice(0, 11);
-        const weak = Math.min(...best.map(ovr));
-        const c = Object.values(G.owner.mk.known).map((k) => idx.get(k.pid)).filter((w) => w && w.kind !== 'ama' && ovr(w.p) >= weak + 3 && G.owner.money > valueOf(w) * 1.5 + 5000).sort((a, b) => ovr(b!.p) - ovr(a!.p))[0];
-        /* 25人いっぱいなら、いちばん弱い24歳以上の選手を手ばなしてから申し込む（売りに出すかわり） */
-        if (c && G.squad.length >= 24) { const out = [...G.squad].filter((p) => p.age >= 24).sort((a, b) => ovr(a) - ovr(b))[0]; if (out) G.squad = G.squad.filter((p) => p !== out); }
-        if (c && G.squad.length < 24) bid(G, c.p.id, 20, r);
+        for (let t = 0; t < 3 && G.owner.mk.bids.length < 3; t++) {
+          const best = [...G.squad].sort((a, b) => ovr(b) - ovr(a)).slice(0, 11);
+          const weak = Math.min(...best.map(ovr));
+          const c = Object.values(G.owner.mk.known).map((k) => idx.get(k.pid)).filter((w) => w && w.kind !== 'ama' && !G.owner.mk.bids.some((x) => x.pid === w.p.id) && ovr(w.p) >= weak + 1 && G.owner.money > valueOf(w) * 1.2 + 3000).sort((a, b) => ovr(b!.p) - ovr(a!.p))[0];
+          if (!c) break;
+          /* 25人いっぱいなら、いちばん弱い24歳以上の選手を手ばなしてから申し込む（売りに出すかわり） */
+          if (G.squad.length + G.owner.mk.bids.length >= 24) { const out = [...G.squad].filter((p) => p.age >= 24).sort((a, b) => ovr(a) - ovr(b))[0]; if (out) G.squad = G.squad.filter((p) => p !== out); }
+          if (bid(G, c.p.id, 20, r)) break;
+        }
       }
       if (G.week === 20) {
         for (const t of [1, 2, 3]) {

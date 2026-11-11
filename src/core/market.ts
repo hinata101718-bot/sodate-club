@@ -29,14 +29,14 @@ const manText = (m: number) => (m >= 10000 ? `${m / 10000}億円` : `${m.toLocal
 export const scoutCond = (s: Scout): ScoutCond => (s.cond ??= anyCond());
 
 /* ---------- 市場の値段（相場） ---------- */
-/** 相場（万円）：能力・年齢・契約の残り年数・いる段で決まる。高め（育成が芯のまま残るように）。高校生・大学生・フリーは0円 */
+/** 相場（万円）：能力・年齢・契約の残り年数・いる段で決まる（感想22：買って強くするのも楽しめる値段）。高校生・大学生・フリーは0円 */
 export function marketValue(p: Player, tier: number | null): number {
   if (tier == null) return 0;
   const o = ovr(p);
   const age = p.age <= 21 ? 1.6 : p.age <= 24 ? 1.35 : p.age <= 28 ? 1 : p.age <= 30 ? 0.75 : p.age <= 32 ? 0.5 : 0.3;
   const ct = p.contract <= 1 ? 0.6 : p.contract === 2 ? 0.85 : 1;
   const tf = tier === 1 ? 1.3 : tier === 2 ? 1.1 : 1;
-  return Math.max(200, Math.round((Math.pow(Math.max(0, o - 40), 2) * 7 * age * ct * tf) / 100) * 100);
+  return Math.max(200, Math.round((Math.pow(Math.max(0, o - 40), 2) * 4.5 * age * ct * tf) / 100) * 100);
 }
 /** 総合力のだいたい（例：「60台」） */
 export const ovrRange = (o: number) => `${Math.floor(o / 10) * 10}台`;
@@ -124,7 +124,7 @@ export function scoutMonth(G: GameState, r: Rng): string[] {
   for (const s of o.scouts) {
     const cond = scoutCond(s);
     /* 腕がいいほど、1回に調べる人数が多い（問30） */
-    const n = 1 + (r.next() < s.skill ? 1 : 0) + (r.next() < s.skill * 0.6 ? 1 : 0);
+    const n = 2 + (r.next() < s.skill ? 1 : 0) + (r.next() < s.skill * 0.6 ? 1 : 0);
     const pros = pool.filter((w) => fits(cond, w.p.pos, w.p.age, valueOf(w), regionOfWhere(w)) && !(mk.known[w.p.id]?.full && mk.known[w.p.id].season === G.season));
     r.shuffle(pros);
     /* 腕のいいスカウトほど、条件の中でも力のある選手を先に見つける */
@@ -132,7 +132,7 @@ export function scoutMonth(G: GameState, r: Rng): string[] {
     const ama = amaAges(cond);
     let got = 0;
     for (let i = 0; i < n; i++) {
-      const useAma = ama && (!pros.length || r.next() < 0.5);
+      const useAma = ama && (!pros.length || r.next() < 0.3);
       if (useAma) {
         const p = makeAmateur(G, r, s, cond, ama!, tier);
         learn(G, p, p.age <= 18 ? '高校' : '大学', 'scout', true, { note: scoutNote(p, s.skill, r), scout: s.name, p, from: p.age <= 18 ? '高校生' : '大学生', fee: Math.max(50, Math.round((100 + r.next() * 300 + (p.pot - 60) * 8) / 10) * 10) });
@@ -191,14 +191,14 @@ export const offerSalary = (w: Where, bump: number) => Math.round((salaryFor(ovr
 /** 相手のクラブが売ってくれる見こみ：先発の上位ほど売りにくく、控えや契約が残り1年なら売りやすい */
 export function sellChance(c: Club, p: Player): number {
   const rank = [...c.squad].sort((a, b) => ovr(b) - ovr(a)).indexOf(p);
-  let x = rank < 3 ? 0.05 : isStarter(c, p) ? 0.2 : rank < 16 ? 0.6 : 0.85;
+  let x = rank < 3 ? 0.05 : isStarter(c, p) ? 0.3 : rank < 16 ? 0.7 : 0.85;
   if (p.contract <= 1) x += 0.3;
   return clamp(x, 0.02, 0.95);
 }
 /** 選手本人が来てくれる見こみ：段の差と、給料の上乗せだけで決まる（気持ちのしくみは入れない：問52） */
 export function joinChance(fromTier: number, myTier: number, bump: number): number {
   const d = myTier - fromTier;
-  const base = d <= -1 ? 0.95 : d === 0 ? 0.85 : d === 1 ? 0.35 : 0.1;
+  const base = d <= -1 ? 0.95 : d === 0 ? 0.85 : d === 1 ? 0.5 : 0.2;
   return clamp(base + (bump >= 50 ? 0.4 : bump >= 20 ? 0.2 : 0), 0.05, 0.95);
 }
 export const fromTierOf = (w: Where) => (w.club ? w.club.tier : tierByOvr(ovr(w.p)));
