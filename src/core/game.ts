@@ -68,7 +68,9 @@ export interface GameState {
   /** 問112〜116：メッセージ・経営会議・目標・監督の評価・補強の予算 */
   inbox?: Msg[]; meet?: Meeting | null; snap?: MonthSnap; front?: { acct: string; sales: string };
   goal?: Goal; nextGoal?: Goal | null; goalLog?: { season: number; text: string; level: string; ok: boolean }[]; mgrEval?: number; spMul?: number;
-  budget?: { cap: number; spent: number }; regm?: RegMeet | null; breakFix?: boolean; yearStart?: { pop: number; fans: [number, number] }; streak?: number;
+  budget?: { cap: number; spent: number };
+  /** 月の経営会議で話した、来月の動き（監督の方針・コーチの練習の強さ） */
+  plan?: { until: number; tilt: 'def' | 'atk' | null; care: boolean }; regm?: RegMeet | null; breakFix?: boolean; yearStart?: { pop: number; fans: [number, number] }; streak?: number;
   /** オーナーが決めること（段階4）：お金・施設・人・移籍 */
   owner: OwnerState;
 }
@@ -139,7 +141,8 @@ export const myClub = (G: GameState) => clubById(G, ME);
 export const myTier = (G: GameState) => myClub(G).tier;
 export const clubName = (G: GameState, id: number) => (id === ME ? G.club.name : clubById(G, id).name);
 export function teamIn(G: GameState, c: Club): TeamIn {
-  return c.me ? { id: c.id, name: G.club.name, me: true, color: G.club.color, squad: G.owner ? matchSquad(G) : G.squad, mgr: G.mgr, policy: G.policy, injMul: G.owner ? 1 - (G.owner.fac.medical - 1) * 0.1 : 1 } : { id: c.id, name: c.name, me: false, color: c.color, squad: c.squad, mgr: c.mgr };
+  const plan = G.plan && G.plan.until > G.season * 48 + G.week ? G.plan : null;
+  return c.me ? { id: c.id, name: G.club.name, me: true, color: G.club.color, squad: G.owner ? matchSquad(G) : G.squad, mgr: G.mgr, policy: G.policy, tilt: plan?.tilt ?? null, injMul: (plan?.care ? 0.8 : 1) * (G.owner ? 1 - (G.owner.fac.medical - 1) * 0.1 : 1) } : { id: c.id, name: c.name, me: false, color: c.color, squad: c.squad, mgr: c.mgr };
 }
 /** 順位表（勝ち点、並んだら得失点差、さらに得点） */
 export function standings(G: GameState, tier = myTier(G)) {
@@ -260,7 +263,7 @@ export function hasMyMatch(G: GameState): boolean {
 export function matchPlan(G: GameState): { form: string; lineup: { p: Player; pos: Pos }[]; bench: Player[]; opp: Club | null; home: boolean | null } {
   const e = eventOf(G); const opp = e.kind === 'league' ? clubById(G, e.opp) : null;
   const me = teamIn(G, myClub(G));
-  const form = chooseForm(G.mgr, teamStrength(G.squad), opp ? teamStrength(opp.squad) : teamStrength(G.squad), G.squad);
+  const form = chooseForm(G.mgr, teamStrength(G.squad), opp ? teamStrength(opp.squad) : teamStrength(G.squad), G.squad, me.tilt);
   const { lineup, bench } = pickLineup(new Rng(1), me, form, true);
   delete me.heard;
   return { form, lineup: lineup.map((x) => ({ p: x.p, pos: x.pos })), bench: bench.sort((a, b) => ovr(b) - ovr(a)), opp, home: e.kind === 'league' ? e.home : null };

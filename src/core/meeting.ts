@@ -8,7 +8,7 @@ import { BREAK_WEEKS, SEASON_END } from './calendar';
 import { clamp, Rng } from './rng';
 import { ovr, teamStrength } from './player';
 import { POS, type Pos } from './constants';
-import { INCOME_KEYS, EXPENSE_KEYS, sponsorYear, type Ledger } from './finance';
+import { INCOME_KEYS, EXPENSE_KEYS, MONEY_NAME, sponsorYear, type Ledger } from './finance';
 import { STAFF_SUR, STAFF_GIV } from './data/names';
 import { monthOf } from './calendar';
 import type { Policy } from './match';
@@ -17,9 +17,12 @@ import type { Player } from './types';
 
 export type Level = 'むずかしい' | 'ちょうどいい' | 'かんたん';
 export interface Goal { tier: number; rank: number; text: string; level: Level; season: number }
-export interface MeetItem { role: string; who: string; lines: string[]; ask?: 'goal' | 'budget' | 'policy' }
+/** 報告する人が持ってくる報告書（収支報告書・試合報告書・成長報告書など）。行は「項目・値」 */
+export interface DocRow { k: string; v: string; cls?: 'good' | 'bad' | 'sum' | 'net' | 'netbad' }
+export interface Doc { title: string; stamp: string; secs: { h?: string; rows: DocRow[] }[] }
+export interface MeetItem { role: string; who: string; lines: string[]; ask?: 'goal' | 'budget' | 'policy'; doc?: Doc }
 export interface Meeting { kind: 'month' | 'year'; title: string; items: MeetItem[]; goals?: Goal[]; budgets?: number[]; pick: { goal: number; budget: number; policy: Policy } }
-export interface MonthSnap { money: number; led: Ledger; rank: number; w: number; d: number; l: number; a: Record<number, number>; ord: [number, number]; awake: string[]; pop: number; fans: [number, number] }
+export interface MonthSnap { money: number; led: Ledger; rank: number; w: number; d: number; l: number; gf?: number; ga?: number; o?: Record<number, number>; a: Record<number, number>; ord: [number, number]; awake: string[]; pop: number; fans: [number, number] }
 export interface Msg { id: number; from: string; who: string; title: string; body: string; at: string; read: boolean; pid?: number; kind?: 'wantOut' }
 
 /* ---------- メッセージ（問112） ---------- */
@@ -47,7 +50,7 @@ const man = (v: number) => (Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)}億
 export function snapshot(G: GameState): MonthSnap {
   const row = G.leagues[myTierOf(G)].table[0];
   const rank = rankOf(G);
-  return { money: G.owner.money, led: { ...G.owner.ledger }, rank, w: row.w, d: row.d, l: row.l, a: Object.fromEntries(G.squad.map((p) => [p.id, sumA(p)])), ord: [0, 0], awake: [], pop: G.owner.pop, fans: [0, 0] };
+  return { money: G.owner.money, led: { ...G.owner.ledger }, rank, w: row.w, d: row.d, l: row.l, gf: row.gf, ga: row.ga, o: Object.fromEntries(G.squad.map((p) => [p.id, ovr(p)])), a: Object.fromEntries(G.squad.map((p) => [p.id, sumA(p)])), ord: [0, 0], awake: [], pop: G.owner.pop, fans: [0, 0] };
 }
 function rankOf(G: GameState): number {
   const t = myTierOf(G); const L = G.leagues[t];
@@ -120,41 +123,92 @@ function gaps(G: GameState): string[] {
   void POS; return out;
 }
 
+/** お金の書き方（画面の yen と同じ：1億2,000万円） */
+export const yenText = (v: number) => { const neg = v < 0; const m = Math.abs(Math.round(v)); const t = m >= 10000 ? `${Math.floor(m / 10000)}億${m % 10000 ? (m % 10000).toLocaleString() + '万' : ''}円` : `${m.toLocaleString()}万円`; return (neg ? '−' : '') + t; };
+function statement(title: string, now: Ledger, base: Ledger | null, money: number, debt: number, prev?: number): Doc {
+  const d = (k: keyof Ledger) => now[k] - (base ? base[k] : 0);
+  const inc = INCOME_KEYS.reduce((t, k) => t + d(k), 0), exp = EXPENSE_KEYS.reduce((t, k) => t + d(k), 0), net = inc - exp;
+  const r = (k: keyof Ledger): DocRow => ({ k: MONEY_NAME[k], v: d(k) ? yenText(d(k)) : '—' });
+  return { title, stamp: '経理', secs: [
+    { h: '入ってきたお金', rows: [...INCOME_KEYS.map(r), { k: '合計', v: yenText(inc), cls: 'sum' }] },
+    { h: '出ていったお金', rows: [...EXPENSE_KEYS.map(r), { k: '合計', v: yenText(exp), cls: 'sum' }] },
+    { rows: [{ k: '差し引き', v: `${net >= 0 ? '+' : ''}${yenText(net)}`, cls: net >= 0 ? 'net' : 'netbad' }, ...(prev != null ? [{ k: '前の月のお金', v: yenText(prev) }] : []), { k: 'いまのお金', v: yenText(money), cls: 'sum' as const }, ...(debt ? [{ k: '借金', v: yenText(debt), cls: 'bad' as const }] : [])] },
+  ] };
+}
 /* ---------- 月の経営会議（問113・114） ---------- */
 export function monthMeeting(G: GameState): Meeting {
   const s = G.snap ?? snapshot(G); const o = G.owner;
   const inc = ledSum(o.ledger, INCOME_KEYS) - ledSum(s.led, INCOME_KEYS); const exp = ledSum(o.ledger, EXPENSE_KEYS) - ledSum(s.led, EXPENSE_KEYS);
   const mon = monthOf(G.week);
   const items: MeetItem[] = [];
-  items.push({ role: '経理', who: G.front!.acct, lines: [`${mon}月の収支です。入ってきたお金 ${man(inc)}、出ていったお金 ${man(exp)}。差し引き ${inc - exp >= 0 ? '+' : '−'}${man(Math.abs(inc - exp))}。`, `いまのお金は ${man(o.money)}${o.debt ? `、借金が ${man(o.debt)}` : ''}です。${inc - exp < 0 && o.money < 3000 ? '少し苦しくなってきました。' : ''}`] });
+  const net = inc - exp;
+  items.push({ role: '経理', who: G.front!.acct, lines: [`${mon}月の収支報告書です。差し引きは ${net >= 0 ? `${man(net)}の黒字` : `${man(-net)}の赤字`}でした。`, net < 0 && o.money < 3000 ? '少し苦しくなってきました。選手の給料と施設づくりには気をつけてください。' : o.debt ? '借金の返済も、少しずつ進めましょう。' : 'お金のまわりは、いまのところ順調です。'], doc: statement(`${mon}月の収支報告書`, o.ledger, s.led, o.money, o.debt, s.money) });
   const row = G.leagues[myTierOf(G)].table[0]; const w = row.w - s.w, d = row.d - s.d, l = row.l - s.l; const rk = rankOf(G);
+  const gf = row.gf - (s.gf ?? row.gf), ga = row.ga - (s.ga ?? row.ga);
   const nextMatches = G.sched.league.filter((x) => x >= G.week + 1 && x < G.week + 5).length;
   const gl = G.goal;
   const mg: string[] = [];
-  mg.push(w + d + l ? `${mon}月のリーグ戦は ${w}勝${d}分${l}敗。順位は${s.rank ? `${s.rank}位から ` : ''}${rk}位${s.rank && rk < s.rank ? 'に上がりました' : s.rank && rk > s.rank ? 'に下がりました' : 'です'}。` : `${mon}月はリーグ戦がありませんでした。`);
-  if (s.ord[0]) mg.push(`オーナーの頼みは、${s.ord[0]}つのうち${s.ord[1]}つ聞きました。`);
+  mg.push(w + d + l ? (w > l ? `${mon}月は勝ちが先に立ちました。` : w < l ? `${mon}月は苦しい月でした。` : `${mon}月は五分の成績でした。`) : `${mon}月はリーグ戦がありませんでした。`);
   if (gl && rk) mg.push(rk <= gl.rank ? `目標の「${gl.text}」には、いまのところ届いています。` : `目標の「${gl.text}」まで、あと${rk - gl.rank}つ順位を上げたい。`);
-  if (nextMatches) mg.push(`来月はリーグ戦が${nextMatches}試合あります。${l > w ? '負けが先に立っているので、ここで立て直します。' : 'この調子で行きます。'}`);
-  items.push({ role: '監督', who: G.mgr.name, lines: mg });
-  const ups = G.squad.map((p) => ({ p, d: sumA(p) - (s.a[p.id] ?? sumA(p)) })).filter((x) => x.d >= 0.6).sort((a, b) => b.d - a.d).slice(0, 3);
+  if (nextMatches) mg.push(l > w ? '来月は、ここで立て直します。' : '来月も、この調子で行きます。');
+  items.push({ role: '監督', who: G.mgr.name, lines: mg, doc: { title: `${mon}月の試合報告書`, stamp: '監督', secs: [
+    { h: 'リーグ戦', rows: [{ k: '成績', v: w + d + l ? `${w}勝${d}分${l}敗` : 'なし' }, { k: '取った点・取られた点', v: w + d + l ? `${gf} − ${ga}` : '—' }, { k: '順位', v: rk ? `${s.rank ? `${s.rank}位 → ` : ''}${rk}位` : '開幕前', cls: s.rank && rk < s.rank ? 'good' : s.rank && rk > s.rank ? 'bad' : undefined }] },
+    { h: 'オーナーの頼み', rows: [{ k: '聞いた数', v: s.ord[0] ? `${s.ord[1]} / ${s.ord[0]}` : '頼みなし' }] },
+    { h: '来月', rows: [{ k: 'リーグ戦', v: `${nextMatches}試合` }, ...(gl ? [{ k: '今年の目標', v: gl.text }] : [])] },
+  ] } });
+  const ups = G.squad.map((p) => ({ p, d: ovr(p) - (s.o?.[p.id] ?? ovr(p)), a: sumA(p) - (s.a[p.id] ?? sumA(p)) })).filter((x) => x.d > 0 || x.a >= 0.6).sort((a, b) => b.d - a.d || b.a - a.a).slice(0, 5);
   const cl: string[] = [];
-  cl.push(ups.length ? `今月よく伸びたのは ${ups.map((x) => x.p.name).join('、')}。` : '今月は、大きく伸びた選手はいませんでした。');
-  if (s.awake.length) cl.push(`${s.awake.join('、')} が覚醒しました！`);
+  cl.push(ups.length ? `今月いちばん伸びたのは ${ups[0].p.name} です。${ups.length > 1 ? 'ほかの選手も、報告書にまとめました。' : ''}` : '今月は、大きく伸びた選手はいませんでした。');
+  if (s.awake.length) cl.push(`それに、${s.awake.join('、')} が覚醒しました！`);
   const inj = G.squad.filter((p) => p.inj);
-  cl.push(inj.length ? `ケガ人は ${inj.map((p) => `${p.name}（あと${p.inj}週）`).join('、')}。` : 'ケガ人はいません。');
+  cl.push(inj.length ? (inj.some((p) => p.inj >= 4) ? '長いケガ人がいます。無理はさせません。' : 'ケガ人は、すぐにもどれそうです。') : 'ケガ人はいません。');
   const ch = G.owner.coaches.phys ?? G.owner.coaches.off;
-  items.push({ role: 'コーチ', who: ch?.name ?? G.mgr.name, lines: cl });
+  items.push({ role: 'コーチ', who: ch?.name ?? G.mgr.name, lines: cl, doc: { title: `${mon}月の成長報告書`, stamp: 'コーチ', secs: [
+    { h: 'よく伸びた選手', rows: ups.length ? ups.map((x) => ({ k: `${x.p.name}（${x.p.pos}）`, v: x.d ? `総合 ${ovr(x.p) - x.d} → ${ovr(x.p)}` : '少し伸びた', cls: x.d ? 'good' as const : undefined })) : [{ k: 'なし', v: '—' }] },
+    ...(s.awake.length ? [{ h: '覚醒', rows: s.awake.map((n) => ({ k: n, v: '覚醒！', cls: 'good' as const })) }] : []),
+    { h: 'ケガ', rows: inj.length ? inj.map((p) => ({ k: `${p.name}（${p.pos}）`, v: `あと${p.inj}週`, cls: p.inj >= 4 ? 'bad' as const : undefined })) : [{ k: 'なし', v: '—' }] },
+  ] } });
   const yl = G.youthLog[G.youthLog.length - 1];
   if (yl && yl.season === G.season && yl.month === mon) {
-    const best = [...yl.lines].sort((a, b) => b.stars - a.stars).slice(0, 2).map((x) => { const p = G.youth.find((y) => y.id === x.pid); return p ? `${p.name}（${p.grade}年）は「${x.words} ${x.arrow}」` : ''; }).filter(Boolean);
-    items.push({ role: 'ユースコーチ', who: G.owner.coaches.youth?.name ?? '（いない）', lines: [yl.coach, ...(best.length ? [`目立っているのは ${best.join('、')}。`] : []), 'くわしい報告は、ユースの画面（チーム → ユース）に置いてあります。'] });
+    const lines = [...yl.lines].sort((a, b) => b.stars - a.stars).slice(0, 5).map((x) => ({ x, p: G.youth.find((y) => y.id === x.pid) })).filter((z) => z.p);
+    items.push({ role: 'ユースコーチ', who: G.owner.coaches.youth?.name ?? '（いない）', lines: [yl.coach, 'くわしい報告は、ユースの画面（チーム → ユース）に置いてあります。'].filter(Boolean), doc: { title: `${mon}月のユース報告書`, stamp: 'ユース', secs: [
+      { h: '目立っている子', rows: lines.map(({ x, p }) => ({ k: `${p!.name}（${p!.grade}年・${p!.pos}）${'★'.repeat(x.stars)}`, v: `${x.words} ${x.arrow}` })) },
+    ] } });
   }
   const sc = G.owner.scouts[0];
   if (sc) {
     const now = G.season * 48 + G.week;
-    const fresh = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.p && k.season * 48 + k.week >= now - 4).sort((a, b) => ((b.p!.pot ?? 0) - ovr(b.p!)) - ((a.p!.pot ?? 0) - ovr(a.p!))).slice(0, 2);
-    items.push({ role: 'スカウト', who: sc.name, lines: fresh.length ? [`今月のおすすめは ${fresh.map((k) => `${k.p!.name}（${k.p!.age}歳・${k.p!.pos}）`).join('、')}。`, ...fresh.filter((k) => k.note).map((k) => `${k.p!.name}：「${k.note}」`), '調べた中身は、スカウトの画面（チーム → 移籍 → スカウト）に送っておきました。'] : ['今月は、強くおすすめできる選手は見つかりませんでした。'] });
+    const fresh = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.p && k.season * 48 + k.week >= now - 4).sort((a, b) => ((b.p!.pot ?? 0) - ovr(b.p!)) - ((a.p!.pot ?? 0) - ovr(a.p!))).slice(0, 3);
+    items.push({ role: 'スカウト', who: sc.name, lines: fresh.length ? [`今月のいちばんのおすすめは ${fresh[0].p!.name} です。`, fresh[0].note ? `「${fresh[0].note}」` : '', '調べた中身は、スカウトの画面（チーム → 移籍 → スカウト）に送っておきました。'].filter(Boolean) : ['今月は、強くおすすめできる選手は見つかりませんでした。'],
+      doc: fresh.length ? { title: `${mon}月のスカウト報告書`, stamp: 'スカウト', secs: [{ h: 'おすすめの選手', rows: fresh.map((k) => ({ k: `${k.p!.name}（${k.p!.age}歳・${k.p!.pos}）`, v: k.club ?? '' })) }] } : undefined });
   }
+  /* 感想：それぞれが「今月の不足」と「来月からの動き」を話す。監督の方針とコーチの練習の強さは、来月の試合に本当に効く */
+  const games = w + d + l; const gp = gaps(G);
+  let tilt: 'def' | 'atk' | null = null; let care = false;
+  const add = (role: string, short: string[], act: string) => {
+    const it = items.find((x) => x.role === role); if (!it) return;
+    it.lines.push(short.length ? `今月の不足は、${short.join('、')}です。` : '今月は、大きな不足はありませんでした。', act);
+    (it.doc ??= { title: `${mon}月の${role}の報告書`, stamp: role, secs: [] }).secs.push({ h: '今月の不足', rows: short.length ? short.map((t) => ({ k: t, v: '', cls: 'bad' as const })) : [{ k: '特になし', v: '' }] }, { h: '来月からの動き', rows: [{ k: act, v: '' }] });
+  };
+  { const sh: string[] = []; const big = EXPENSE_KEYS.map((k) => [k, o.ledger[k] - s.led[k]] as const).sort((x, y) => y[1] - x[1])[0];
+    if (net < 0) sh.push(`支出が収入を上回ったこと（いちばん大きい支出は${MONEY_NAME[big[0]]}）`); if (o.money < 3000) sh.push('手元のお金が少ないこと'); if (o.debt) sh.push('借金が残っていること');
+    add('経理', sh, net < 0 ? '来月は、選手の給料と施設づくりの支払いを毎週たしかめて、ふくらみそうならすぐ知らせます。' : o.debt && o.money > o.debt * 2 ? '余裕があるので、借金を少しずつ返すことをおすすめします（経営 → お金）。' : 'いまの使い方のまま、毎週の出入りを見ていきます。'); }
+  { const sh: string[] = []; const gaPer = games ? ga / games : 0, gfPer = games ? gf / games : 0;
+    if (games && gaPer >= 1.8) sh.push(`失点が多いこと（1試合 ${gaPer.toFixed(1)}点）`); if (games && gfPer < 1) sh.push(`点が取れていないこと（1試合 ${gfPer.toFixed(1)}点）`); if (gp.length) sh.push(`${gp.slice(0, 2).join('・')}`);
+    tilt = games && gaPer >= 1.8 && gfPer >= 1 ? 'def' : games && gfPer < 1 && gaPer < 1.8 ? 'atk' : null;
+    add('監督', sh, tilt === 'def' ? '来月は、守りの人数を増やす並び方を多めに使います。' : tilt === 'atk' ? '来月は、攻めの人数を増やす並び方を多めに使います。' : '来月も、いまの戦い方を続けます。'); }
+  { const sh: string[] = []; const longInj = inj.filter((p) => p.inj >= 4).length; const tired = G.squad.filter((p) => p.fat >= 40).length;
+    if (!ups.length) sh.push('伸びた選手が少ないこと'); if (inj.length) sh.push(`ケガ人が${inj.length}人いること`); if (tired >= 3) sh.push(`疲れがたまっている選手が${tired}人いること`);
+    care = longInj >= 1 || tired >= 3 || inj.length >= 3;
+    add('コーチ', sh, care ? '来月は、練習の強さを少し落として、ケガを防ぎます（試合でのケガが少し減ります）。' : '来月は、伸びている選手を中心に、練習の中身を見ていきます。'); }
+  { const yl2 = G.youthLog[G.youthLog.length - 1];
+    if (yl2 && yl2.season === G.season && yl2.month === mon) { const slow = yl2.lines.filter((x) => /→|↓/.test(x.arrow)).map((x) => G.youth.find((y) => y.id === x.pid)?.name).filter(Boolean) as string[];
+      add('ユースコーチ', slow.length ? [`伸びが止まっている子がいること（${slow.slice(0, 3).join('、')}）`] : [], slow.length ? `来月は、${slow[0]}に声をかけて、練習の様子を近くで見ます。` : '来月も、いまの練習を続けます。'); } }
+  { const now2 = G.season * 48 + G.week; const fr = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.p && k.season * 48 + k.week >= now2 - 4);
+    const need = gp.length ? gp[0].split('（')[0] : ''; const sh: string[] = [];
+    if (!fr.length) sh.push('条件に合う選手が見つからなかったこと'); if (need) sh.push(`足りない${need}の候補が少ないこと`);
+    add('スカウト', sh, need ? `${need}を探すなら、探す条件のポジションを合わせてください。合わせてもらえれば、来月はそこを重点的に回ります。` : !fr.length ? '探す条件（地域・年齢・値段）を少しゆるめてもらえると、来月は見つけやすくなります。' : '来月も、いまの条件で探し続けます。'); }
+  G.plan = { until: G.season * 48 + G.week + 5, tilt, care };
   return { kind: 'month', title: `${mon}月の経営会議`, items, pick: { goal: 1, budget: 1, policy: G.policy } };
 }
 
@@ -163,16 +217,25 @@ export function yearMeeting(G: GameState, judged: string[]): Meeting {
   const o = G.owner; const items: MeetItem[] = [];
   const inc = ledSum(o.ledger, INCOME_KEYS), exp = ledSum(o.ledger, EXPENSE_KEYS);
   const t = myTierOf(G), rk = rankOf(G);
-  items.push({ role: '経理', who: G.front!.acct, lines: [`${G.season}年目の収支です。入ってきたお金 ${man(inc)}、出ていったお金 ${man(exp)}。差し引き ${inc - exp >= 0 ? '+' : '−'}${man(Math.abs(inc - exp))}。`, `いまのお金は ${man(o.money)}${o.debt ? `、借金が ${man(o.debt)}` : ''}です。`] });
+  items.push({ role: '経理', who: G.front!.acct, lines: [`${G.season}年目の1年分の収支報告書です。1年で ${inc - exp >= 0 ? `${man(inc - exp)}の黒字` : `${man(exp - inc)}の赤字`}でした。`], doc: statement(`${G.season}年目の収支報告書`, o.ledger, null, o.money, o.debt) });
   const s0 = G.yearStart ?? { pop: o.pop, fans: [0, 0] as [number, number] };
   const avgFans = s0.fans[1] ? Math.round(s0.fans[0] / s0.fans[1]) : 0;
   const nt = nextTier(G);
-  items.push({ role: '営業', who: G.front!.sales, lines: [`クラブの人気は ${Math.round(s0.pop)} から ${Math.round(o.pop)} に${o.pop >= s0.pop ? '上がりました' : '下がりました'}。`, avgFans ? `ホームの試合には、1試合 平均 ${avgFans.toLocaleString()}人のお客さんが来ました。` : 'ホームの試合のお客さんの記録は、来年からとります。', `今年のスポンサー収入は ${man(o.sponsor)}。来年は ${man(Math.round(sponsorYear(nt, G.club.pref, o.pop) * (G.spMul ?? 1)))} くらいの見こみです。`] });
+  const spNext = Math.round(sponsorYear(nt, G.club.pref, o.pop) * (G.spMul ?? 1));
+  items.push({ role: '営業', who: G.front!.sales, lines: [o.pop >= s0.pop ? 'クラブの人気は、1年で上がりました。街でもユニフォームを見かけるようになりましたよ。' : '人気は少し下がりました。勝って、お客さんを呼びもどしましょう。', `来年のスポンサーは、${spNext >= o.sponsor ? '今年より増えそうです' : '今年より少し減りそうです'}。`],
+    doc: { title: `${G.season}年目の営業報告書`, stamp: '営業', secs: [
+      { h: '人気とお客さん', rows: [{ k: 'クラブの人気', v: `${Math.round(s0.pop)} → ${Math.round(o.pop)}`, cls: o.pop >= s0.pop ? 'good' : 'bad' }, { k: 'ホームの試合のお客さん（平均）', v: avgFans ? `${avgFans.toLocaleString()}人` : '記録なし' }, { k: 'ホームの試合', v: `${s0.fans[1]}試合` }] },
+      { h: 'スポンサー', rows: [{ k: '今年', v: yenText(o.sponsor) }, { k: '来年の見こみ', v: yenText(spNext), cls: spNext >= o.sponsor ? 'good' : 'bad' }] },
+    ] } });
   const opts = goalOptions(G, nt, G.season + 1, 2);
   const ml = [`今年は ${t}部 ${rk}位でした。`, ...judged, `監督の評価：${evalWord(G.mgrEval ?? 60)}`];
   if ((G.mgrEval ?? 60) < 25) ml.push('今年は結果を出せず、申し訳ありません。監督を代えるという判断も、受け入れます（入れかえは 経営 → スタッフ）。');
   ml.push(`来年（${nt}部）の目標を、3つ用意しました。どれで行くか、オーナーが決めてください。`);
-  items.push({ role: '監督', who: G.mgr.name, lines: ml, ask: 'goal' });
+  const gl0 = G.goal; const row = G.leagues[t].table[0];
+  items.push({ role: '監督', who: G.mgr.name, lines: ml, ask: 'goal', doc: { title: `${G.season}年目の試合報告書`, stamp: '監督', secs: [
+    { h: 'リーグ戦', rows: [{ k: '順位', v: `${t}部 ${rk}位` }, { k: '成績', v: `${row.w}勝${row.d}分${row.l}敗` }, { k: '取った点・取られた点', v: `${row.gf} − ${row.ga}` }] },
+    { h: '目標', rows: gl0 ? [{ k: gl0.text, v: (G.goalLog ?? []).slice(-1)[0]?.ok ? '届いた' : '届かなかった', cls: (G.goalLog ?? []).slice(-1)[0]?.ok ? 'good' : 'bad' }] : [{ k: 'なし', v: '—' }] },
+  ] } });
   const gp = gaps(G);
   items.push({ role: '監督', who: G.mgr.name, lines: [gp.length ? `いま足りないのは ${gp.join('、')} です。` : 'いまのところ、大きく足りないポジションはありません。', '来年は若手を使っていくか、勝ちを優先するか。チームの方針を決めてください。'], ask: 'policy' });
   const budgets = [0.25, 0.45, 0.65].map((f) => Math.max(0, Math.round((o.money * f) / 100) * 100));
@@ -182,7 +245,8 @@ export function yearMeeting(G: GameState, judged: string[]): Meeting {
   const cl: string[] = [];
   if (down.length) cl.push(...down.map((n) => `↓ ${n.name}（${n.why}）：「${n.text}」`));
   if (up.length) cl.push(...up.map((n) => `${(n.d ?? 0) >= 3 ? '↑↑' : '↑'} ${n.name}（${n.why}）：「${n.text}」`));
-  items.push({ role: 'コーチ', who: (G.owner.coaches.phys ?? G.owner.coaches.off)?.name ?? G.mgr.name, lines: cl.length ? ['今年1年の、選手の伸びしろの見立てです。', ...cl] : ['今年は、伸びしろが大きく動いた選手はいませんでした。'] });
+  items.push({ role: 'コーチ', who: (G.owner.coaches.phys ?? G.owner.coaches.off)?.name ?? G.mgr.name, lines: cl.length ? ['今年1年の、選手の伸びしろの見立てです。', ...cl] : ['今年は、伸びしろが大きく動いた選手はいませんでした。'],
+    doc: notes.length ? { title: `${G.season}年目の伸びしろ報告書`, stamp: 'コーチ', secs: [...(down.length ? [{ h: '伸びしろが小さくなった', rows: down.map((n) => ({ k: n.name, v: `↓（${n.why}）`, cls: 'bad' as const })) }] : []), ...(up.length ? [{ h: '伸びしろが広がった', rows: up.map((n) => ({ k: n.name, v: `${(n.d ?? 0) >= 3 ? '↑↑' : '↑'}（${n.why}）`, cls: 'good' as const })) }] : [])] } : undefined });
   return { kind: 'year', title: `${G.season}年目の年に1回の経営会議`, items, goals: opts, budgets, pick: { goal: 1, budget: 1, policy: G.policy } };
 }
 /** 会議を閉じる：年の会議なら、選んだ目標・予算・方針を決める（決めずに閉じても、おすすめ＝まん中になる） */

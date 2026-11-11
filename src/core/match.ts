@@ -12,7 +12,9 @@ import { narrate } from './narrate';
 export type Policy = '若手多め' | 'ふつう' | '勝ち優先';
 export interface TeamIn { id: number; name: string; me: boolean; color: string; squad: Player[]; mgr: Manager; policy?: Policy; injMul?: number;
   /** オーナーの頼みを聞いたか（選手ごと。試合の中で決まる） */
-  heard?: Map<number, boolean>; }
+  heard?: Map<number, boolean>;
+  /** 監督の今月の方針（月の経営会議で話したこと）：守りを固める／攻めに出る */
+  tilt?: 'def' | 'atk' | null; }
 export interface MatchOpts { record?: boolean; label?: string; big?: boolean; cup?: boolean; neutral?: boolean; title?: string; }
 export interface OnPl { p: Player; pos: Pos; sub: boolean; }
 /** 1試合の選手ごとの数字（問107） */
@@ -81,8 +83,8 @@ export function pickLineup(r: Rng, t: TeamIn, form: string, assume = false): { l
   slots.forEach((pos, i) => { const p = filled[i]; if (p) lineup.push({ p, pos, sub: false }); });
   return { lineup, bench: sq.filter((p) => !used.has(p.id)) };
 }
-export function chooseForm(m: Manager, myStr: number, oppStr: number, squad?: Player[]): string {
-  const f = m.forms; const diff = myStr - oppStr;
+export function chooseForm(m: Manager, myStr: number, oppStr: number, squad?: Player[], tilt?: 'def' | 'atk' | null): string {
+  const f = m.forms; const diff = myStr - oppStr + (tilt === 'atk' ? 4 : tilt === 'def' ? -4 : 0);
   const byAtk = [...f].sort((x, y) => FORM_ATK[y] - FORM_ATK[x]);
   /* そろっている選手：ケガでFWが足りないときは、FWの少ない形にする */
   if (squad) {
@@ -147,7 +149,7 @@ function mid(s: Side): number {
 export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpts = {}): MatchResult {
   const sides: Side[] = [home, away].map((t, ix) => {
     const myS = teamStrength(t.squad), opS = teamStrength((ix ? home : away).squad);
-    const form = chooseForm(t.mgr, myS, opS, t.squad);
+    const form = chooseForm(t.mgr, myS, opS, t.squad, t.tilt);
     const { lineup, bench } = pickLineup(r, t, form);
     return { t, home: ix === 0 && !opts.neutral, day: (r.next() - 0.5) * 8, style: t.mgr.style, form, on: lineup, bench, subs: 0, goals: 0, str: myS, offs: [], changed: false, st: new Map(lineup.map((x) => [x.p, zeroSt()])) };
   });
@@ -484,7 +486,12 @@ function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, numbe
   hl.sort((a, b) => a.min - b.min || (a.kind === 'memo' ? -1 : 1));
   const full: ViewItem[] = [...log.map(toItem), ...ev.map(evItem)].sort((x, y) => x.min - y.min || (x.kind === 'talk' && y.kind !== 'talk' ? (x.min >= 90 ? 1 : -1) : 0));
   const meSide = sides.find((s) => s.t.me);
-  const played = meSide ? [...meSide.on.filter((x) => !x.sub), ...meSide.offs, ...meSide.on.filter((x) => x.sub)].map((x) => { const st = meSide.st.get(x.p) ?? zeroSt(); return { id: x.p.id, name: x.p.name, pos: x.pos, sub: x.sub, goals: st.g, ast: st.as, rt: rt.get(x.p) ?? 6, min: Math.max(0, st.to - st.from), st: { pa: st.pa, pc: st.pc, tk: st.tk, sh: st.sh, ot: st.ot, sv: st.sv, dr: st.dr, kp: st.kp } }; }) : [];
+  /* 感想：先発はポジション順（GK→DF→MF→FW）、そのあとに途中から入った選手を入った順に */
+  const PO: Record<string, number> = { GK: 0, CB: 1, SB: 2, DM: 3, CM: 4, AM: 5, WG: 6, ST: 7 };
+  const all = meSide ? [...meSide.on, ...meSide.offs] : [];
+  const starters = all.filter((x) => !x.sub).sort((a, b) => PO[a.pos] - PO[b.pos]);
+  const subsIn = all.filter((x) => x.sub).sort((a, b) => (meSide!.st.get(a.p)?.from ?? 0) - (meSide!.st.get(b.p)?.from ?? 0));
+  const played = meSide ? [...starters, ...subsIn].map((x) => { const st = meSide.st.get(x.p) ?? zeroSt(); return { id: x.p.id, name: x.p.name, pos: x.pos, sub: x.sub, goals: st.g, ast: st.as, rt: rt.get(x.p) ?? 6, min: Math.max(0, st.to - st.from), st: { pa: st.pa, pc: st.pc, tk: st.tk, sh: st.sh, ot: st.ot, sv: st.sv, dr: st.dr, kp: st.kp } }; }) : [];
   return {
     title,
     home: { name: sides[0].t.name, me: sides[0].t.me, color: sides[0].t.color },

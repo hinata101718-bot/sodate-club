@@ -1,6 +1,6 @@
 /* 経営会議（問113〜116）：報告する人が1人ずつ出てきて、タップで次へ。年の会議では目標・方針・予算を選ぶ。
    メッセージの受け取り箱（問112） */
-import { closeMeeting, evalWord, type Msg } from '../core/meeting';
+import { closeMeeting, evalWord, type Msg, type Doc } from '../core/meeting';
 import { answerWantOut } from '../core/bond';
 import type { GameState } from '../core/game';
 import type { Policy } from '../core/match';
@@ -10,6 +10,12 @@ import { $, $$, esc, sheet, toast, yen } from './dom';
 const ROLE_ICON: Record<string, string> = { 経理: '¥', 営業: '♪', 監督: '監', コーチ: 'コ', ユースコーチ: 'ユ', スカウト: 'ス', 選手: '選' };
 const face = (role: string) => `<span class="mface mface-${esc(role)}" aria-hidden="true">${ROLE_ICON[role] ?? '・'}</span>`;
 
+/** 報告書：紙の書類のように見せる（経理・監督・コーチ・ユースコーチ・スカウト・営業） */
+function docHTML(d: Doc): string {
+  return `<div class="statement" role="table" aria-label="${esc(d.title)}"><div class="st-title">${esc(d.title)}</div>
+    <table><tbody>${d.secs.map((sec) => `${sec.h ? `<tr class="st-h"><td class="l" colspan="2">${esc(sec.h)}</td></tr>` : ''}${sec.rows.map((r) => `<tr class="${r.cls ? `st-${r.cls}` : ''}">${r.v ? `<td class="l">${esc(r.k)}</td><td class="${r.v.length > 10 ? 'wrap' : ''}">${esc(r.v)}</td>` : `<td class="l" colspan="2">${esc(r.k)}</td>`}</tr>`).join('')}`).join('')}</tbody></table>
+    <div class="st-stamp" aria-hidden="true">${esc(d.stamp)}</div></div>`;
+}
 export function openMeeting(G: GameState, done: () => void) {
   const m = G.meet; if (!m) { done(); return; }
   let k = 0; const n = m.items.length;
@@ -26,7 +32,7 @@ export function openMeeting(G: GameState, done: () => void) {
     if (!last) {
       const it = m.items[k];
       body = `<div class="mspeak">${face(it.role)}<div class="grow"><div class="mrole">${esc(it.role)}</div><div class="mwho">${esc(it.who)}</div></div></div>
-        <div class="talk-bubble mbubble">${it.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>${it.ask ? askHTML(it.ask) : ''}`;
+        <div class="talk-bubble mbubble">${it.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>${it.doc ? docHTML(it.doc) : ''}${it.ask ? askHTML(it.ask) : ''}`;
     } else {
       body = m.kind === 'year' ? `<section class="card"><h2>決まったこと</h2><dl class="kv"><dt>来年の目標</dt><dd>${esc(m.goals![m.pick.goal].text)}（${m.goals![m.pick.goal].level}）</dd><dt>強化方針</dt><dd>${m.pick.policy === '若手多め' ? '若手を育てる' : m.pick.policy === '勝ち優先' ? '勝ちを優先' : 'バランス'}</dd><dt>補強の予算</dt><dd>${yen(m.budgets![m.pick.budget])}まで</dd><dt>監督の評価</dt><dd>${evalWord(G.mgrEval ?? 60)}</dd></dl>
         <div class="muted small" style="margin-top:6px">このあと12月は、契約の更新と冬の移籍の期間。</div></section>` : `<section class="card"><h2>${esc(m.title)}は終わり</h2><div class="muted">また来月。</div></section>`;
