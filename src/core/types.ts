@@ -60,6 +60,8 @@ export interface Player {
   ord?: { kind: 'start' | 'sub' | 'bench' | 'pos'; pos?: Pos };
   /** 監督の信頼（0〜100。問94）・クラブへの愛着（0〜100）・出番への不満（0〜100）・「移籍したい」と言っている（問95） */
   trust?: number; love?: number; unrest?: number; wantOut?: boolean;
+  /** お気に入り（問103：トップとユース） */
+  fav?: boolean;
 }
 
 export interface Manager {

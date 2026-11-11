@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { advanceWeek, newGame, answerOffer, type GameState } from '../src/core/game';
-import { borrow, repay, startBuild, takeTrial, decideTrial, setRenew, hireScout, hireCoach, coachWindow, payroll } from '../src/core/owner';
+import { borrow, repay, startBuild, setRenew, hireScout, hireCoach, coachWindow, payroll } from '../src/core/owner';
 import { debtCap, facCost } from '../src/core/finance';
 import { Rng } from '../src/core/rng';
 import { bid } from '../src/core/market';
@@ -76,15 +76,10 @@ describe('移籍と契約（企画書 12）・練習生（企画書 9-4）', () 
     const bb = G.squad.find((x) => x.id === b.id); if (bb) expect(bb.contract).toBe(3);
     expect(payroll(G)).toBeGreaterThan(0);
   });
-  it('練習生は1〜3か月あずかって、月1回の報告のあとに決める', () => {
-    const G = newGame({ seed: 38 }); G.squad = G.squad.slice(0, 20);
-    let g = 0; while (!G.owner.cands.some((c) => c.src === 'trial') && g++ < 200) advanceWeek(G);
-    const c = G.owner.cands.find((x) => x.src === 'trial')!; expect(c).toBeTruthy();
-    expect(takeTrial(G, c.id, 1)).toBeNull();
-    g = 0; while (G.owner.trials[0]?.trialMonths !== 0 && g++ < 12) advanceWeek(G);
-    expect(G.owner.trials[0].trialMonths).toBe(0);
-    expect(G.owner.trialLog.length).toBeGreaterThan(0);
-    expect(decideTrial(G, c.id, true)).toBeNull();
-    expect(G.squad.find((p) => p.id === c.id)!.origin).toBe('練習生');
+  it('練習生はなくなり、売り込みに来た子はスカウトの報告に届く（問119）', () => {
+    const G = newGame({ seed: 38 });
+    let g = 0; while (!Object.values(G.owner.mk.known).some((k) => k.from === '売り込み') && g++ < 300) advanceWeek(G);
+    expect(Object.values(G.owner.mk.known).some((k) => k.from === '売り込み')).toBe(true);
+    expect(G.owner.cands.length).toBe(0); expect(G.owner.trials.length).toBe(0);
   });
 });

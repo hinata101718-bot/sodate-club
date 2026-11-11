@@ -82,7 +82,7 @@ describe('監督の見方と選手の気持ち（問94・問95）', () => {
     const kv = memoryKV(); const raw = JSON.parse(readFileSync(__dirname + '/fixtures/save-v4.json', 'utf8'));
     raw.state.squad[0].req = true; kv.setItem(AUTO_KEY, JSON.stringify(raw));
     const G = loadFrom(kv, AUTO_KEY)!;
-    expect(G.version).toBe(SAVE_VERSION); expect(SAVE_VERSION).toBe(6);
+    expect(G.version).toBe(SAVE_VERSION);
     expect(G.squad[0].ord?.kind).toBe('start');
     expect(G.squad.every((p) => typeof p.love === 'number' && typeof p.trust === 'number')).toBe(true);
   });

@@ -13,6 +13,13 @@ import { sponsorYear } from './finance';
 import { initMarket, anyCond } from './market';
 import { ovr } from './player';
 export const MIGRATIONS: Record<number, (s: any) => any> = {
+  /* 版6 → 版7（1年間のプレイのあとの直し）。対戦で見ただけの選手は、候補リストの人だけ残す（問100）。練習生は帰ってもらう（問119） */
+  6: (s: any) => {
+    const mk = s.owner?.mk;
+    if (mk) { const keep = new Set(mk.short ?? []); for (const k of Object.values(mk.known ?? {}) as any[]) if (k.src === 'match' && !keep.has(k.pid)) delete mk.known[k.pid]; }
+    if (s.owner) { s.owner.cands = []; s.owner.trials = []; }
+    return s;
+  },
   /* 版5 → 版6（問93〜95：監督への頼み・信頼・愛着）。「使ってほしい」の頼みは「先発で使ってほしい」に変える */
   5: (s: any) => {
     for (const p of s.squad ?? []) {

@@ -14,7 +14,7 @@ export function youthHTML(G: GameState, sel: Set<number>): string {
   const seg = `<div class="seg" role="group" aria-label="学年">${[3, 2, 1].map((g) => `<button data-ygr="${g}" aria-pressed="${yGrade === g}">${g}年（${G.youth.filter((p) => p.grade === g).length}）</button>`).join('')}</div><div style="height:10px"></div>`;
   const list = G.youth.filter((p) => p.grade === yGrade);
   const rows = list.map((p) => { const l = lineOf(p); const key = `y:${p.id}`; const open = yOpen === key;
-    return `<div class="srow-wrap"><button class="srow" data-yopen="${key}" aria-expanded="${open}">${posTag(p.pos)}<span class="grow sname">${esc(p.name)}</span>${l ? `<span class="small">${l.arrow}</span><span class="small" style="color:var(--gold)">${stars(l.stars)}</span>` : ''}<span class="chev" aria-hidden="true">${open ? '▲' : '▼'}</span></button>
+    return `<div class="srow-wrap"><button class="srow" data-yopen="${key}" aria-expanded="${open}">${posTag(p.pos)}<span class="grow sname">${p.fav ? '<span class="favmark">★</span>' : ''}${esc(p.name)}</span>${l ? `<span class="small">${l.arrow}</span><span class="small" style="color:var(--gold)">${stars(l.stars)}</span>` : ''}<span class="chev" aria-hidden="true">${open ? '▲' : '▼'}</span></button>
       ${open ? `<div class="sdetail"><div class="small">${p.age}歳 ・ ${esc(p.pref)}${l ? ` ・ <b>${esc(l.words)} ${l.arrow}</b>` : ''}</div>${l ? `<div class="muted small">「${esc(l.comment)}」</div>` : ''}<button class="btn small ghost" data-yid="${p.id}" style="margin-top:6px;align-self:flex-start">くわしく見る</button></div>` : ''}</div>`; }).join('');
   const repCard = rep ? `<section class="card"><h2>${rep.month}月の報告会議</h2><div>${esc(rep.coach)}</div><button class="btn small ghost" data-act="ylog" style="margin-top:8px">報告をくわしく見る</button></section>` : `<section class="card"><h2>報告会議</h2><div class="muted small">毎月はじめ（3月〜12月）に、ユースコーチから報告がある。</div></section>`;
   return `${repCard}${seg}<section class="card"><h2>${yGrade}年</h2><div class="slist">${rows || '<div class="muted">いない</div>'}</div><div class="muted small" style="margin-top:8px">★はユースコーチの見立て（どこまで伸びそうか）。数字が見えるのは、2月の「春の昇格会議」のときだけ。</div></section>`;
@@ -57,9 +57,11 @@ function openYouthPlayer(G: GameState, id: number, back: () => void) {
   const lines = G.youthLog.map((r) => ({ r, l: r.lines.find((x) => x.pid === id) })).filter((x) => x.l).reverse();
   sheet(`<div class="bar"><h2>${esc(p.name)}</h2><span class="tag">ユース ${p.grade}年</span></div>
     <div class="row wrap">${posTag(p.pos)}<span class="muted">${p.age}歳 ・ ${p.height}cm ・ 利き足 ${p.foot === '両' ? '両足' : p.foot} ・ ${esc(p.pref)}出身</span></div>
+    <button class="btn ${p.fav ? 'primary' : 'ghost'} wide favbtn" id="yFav" aria-pressed="${!!p.fav}">${p.fav ? '★ お気に入り（もう一度押すと外す）' : '☆ お気に入りにする'}</button>
     <section class="card"><h2>能力</h2><div class="muted">数字は、春の昇格会議で初めて見える。</div></section>
     <section class="card"><h2>成長の記録</h2>${lines.length ? `<div class="list">${lines.map(({ r, l }) => `<div class="row"><span class="tag">${r.month}月</span><span class="grow">${esc(l!.words)} <b>${l!.arrow}</b></span><span class="small muted">${l!.apps}試合 ${l!.goals}点</span></div>`).join('')}</div>` : '<div class="muted">まだ報告はない。</div>'}</section>
     <section class="card"><h2>記録</h2><div class="muted">ユースの試合 通算 ${p.yApps || 0}試合 ${p.yGoals || 0}点</div></section>`,
     `<div class="in2 one"><button class="btn primary" id="yBack">もどる</button></div>`);
   $('#yBack').addEventListener('click', () => { $('#layer').innerHTML = ''; back(); });
+  $('#yFav').addEventListener('click', () => { p.fav = !p.fav; openYouthPlayer(G, id, back); });
 }

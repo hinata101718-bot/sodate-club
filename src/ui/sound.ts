@@ -24,6 +24,18 @@ function noise(c: AudioContext, t0: number, dur: number, vol = 0.08, freq = 1200
   const g = c.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   s.connect(f).connect(g).connect(c.destination); s.start(t0); s.stop(t0 + dur);
 }
+/** 押せるところは全部鳴らす（問97）。ボタンの種類で音を選ぶ */
+export function bindTapSounds(root: Document = document) {
+  root.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement | null)?.closest('button, a, [role="button"]') as HTMLElement | null;
+    if (!b || (b as HTMLButtonElement).disabled) return;
+    const txt = b.textContent || '';
+    if (b.id === 'pBack' || b.id === 'mBack' || b.id === 'nClose' || /もどる|やめる|閉じる|取り下げ|断る/.test(txt) || b.dataset.unbid != null) sfx('back');
+    else if (b.dataset.act === 'week' || b.dataset.act === 'skip' || b.classList.contains('primary')) sfx('go');
+    else if (b.classList.contains('navbtn') || b.classList.contains('hubtile')) sfx('tap');
+    else sfx('soft');
+  }, true);
+}
 export function sfx(name: string) {
   if (!on) return;
   const c = ac(); if (!c) return;
@@ -31,6 +43,10 @@ export function sfx(name: string) {
     const t = c.currentTime + 0.01;
     switch (name) {
       case 'tap': tone(c, 660, t, 0.06, 'triangle', 0.05); break;
+      /* 問97：押したものの種類で音を変える */
+      case 'soft': tone(c, 880, t, 0.04, 'triangle', 0.03); break;
+      case 'go': tone(c, 587, t, 0.07, 'triangle', 0.08); tone(c, 880, t + 0.06, 0.1, 'triangle', 0.08); break;
+      case 'back': tone(c, 392, t, 0.08, 'triangle', 0.05, 330); break;
       case 'goal': noise(c, t, 1.3, 0.16, 900); [523, 659, 784, 1047].forEach((f, i) => tone(c, f, t + i * 0.09, 0.28, 'triangle', 0.1)); break;
       case 'goalOpp': noise(c, t, 0.7, 0.06, 500); tone(c, 330, t, 0.3, 'sine', 0.06, 220); break;
       case 'special': tone(c, 880, t, 0.12, 'square', 0.04); tone(c, 1320, t + 0.08, 0.2, 'triangle', 0.07); break;

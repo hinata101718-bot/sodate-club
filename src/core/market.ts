@@ -14,7 +14,9 @@ import type { GameState } from './game';
 
 /* ---------- スカウトの条件 ---------- */
 /** どれも null（または空）は「こだわらない」 */
-export interface ScoutCond { pos: Pos[]; region: string | null; vmin: number | null; vmax: number | null; amin: number | null; amax: number | null; }
+export interface ScoutCond { pos: Pos[]; region: string | null; vmin: number | null; vmax: number | null; amin: number | null; amax: number | null;
+  /** 問104：クラブに合わせる（いまのお金で払える・段の差が1つまでの選手を先に探す）。なければオン */
+  fit?: boolean; }
 export const anyCond = (): ScoutCond => ({ pos: [], region: null, vmin: null, vmax: null, amin: null, amax: null });
 /** 画面に出す地域の名前（指示書の呼び方にそろえる） */
 export const SCOUT_REGIONS = REGIONS;
@@ -103,6 +105,7 @@ function learn(G: GameState, p: Player, club: string, src: KnownSrc, full: boole
   mk.known[p.id] = { pid: p.id, full, season: G.season, week: G.week, src, ovr: ovr(p), a: full ? [...p.a] : undefined, age: p.age, club, ...extra };
 }
 /** 対戦したクラブの先発（強い順の11人）は、名前・ポジション・だいたいの強さだけわかる */
+/** 問100：対戦で見ただけの選手は、もう覚えない（残しているのは古いセーブのためだけ） */
 export function seeOpponent(G: GameState, c: Club) {
   if (c.me) return;
   for (const p of [...c.squad].sort((a, b) => ovr(b) - ovr(a)).slice(0, 11)) learn(G, p, c.name, 'match', false);
@@ -137,7 +140,9 @@ export function scoutMonth(G: GameState, r: Rng): string[] {
     const cond = scoutCond(s);
     /* 腕がいいほど、1回に調べる人数が多い（問30） */
     const n = 2 + (r.next() < s.skill ? 1 : 0) + (r.next() < s.skill * 0.6 ? 1 : 0);
-    const pros = pool.filter((w) => fits(cond, w.p.pos, w.p.age, valueOf(w), regionOfWhere(w)) && !(mk.known[w.p.id]?.full && mk.known[w.p.id].season === G.season));
+    const budget = G.owner.money - mk.bids.reduce((t, b) => t + b.fee, 0);
+    const reach = (w: Where) => cond.fit === false || ((w.club ? w.club.tier >= tier - 1 : true) && valueOf(w) <= Math.max(0, budget));
+    const pros = pool.filter((w) => fits(cond, w.p.pos, w.p.age, valueOf(w), regionOfWhere(w)) && reach(w) && !(mk.known[w.p.id]?.full && mk.known[w.p.id].season === G.season));
     r.shuffle(pros);
     /* 腕のいいスカウトほど、条件の中でも力のある選手を先に見つける */
     if (r.next() < s.skill) pros.sort((a, b) => ovr(b.p) - ovr(a.p) + (r.next() - 0.5) * 12);
@@ -158,7 +163,14 @@ export function scoutMonth(G: GameState, r: Rng): string[] {
     found += got;
     if (!got) none.push(s.name);
   }
-  if (found) out.push(`スカウトが、条件に合う選手を${found}人調べてきた（移籍・候補の「移籍市場」で見られる）。`);
+  /* 問119：自分から売り込みに来る子は、スカウトの報告の1人として届く */
+  if (G.week >= 8 && G.week <= 43 && r.next() < 0.18) {
+    const age = r.int(17, 23); const p = makePlayer(r, G.ids, 38 + r.int(0, 12), r.pick(POS), { age, nSp: 0, exp: 0, pref: r.next() < 0.5 ? G.club.pref : r.pick(PREFS).name, origin: '売り込み' });
+    p.pot = clamp(ovr(p) + r.int(4, 26), 40, 86); p.salary = salaryFor(ovr(p)); p.contract = 2;
+    learn(G, p, age <= 18 ? '高校' : age <= 22 ? '大学' : 'どこにも所属していない', 'scout', true, { note: '「テストを受けさせてください」と、自分から売り込みに来た', scout: '売り込み', p, from: '売り込み', fee: 50 });
+    out.push(`${p.name}（${age}歳・${p.pos}）が、自分から売り込みに来た。スカウトの報告に入れておいた。`);
+  }
+  if (found) out.push(`スカウトが、条件に合う選手を${found}人調べてきた（チーム → 移籍 → スカウトで見られる）。`);
   if (none.length) out.push(`スカウトの${none.join('・')}：「条件に合う選手が見つからなかった」。条件を少しゆるめてみよう。`);
   return out;
 }
@@ -238,6 +250,9 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
   mk.bids.push({ pid, bump: BUMPS.includes(bump) ? bump : 0, fee, salary: offerSalary(w, bump), at: absWeek(G) });
   return null;
 }
+/** 問101：スカウトのリストから消す（候補リストからも外れる）。またスカウトが調べてきたら、新しい情報として出る */
+export function forgetKnown(G: GameState, pid: number) { delete G.owner.mk.known[pid]; dropShort(G, pid); }
+export function forgetUnlisted(G: GameState): number { const keep = new Set(shortList(G)); const bid = new Set(G.owner.mk.bids.map((b) => b.pid)); let n = 0; for (const k of Object.values(G.owner.mk.known)) if (!keep.has(k.pid) && !bid.has(k.pid)) { delete G.owner.mk.known[k.pid]; n++; } return n; }
 export function cancelBid(G: GameState, pid: number) { G.owner.mk.bids = G.owner.mk.bids.filter((b) => b.pid !== pid); }
 
 /** 申し込みの結果（次の週のはじめに届く） */

@@ -22,7 +22,7 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--club)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:41;background:var(--club)}
 button{font:inherit;color:inherit}
 input,select{font:inherit;font-size:16px}
 /* ホーム画面から全画面で開くと、上の時計の帯の分だけ見出しが下にずれ、中身の上が隠れていた。帯の分だけ全体を下げておく */
@@ -105,8 +105,9 @@ tr.down td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 .apt{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:12px}
 .apt div{padding:4px 0;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
 .apt b{display:block;font-size:16px}
-.sheet{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+/* 時計・電池の帯の下から始める（スクロールしても見出しが帯の下にもぐらない：感想メモ） */
+.sheet{position:fixed;inset:env(safe-area-inset-top,0px) 0 0 0;z-index:40;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
 .sheet .in{max-width:480px;margin:0 auto;padding-block:12px 130px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:12px}
 .sheet .bar{display:flex;align-items:center;gap:10px}
 .sheet .bar h2{font-family:var(--f-disp);font-size:18px;margin:0;flex:1;min-width:0}
@@ -307,3 +308,22 @@ nav.bottom .in{position:relative;z-index:0}
 .talk-bubble{position:relative;margin-top:10px;background:var(--club-soft);border-radius:12px;padding:8px 12px;font-size:14px;font-weight:700}
 .talk-bubble::before{content:"";position:absolute;top:-7px;left:18px;border:7px solid transparent;border-top:0;border-bottom-color:var(--club-soft)}
 .ordseg button{font-size:13px}
+/* 問98：シーズンの進み具合の棒と、日付がめくれる動き */
+.sbar{position:relative;height:4px;margin-top:4px;border-radius:2px;background:color-mix(in srgb,var(--club-ink) 25%,transparent);max-width:260px}
+.sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--club-ink);transition:width .4s ease-out}
+.sbar b{position:absolute;top:-2px;width:2px;height:8px;background:var(--gold);border-radius:1px}
+.flipbox{display:inline-block}
+.flip{animation:flipin .45s ease-out}
+@keyframes flipin{0%{transform:perspective(200px) rotateX(-90deg);opacity:.2}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.flip{animation:none}.sbar i{transition:none}}
+/* 問101：左にスワイプで「消す」 */
+.swipe{position:relative;overflow:hidden;border-radius:12px}
+.swipe .pl{transition:transform .2s ease-out;width:100%}
+.swipe.open .pl{transform:translateX(-84px)}
+.swipe-del{position:absolute;right:0;top:0;bottom:0;width:80px;border:0;border-radius:12px;background:var(--danger);color:#fff;font-weight:800;font-family:var(--f-disp);opacity:0;pointer-events:none;transition:opacity .2s}
+.swipe.open .swipe-del{opacity:1;pointer-events:auto}
+/* 問102：スカウトのコメントは1行で「…」 */
+.said{display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+/* 問103：お気に入り */
+.favmark{color:var(--gold);margin-right:2px}
+.favbtn{margin:8px 0}

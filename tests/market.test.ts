@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { newGame, advanceWeek, advanceToDecision, SAVE_VERSION, type GameState } from '../src/core/game';
-import { marketValue, sellChance, joinChance, bid, isStarter, playerIndex, scoutMonth, isStale, toggleShort, inShort, shortList, type ScoutCond } from '../src/core/market';
+import { marketValue, sellChance, joinChance, bid, isStarter, playerIndex, scoutMonth, isStale, toggleShort, inShort, shortList, forgetKnown, forgetUnlisted, type ScoutCond } from '../src/core/market';
 import { makePlayer, ovr } from '../src/core/player';
 import { TIER_LVL } from '../src/core/world';
 import { Rng } from '../src/core/rng';
@@ -63,13 +63,30 @@ describe('知っている選手', () => {
     G.owner.scouts[0].cond = cond({ vmin: 999999 });
     expect(scoutMonth(G, r).join('')).toContain('見つからなかった');
   });
-  it('対戦した相手の先発は、だいたいの強さだけわかる。情報は1シーズンで古くなる', () => {
-    const G = newGame({ seed: 54 });
+  it('対戦しても、知っている選手は増えない（問100）。情報は1シーズンで古くなる', () => {
+    const G = newGame({ seed: 54 }); G.owner.scouts = [];
     toWeek(G, 12, 1);
-    const seen = Object.values(G.owner.mk.known).filter((k) => k.src === 'match');
-    expect(seen.length).toBeGreaterThanOrEqual(11);
-    expect(seen.every((k) => !k.full && !k.a)).toBe(true);
-    const k = seen[0]; k.season = 0; expect(isStale(G, k)).toBe(true);
+    expect(Object.values(G.owner.mk.known).filter((k) => k.src === 'match').length).toBe(0);
+    const c = G.clubs.find((x) => !x.me)!; const p = c.squad[0];
+    G.owner.mk.known[p.id] = { pid: p.id, full: true, season: 0, week: 0, src: 'scout', ovr: 60, age: p.age, club: c.name };
+    expect(isStale(G, G.owner.mk.known[p.id])).toBe(true);
+  });
+  it('スカウトのリストから1人ずつ・まとめて消せる。候補リストの人は残る（問101）', () => {
+    const G = newGame({ seed: 58 }); toWeek(G, 13, 1);
+    const ks = Object.values(G.owner.mk.known); expect(ks.length).toBeGreaterThan(2);
+    forgetKnown(G, ks[0].pid); expect(G.owner.mk.known[ks[0].pid]).toBeUndefined();
+    toggleShort(G, ks[1].pid); forgetUnlisted(G);
+    expect(Object.keys(G.owner.mk.known).map(Number)).toEqual([ks[1].pid]);
+  });
+  it('「クラブに合わせる」がオンなら、払えない選手や2つ上の段の選手は探さない（問104）', () => {
+    const G = newGame({ seed: 59 }); G.owner.money = 3000;
+    G.owner.scouts[0].cond = cond({ vmin: 100 }); for (let i = 0; i < 4; i++) scoutMonth(G, new Rng(i));
+    const idx = playerIndex(G);
+    for (const k of Object.values(G.owner.mk.known)) { const w = idx.get(k.pid); if (w?.club) { expect(w.club.tier).toBeGreaterThanOrEqual(2); expect(marketValue(w.p, w.club.tier)).toBeLessThanOrEqual(3000); } }
+  });
+  it('始まりのときは、どの選手も総合力80まで（問105）', () => {
+    const G = newGame({ seed: 60 });
+    expect(Math.max(...[...G.squad, ...G.clubs.flatMap((c) => c.squad)].map(ovr))).toBeLessThanOrEqual(80);
   });
   it('移籍の期間に申し込むと、次の週に結果が届き、「次に決めることまで進む」が止まる', () => {
     const G = newGame({ seed: 55 }); toWeek(G, 24, 1); G.owner.money = 1e7;
