@@ -106,3 +106,12 @@ export function teamStrength(sq: Player[]): number {
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0;
 }
 export function inGrowth(p: Player): boolean { return p.age >= p.gStart && p.age < p.gStart + p.gLen; }
+
+/** 問124：成長タイプ（隠れている伸び方から決める）。クラブに丸1シーズンいると、コーチが言えるようになる */
+export function growthType(p: Player): '早熟' | 'ふつう' | '晩成' | '長く伸びる' {
+  if (p.gLen >= 7) return '長く伸びる';
+  if (p.gStart >= 23) return '晩成';
+  if (p.gStart <= 17 && p.gStart + p.gLen <= 21) return '早熟';
+  if (p.decl <= 29 && p.gStart <= 18) return '早熟';
+  return 'ふつう';
+}

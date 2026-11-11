@@ -1,6 +1,6 @@
 /* ゲームの状態と、1週ずつ進めるしくみ */
 import { Rng, clamp } from './rng';
-import { makePlayer, makeSquad, ovr, assignNumbers, teamStrength } from './player';
+import { makePlayer, makeSquad, ovr, assignNumbers, teamStrength, growthType } from './player';
 import { simulateMatch, pickLineup, chooseForm, type Policy, type TeamIn } from './match';
 import { growPlayer, mergeReports, DEFAULT_CTX } from './growth';
 import { makeManager } from './staff';
@@ -68,7 +68,7 @@ export interface GameState {
   /** 問112〜116：メッセージ・経営会議・目標・監督の評価・補強の予算 */
   inbox?: Msg[]; meet?: Meeting | null; snap?: MonthSnap; front?: { acct: string; sales: string };
   goal?: Goal; nextGoal?: Goal | null; goalLog?: { season: number; text: string; level: string; ok: boolean }[]; mgrEval?: number; spMul?: number;
-  budget?: { cap: number; spent: number };
+  budget?: { cap: number; spent: number }; typeNews?: string[];
   /** 月の経営会議で話した、来月の動き（監督の方針・コーチの練習の強さ） */
   plan?: { until: number; tilt: 'def' | 'atk' | null; care: boolean }; regm?: RegMeet | null; breakFix?: boolean; yearStart?: { pop: number; fans: [number, number] }; streak?: number;
   /** オーナーが決めること（段階4）：お金・施設・人・移籍 */
@@ -259,6 +259,17 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
   return mine;
 }
 
+/** 問124：クラブに長くいる選手の成長タイプを、コーチが見きわめる（need 週いると。腕のいいコーチは半分でわかる） */
+function revealTypes(G: GameState, need: number): string[] {
+  const now = G.season * 48 + G.week; const out: string[] = [];
+  for (const p of G.squad) {
+    if (p.gType) continue;
+    const since = p.joined ?? 48; const C = G.owner.coaches; const c = p.pos === 'GK' ? C.gk : ['CB', 'SB', 'DM'].includes(p.pos) ? C.def : C.off;
+    const want = (c?.skill ?? 0.3) >= 0.65 ? Math.min(need, 24) : need;
+    if (now - since >= want) { p.gType = growthType(p); out.push(`${p.name}：${p.gType}`); }
+  }
+  return out;
+}
 /** 今週、自分のクラブの試合があるか（勝ち抜きの大会で、まだ出番がない回はない） */
 export function hasMyMatch(G: GameState): boolean {
   const e = eventOf(G);
@@ -339,6 +350,7 @@ export function advanceWeek(G: GameState): WeekResult {
     G.week++;
     let seasonEnd = false;
     if (G.week >= WEEKS) { news.push(...newSeason(G, r)); seasonEnd = true; news.push(`${G.season}年目が始まった。`); }
+    if (G.owner && G.week === 28) { const f = revealTypes(G, 24); if (f.length) mail(G, 'コーチ', (G.owner.coaches.phys ?? G.owner.coaches.off)?.name ?? G.mgr.name, '成長タイプがわかった選手', `半年見てきて、成長のしかたがわかってきた選手がいます。${f.join('、')}。選手の画面に書いておきました。`); }
     if (G.owner && REG_WEEKS.includes(G.week)) { openReg(G); news.push(`選手登録の会議（${G.regm!.kind}）が開かれる。試合に出られる23人を決めよう。`); }
     if (G.week === 4) { G.promo = { open: true, rec: recommend(G.youth, G.squad.length) }; news.push('春の昇格会議が開かれる。トップに上げる子を決めよう。'); }
     news.push(...bondNews); bondNews = [];
@@ -427,7 +439,8 @@ function yearEnd(G: GameState, r: Rng): string[] {
   /* 問115・116：今年の目標に届いたか → 年に1回の経営会議 */
   if (G.owner) {
     const judged = judgeGoal(G, tier, rank); out.push(...judged);
-    G.meet = yearMeeting(G, judged);
+    G.typeNews = revealTypes(G, 40);
+    G.meet = yearMeeting(G, judged); G.typeNews = undefined;
     if ((G.mgrEval ?? 60) < 25) mail(G, '監督', G.mgr.name, '今年の結果について', '目標に大きく届かず、申し訳ありません。クラブのためなら、私を代えてもらってかまいません。');
   }
   void r;

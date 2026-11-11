@@ -245,8 +245,8 @@ export function yearMeeting(G: GameState, judged: string[]): Meeting {
   const cl: string[] = [];
   if (down.length) cl.push(...down.map((n) => `↓ ${n.name}（${n.why}）：「${n.text}」`));
   if (up.length) cl.push(...up.map((n) => `${(n.d ?? 0) >= 3 ? '↑↑' : '↑'} ${n.name}（${n.why}）：「${n.text}」`));
-  items.push({ role: 'コーチ', who: (G.owner.coaches.phys ?? G.owner.coaches.off)?.name ?? G.mgr.name, lines: cl.length ? ['今年1年の、選手の伸びしろの見立てです。', ...cl] : ['今年は、伸びしろが大きく動いた選手はいませんでした。'],
-    doc: notes.length ? { title: `${G.season}年目の伸びしろ報告書`, stamp: 'コーチ', secs: [...(down.length ? [{ h: '伸びしろが小さくなった', rows: down.map((n) => ({ k: n.name, v: `↓（${n.why}）`, cls: 'bad' as const })) }] : []), ...(up.length ? [{ h: '伸びしろが広がった', rows: up.map((n) => ({ k: n.name, v: `${(n.d ?? 0) >= 3 ? '↑↑' : '↑'}（${n.why}）`, cls: 'good' as const })) }] : [])] } : undefined });
+  items.push({ role: 'コーチ', who: (G.owner.coaches.phys ?? G.owner.coaches.off)?.name ?? G.mgr.name, lines: [...(cl.length ? ['今年1年の、選手の伸びしろの見立てです。', ...cl] : ['今年は、伸びしろが大きく動いた選手はいませんでした。']), ...((G.typeNews ?? []).length ? [`それと、1年見てきて、${(G.typeNews ?? []).length}人の成長タイプがわかりました。報告書に書いておきます。`] : [])],
+    doc: notes.length || (G.typeNews ?? []).length ? { title: `${G.season}年目の伸びしろ報告書`, stamp: 'コーチ', secs: [...((G.typeNews ?? []).length ? [{ h: '成長タイプがわかった（1年見てきて）', rows: (G.typeNews ?? []).map((t) => { const [n, ty] = t.split('：'); return { k: n, v: ty }; }) }] : []),...(down.length ? [{ h: '伸びしろが小さくなった', rows: down.map((n) => ({ k: n.name, v: `↓（${n.why}）`, cls: 'bad' as const })) }] : []), ...(up.length ? [{ h: '伸びしろが広がった', rows: up.map((n) => ({ k: n.name, v: `${(n.d ?? 0) >= 3 ? '↑↑' : '↑'}（${n.why}）`, cls: 'good' as const })) }] : [])] } : undefined });
   return { kind: 'year', title: `${G.season}年目の年に1回の経営会議`, items, goals: opts, budgets, pick: { goal: 1, budget: 1, policy: G.policy } };
 }
 /** 会議を閉じる：年の会議なら、選んだ目標・予算・方針を決める（決めずに閉じても、おすすめ＝まん中になる） */

@@ -70,6 +70,8 @@ export interface Player {
   potLog?: { y: number; arrow: string; why: string }[];
   /** 選手登録（試合に出られる23人：感想42）と、クラブに入った週 */
   reg?: boolean; joined?: number;
+  /** 問124：コーチが見きわめた成長タイプ（わかるまではなし） */
+  gType?: string;
 }
 
 export interface Manager {
