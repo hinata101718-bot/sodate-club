@@ -31,14 +31,16 @@ const whereText = (r: Row) => (r.w.kind === 'ama' ? r.k.from ?? '高校・大学
 const fresh = (G: GameState, k: Known) => (isStale(G, k) ? '<span class="tag away">去年の情報</span>' : k.full ? '' : '<span class="tag">対戦で見ただけ</span>');
 const srcText: Record<string, string> = { scout: 'スカウトが調べた', match: '対戦で見た', award: '表彰された', free: 'フリーのお知らせ' };
 
-function rowHTML(G: GameState, r: Row): string {
+function rowHTML(G: GameState, r: Row, inShortList = false): string {
   const k = r.k; const p = r.w.p;
   const strength = k.full ? val(k.ovr) : `<span class="v">${ovrRange(k.ovr)}</span>`;
   /* 問102：3行目はスカウトのコメント（長いときは「…」）。問101：横にスワイプすると「消す」が出る */
   const said = k.note ? `${k.scout && k.scout !== '売り込み' ? `${esc(k.scout)}「${esc(k.note)}」` : esc(k.note)}` : srcText[k.src];
-  const del = mv.sub === 'known' && !inShort(G, k.pid) && !G.owner.mk.bids.some((b) => b.pid === k.pid);
+  /* 候補リストでは、左にスワイプすると「外す」（感想：候補リストから消せなかった） */
+  const bidOn = G.owner.mk.bids.some((b) => b.pid === k.pid);
+  const del = inShortList ? !bidOn : mv.sub === 'known' && !inShort(G, k.pid) && !bidOn;
   return `<div class="swipe" data-swipe="${del ? k.pid : ''}"><button class="pl" data-known="${k.pid}">${posTag(p.pos)}<span style="min-width:0"><span class="pname">${esc(p.name)}${G.owner.mk.bids.some((b) => b.pid === k.pid) ? ' <span class="tag">申し込み中</span>' : inShort(G, k.pid) ? ' <span class="tag gold">候補</span>' : ''}</span><br>
-    <span class="pmeta">${p.age}歳 ・ ${esc(whereText(r))} ・ ${r.value ? yen(r.value) : '移籍金なし'}</span><br><span class="pmeta said">${said}</span>${fresh(G, k) ? ` ${fresh(G, k)}` : ''}</span><span class="ovr">${strength}</span></button>${del ? `<button class="swipe-del" data-forget="${k.pid}">消す</button>` : ''}</div>`;
+    <span class="pmeta">${p.age}歳 ・ ${esc(whereText(r))} ・ ${r.value ? yen(r.value) : '移籍金なし'}</span><br><span class="pmeta said">${said}</span>${fresh(G, k) ? ` ${fresh(G, k)}` : ''}</span><span class="ovr">${strength}</span></button>${del ? (inShortList ? `<button class="swipe-del" data-unshort="${k.pid}">外す</button>` : `<button class="swipe-del" data-forget="${k.pid}">消す</button>`) : ''}</div>`;
 }
 
 export function marketHTML(G: GameState): string {
@@ -78,7 +80,7 @@ export function shortHTML(G: GameState): string {
   const list: Row[] = shortList(G).map((pid) => { const k = mk.known[pid]; const w = idx.get(pid); return k && w ? { k, w, value: valueOf(w), o: k.ovr } : null; }).filter((x): x is Row => !!x);
   const total = list.reduce((s, r) => s + r.value, 0);
   return `${bids}<section class="card"><h2>候補リスト（${list.length}人）</h2><div class="muted small">${open ? '<b>いまは移籍の期間</b>。選手を押して申し込む。' : 'プロとフリーの選手は、移籍の期間（夏：7〜8月、冬：12月）に申し込める。高校生・大学生はいつでも獲れる。'}${list.length ? ` 全員の移籍金の合計：${yen(total)}` : ''}</div>
-    <div class="plist" style="margin-top:8px">${list.map((r) => rowHTML(G, r)).join('') || '<div class="muted">まだいない。「スカウト」で選手を押して「候補リストに入れる」と、ここに集まる。</div>'}</div></section>`;
+    <div class="plist" style="margin-top:8px">${list.length ? '<div class="muted small" style="margin-bottom:6px">選手を左にスワイプすると、候補リストから外せる。</div>' : ''}${list.map((r) => rowHTML(G, r, true)).join('') || '<div class="muted">まだいない。「スカウト」で選手を押して「候補リストに入れる」と、ここに集まる。</div>'}</div></section>`;
 }
 
 function condHTML(G: GameState): string {
@@ -161,6 +163,7 @@ export function bindMarket(G: GameState, root: HTMLElement, done: (msg?: string 
   on('data-mv-pos', (v) => { mv.pos = v as Pos | ''; mv.more = false; });
   on('data-mv-more', () => { mv.more = true; });
   on('data-forget', (v) => { forgetKnown(G, +v); return 'リストから消した'; });
+  on('data-unshort', (v) => { if (inShort(G, +v)) toggleShort(G, +v); return '候補リストから外した（スカウトの報告にもどる）'; });
   on('data-forget-all', () => { if (!mv.confirm) { mv.confirm = true; return null; } mv.confirm = false; const n = forgetUnlisted(G); return `${n}人をリストから消した`; });
   /* 左にスワイプすると「消す」が出る */
   $$<HTMLElement>('.swipe[data-swipe]', root).forEach((w) => { if (!w.dataset.swipe) return; let x0 = -1, y0 = 0;
