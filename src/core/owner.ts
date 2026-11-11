@@ -154,7 +154,7 @@ export function takeTrial(G: GameState, id: number, months: number): string | nu
 }
 export function decideTrial(G: GameState, id: number, sign: boolean): string | null {
   const o = G.owner; const p = o.trials.find((x) => x.id === id); if (!p) return '見つからない。';
-  if (sign) { if (G.squad.length >= 25) return 'トップは25人まで。'; p.trialMonths = undefined; p.snap = undefined; p.origin = '練習生'; p.contract = 2; p.salary = salaryFor(ovr(p)); p.num = 0; G.squad.push(p); assignNumbers(G.squad); }
+  if (sign) { if (G.squad.length >= 35) return 'トップは35人まで。'; p.trialMonths = undefined; p.snap = undefined; p.origin = '練習生'; p.contract = 2; p.salary = salaryFor(ovr(p)); p.num = 0; G.squad.push(p); assignNumbers(G.squad); }
   o.trials = o.trials.filter((x) => x !== p); return null;
 }
 export function trialWeek(G: GameState, r: Rng, ctx: GrowCtx): string[] {

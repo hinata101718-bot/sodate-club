@@ -106,7 +106,7 @@ export function transferHTML(G: GameState): string {
   const nShort = (o.mk.short ?? []).length;
   /* 感想24：オファー・候補リスト・スカウト・練習生の4つ */
   const seg = `<div class="seg" role="group" aria-label="移籍の画面"><button data-trv="offer" aria-pressed="${trView === 'offer'}">オファー${cnt(nOffer)}</button><button data-trv="short" aria-pressed="${trView === 'short'}">候補リスト${cnt(nShort)}</button><button data-trv="scout" aria-pressed="${trView === 'scout'}">スカウト</button></div>
-    <div class="muted small" style="margin:8px 2px 4px">${win ? '<b>いまは移籍の期間</b>' : '移籍の期間は夏（7〜8月）と冬（12月）'} ・ トップ ${G.squad.length}人（25人まで）</div>`;
+    <div class="muted small" style="margin:8px 2px 4px">${win ? '<b>いまは移籍の期間</b>' : '移籍の期間は夏（7〜8月）と冬（12月）'} ・ トップ ${G.squad.length}人（35人まで）</div>`;
   if (trView === 'scout') return seg + marketHTML(G);
   if (trView === 'short') return seg + shortHTML(G);
   void nTrial; void trials;

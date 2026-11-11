@@ -21,12 +21,12 @@ export function youthHTML(G: GameState, sel: Set<number>): string {
 }
 let yGrade = 3; let yOpen = '';
 function promoHTML(G: GameState, sel: Set<number>): string {
-  const room = 25 - G.squad.length;
+  const room = 35 - G.squad.length;
   const list = [...G.youth].sort((a, b) => (b.grade || 0) - (a.grade || 0) || ovr(b) - ovr(a));
   const rep = G.youthLog[G.youthLog.length - 1];
   return `<section class="card"><h2>春の昇格会議</h2><div class="goal">トップに上げる子を選ぶ</div>
     <div class="muted">ここで初めて、ユースの子の数字が見える。上げなかった3年は卒業してクラブを去る。1・2年はあと1年ユースに残る。コーチのおすすめが、はじめから選ばれている。</div>
-    <div style="margin-top:6px">トップは今 <b>${G.squad.length}人</b>（25人まで）・ 選んだ子 <b>${sel.size}人</b>${sel.size > room ? ' <span class="tag bad">多すぎる</span>' : ''}</div></section>
+    <div style="margin-top:6px">トップは今 <b>${G.squad.length}人</b>（35人まで）・ 選んだ子 <b>${sel.size}人</b>${sel.size > room ? ' <span class="tag bad">多すぎる</span>' : ''}</div></section>
   ${list.map((p) => { const L = p.pos === 'GK' ? AT_K : AT_F; const O = p.pos === 'GK' ? ORDER_K : ORDER_F; const l = rep?.lines.find((x) => x.pid === p.id); const on = sel.has(p.id);
     return `<section class="card" style="${on ? 'border:2px solid var(--club)' : ''}"><div class="row">${posTag(p.pos)}<span class="grow pname">${esc(p.name)} <span class="pmeta">${p.grade}年 ・ ${p.age}歳</span></span><span class="ovr">${val(ovr(p))}</span></div>
       <div class="mini" style="margin-top:8px">${O.map((i) => `<span>${L[i]} ${val(Math.floor(p.a[i]))}</span>`).join('')}</div>

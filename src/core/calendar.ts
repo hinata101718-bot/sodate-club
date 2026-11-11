@@ -23,8 +23,8 @@ const CUP_OFFSETS = [5, 10, 15, 21, 27, 35];
 export function seasonSchedule(): { league: number[]; cup: number[] } {
   const cup = CUP_OFFSETS.map((o) => SEASON_START + o);
   const rest: number[] = [];
-  for (let w = SEASON_START; w <= SEASON_END; w++) if (!cup.includes(w)) rest.push(w);
-  /* のこり30週から22週を、なるべく均等に選ぶ（あいた週は休み） */
+  for (let w = SEASON_START; w <= SEASON_END; w++) if (!cup.includes(w) && !BREAK_WEEKS.includes(w)) rest.push(w);
+  /* のこり27週（中断期間をのぞく）から22週を、なるべく均等に選ぶ（あいた週は休み） */
   const league: number[] = [];
   for (let i = 0; i < 22; i++) league.push(rest[Math.round((i * (rest.length - 1)) / 21)]);
   return { league, cup };

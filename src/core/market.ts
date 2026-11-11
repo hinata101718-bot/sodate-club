@@ -2,6 +2,7 @@
    - 申し込めるのは「知っている選手」だけ（全員を検索できる形にはしない）
    - スカウトは1つのしくみ：ポジション・ざっくりの地域・市場の値段・年齢の4つの条件で、所属を問わず探す
    - 移籍金は「相場」。値段の交渉はしない。相手のクラブが売るか、選手本人が来るかを決める（段と給料だけ） */
+import { MAX_SQUAD, autoReg } from './squad';
 import { Rng, clamp } from './rng';
 import { POS, type Pos } from './constants';
 import { PREFS, REGIONS, prefByName } from './data/prefs';
@@ -63,7 +64,9 @@ export interface Known {
 export interface Bid { pid: number; bump: number; fee: number; salary: number; at: number; }
 export interface MarketState { known: Record<number, Known>; free: Player[]; bids: Bid[]; result: number;
   /** 候補リスト（感想24：スカウトの報告から気になった選手を入れておき、あとで誰に申し込むか決める）。古いセーブにはないので、なければ空 */
-  short?: number[]; }
+  short?: number[];
+  /** 問118：交渉がまとまらなかった選手（同じ移籍の期間は申し込めない） */
+  blocked?: Record<number, string>; }
 export const shortList = (G: GameState) => (G.owner.mk.short ??= []);
 export const inShort = (G: GameState, pid: number) => shortList(G).includes(pid);
 export function toggleShort(G: GameState, pid: number): boolean {
@@ -235,14 +238,14 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
   const mk = G.owner.mk; const k = mk.known[pid];
   if (!k) return '知らない選手には申し込めない。スカウトに調べてもらおう。';
   const w = whereIs(G, pid); if (!w) return 'この選手は、もういない（引退したか、ほかのクラブに移った）。';
-  if (G.squad.length + mk.bids.length >= 25) return 'トップは25人まで。誰かを売りに出してから獲ろう。';
+  if (G.squad.length + mk.bids.length >= MAX_SQUAD) return `トップは${MAX_SQUAD}人まで。誰かを売りに出してから獲ろう。`;
   if (mk.bids.some((b) => b.pid === pid)) return 'もう申し込んでいる。結果は次の週に届く。';
   if (w.kind === 'ama') {
     const fee = k.fee ?? 100;
     if (G.owner.money < fee) return 'お金が足りない。';
     G.owner.money -= fee; G.owner.ledger.buy += fee;
     const p = w.p; joinBond(p, false); p.love = 45; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
-    G.squad.push(p); assignNumbers(G.squad); delete mk.known[pid]; dropShort(G, pid);
+    G.squad.push(p); assignNumbers(G.squad); delete mk.known[pid]; dropShort(G, pid); autoReg(G, p);
     void r; return null;
   }
   if (!marketOpen(G)) return 'プロとフリーの選手は、移籍の期間（7〜8月・12月）にしか申し込めない。';
@@ -268,16 +271,21 @@ export function resolveBids(G: GameState, r: Rng): string[] {
     if (w.club && r.next() >= sellChance(w.club, p)) { out.push(`移籍の結果：${w.club.name}は ${who} を売ってくれなかった。`); continue; }
     if (r.next() >= joinChance(fromTierOf(w), tierOf(G), b.bump)) { out.push(`移籍の結果：${w.club ? `${w.club.name}は売ってくれたが、` : ''}${who}本人が来るのを断った。`); continue; }
     if (G.owner.money < b.fee) { out.push(`移籍の結果：お金が足りなくなっていて、${who}を獲れなかった。`); continue; }
-    if (G.squad.length >= 25) { out.push(`移籍の結果：トップが25人いて、${who}を入れられなかった。`); continue; }
-    if (b.fee) { G.owner.money -= b.fee; G.owner.ledger.buy += b.fee; if (G.budget) G.budget.spent += b.fee; }
-    if (w.club) replaceInClub(G, w.club, p, r);
-    else mk.free = mk.free.filter((x) => x !== p);
-    joinBond(p, false); p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = 3; p.salary = b.salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
-    G.squad.push(p); assignNumbers(G.squad); delete mk.known[p.id]; dropShort(G, p.id);
+    if (G.squad.length >= MAX_SQUAD) { out.push(`移籍の結果：トップが${MAX_SQUAD}人いて、${who}を入れられなかった。`); continue; }
+    completeSign(G, w, b.fee, b.salary, 3, r);
     out.push(`移籍の結果：${w.club ? `${w.club.name}から` : 'フリーの'} ${who} が来てくれた！${b.fee ? `（移籍金 ${manText(b.fee)}、` : '（'}給料 年${b.salary.toLocaleString()}万円）`);
   }
   mk.result = due.length ? now : mk.result;
   return out;
+}
+/** 獲得が決まった：お金を払い、トップに入れる（登録に空きがあれば登録もする） */
+export function completeSign(G: GameState, w: Where, fee: number, salary: number, years: number, r: Rng) {
+  const mk = G.owner.mk; const p = w.p;
+  if (fee) { G.owner.money -= fee; G.owner.ledger.buy += fee; if (G.budget) G.budget.spent += fee; }
+  if (w.club) replaceInClub(G, w.club, p, r);
+  else mk.free = mk.free.filter((x) => x !== p);
+  joinBond(p, false); p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = years; p.salary = salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
+  G.squad.push(p); assignNumbers(G.squad); delete mk.known[p.id]; dropShort(G, p.id); autoReg(G, p);
 }
 /** 選手が抜けたクラブには、段の目安くらいの選手が入る（段ごとの強さがくずれないように） */
 function replaceInClub(G: GameState, c: Club, p: Player, r: Rng, lvl = TIER_LVL[c.tier] - 2) {

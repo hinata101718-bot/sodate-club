@@ -3,6 +3,8 @@
    - 12月（表彰式のあと）：年に1回の経営会議。去年のふり返り・営業の報告・目標（監督が3つ出してオーナーが選ぶ）・
      補強の予算・チームの強化方針・いまの不足・コーチの伸びしろの報告（問120）
    - 目標に届いたか：監督の評価・人気・スポンサーが上下する（大きく外れると監督の解任の話） */
+import { ensureReg } from './squad';
+import { BREAK_WEEKS, SEASON_END } from './calendar';
 import { clamp, Rng } from './rng';
 import { ovr, teamStrength } from './player';
 import { POS, type Pos } from './constants';
@@ -31,6 +33,7 @@ export const unread = (G: GameState) => (G.inbox ?? []).filter((m) => !m.read).l
 /* ---------- 報告する人 ---------- */
 function staffName(seed: number) { return `${STAFF_SUR[seed % STAFF_SUR.length]} ${STAFF_GIV[(seed * 7 + 3) % STAFF_GIV.length]}`; }
 export function ensureMeta(G: GameState) {
+  ensureReg(G); fixBreak(G);
   G.front ??= { acct: staffName(G.club.name.length * 13 + 5), sales: staffName(G.club.name.length * 29 + 11) };
   G.mgrEval ??= 60;
   if (!G.goal || G.goal.season !== G.season) G.goal = goalOptions(G, myTierOf(G), G.season)[1];
@@ -203,4 +206,15 @@ export function potNote(r: Rng, p: Player, d: number): string {
     young ? '出番が少なくて、伸びが止まりかけています。試合で使ってあげたい' : '出番が少なく、体のキレが落ちてきています', '練習だけでは、なかなか伸びません。試合の経験がほしいところです', vet ? '年齢もあって、ここから大きく伸びるのは難しいかもしれません' : 'ほかのクラブで試合に出るほうが、本人のためかもしれません',
   ];
   return r.pick(pool);
+}
+
+/** 問117：夏の中断期間。古いセーブの今のシーズンも、まだ来ていないリーグ戦を中断期間の外へ動かす */
+export function fixBreak(G: GameState) {
+  if (G.breakFix) return; G.breakFix = true;
+  const L = G.sched.league; if (!L.some((w) => BREAK_WEEKS.includes(w))) return;
+  const done = L.filter((w) => w < G.week); const n = L.length - done.length;
+  const cand: number[] = []; for (let w = Math.max(G.week, 8); w <= SEASON_END; w++) if (!G.sched.cup.includes(w) && !BREAK_WEEKS.includes(w)) cand.push(w);
+  if (cand.length < n || !n) return;
+  const rest = n === 1 ? [cand[0]] : Array.from({ length: n }, (_, i) => cand[Math.round((i * (cand.length - 1)) / (n - 1))]);
+  G.sched.league = [...done, ...rest];
 }

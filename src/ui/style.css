@@ -377,3 +377,11 @@ button.pp{cursor:pointer}
 .mchoice{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:52px;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:inherit;font:inherit;text-align:left;cursor:pointer}
 .mchoice[aria-pressed="true"]{border-color:var(--club);background:color-mix(in srgb,var(--club) 12%,var(--card))}
 @media (prefers-reduced-motion:reduce){.mspeak{animation:none}}
+/* 感想42：選手登録 */
+.regrow.on{border-color:var(--club);background:color-mix(in srgb,var(--club) 10%,var(--card))}
+.regchk{width:24px;height:24px;flex:none;border-radius:6px;border:2px solid var(--club);display:inline-flex;align-items:center;justify-content:center;color:var(--club);font-weight:900}
+/* 問118：交渉 */
+.nego{display:flex;flex-direction:column;gap:8px}
+.nego-line{align-self:flex-start;max-width:88%;padding:8px 12px;border-radius:14px 14px 14px 4px;background:var(--line);font-size:14px}
+.nego-line.me{align-self:flex-end;border-radius:14px 14px 4px 14px;background:color-mix(in srgb,var(--club) 22%,var(--card))}
+.regend{display:flex;align-items:center;gap:8px}

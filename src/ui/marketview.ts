@@ -1,4 +1,5 @@
 /* 移籍市場の画面（夜2 段階2）：知っている選手・フリーの選手・スカウトの条件・申し込み */
+import { startNego, negoTurn, isBlocked, FEE_STEPS, SAL_STEPS } from '../core/nego';
 import type { GameState } from '../core/game';
 import { myTier } from '../core/game';
 import { POS, type Pos } from '../core/constants';
@@ -9,7 +10,7 @@ import {
   playerIndex, regionLabel, scoutCond, sellChance, valueOf, inShort, shortList, toggleShort, forgetKnown, forgetUnlisted, type Known, type Where,
 } from '../core/market';
 import type { Player } from '../core/types';
-import { $$, closeSheet, esc, posTag, sheet, val, yen } from './dom';
+import { $, $$, closeSheet, esc, posTag, sheet, toast, val, yen } from './dom';
 import { openPlayer } from './playerview';
 
 /** 画面の状態（セーブには入れない） */
@@ -108,17 +109,17 @@ export function openKnown(G: GameState, pid: number, done: (msg?: string | null)
     if (!inShort(G, pid) && !inBid) return `<section class="card" id="offerCard"><h2>候補リスト</h2><div class="muted small">気になったら候補リストに入れておこう。申し込みは、候補リストの中から決める。</div><button class="btn primary wide" id="mShort" style="margin-top:8px">候補リストに入れる</button></section>`;
     const outBtn = '<button class="btn small ghost" id="mShort" style="margin-top:8px">候補リストから外す</button>';
     if (w.kind === 'ama') return `<section class="card" id="offerCard"><h2>獲得</h2><div>契約金 ${yen(k.fee ?? 100)} ・ 給料 年${p.salary.toLocaleString()}万円 ・ 3年契約</div><div class="muted small">高校生・大学生は、いつでも獲れる（すぐにトップに入る）。</div><button class="btn primary wide" id="mBid" style="margin-top:8px">獲る</button>${outBtn}</section>`;
-    const sc = w.club ? sellChance(w.club, p) : 1;
-    return `<section class="card" id="offerCard"><h2>獲得を申し込む</h2><div class="list small">
-      <div>移籍金（相場）：<b>${value ? yen(value) : 'なし（フリー）'}</b></div><div>給料：<b>年${offerSalary(w, bump).toLocaleString()}万円</b>（3年契約）</div>
-      ${w.club ? `<div>${esc(w.club.name)}が売ってくれる見こみ：<b>${chanceWord(sc)}</b></div>` : ''}<div>本人が来てくれる見こみ：<b>${chanceWord(joinChance(fromT, tier, bump))}</b></div></div>
-      <h3>給料の上乗せ</h3><div class="seg" role="group" aria-label="給料の上乗せ">${BUMPS.map((b) => `<button data-bump="${b}" aria-pressed="${bump === b}">${b ? `+${b}%` : '上乗せなし'}</button>`).join('')}</div>
-      <div class="muted small" style="margin-top:6px">値段の交渉はしない。相場の額で申し込み、${w.club ? '相手のクラブが売るか、' : ''}選手本人が来るかを決める。上の段の選手ほど、下の段のクラブには来にくい。結果は次の週のお知らせで届く。</div>
-      ${inBid ? '<div class="tag" style="margin-top:8px">申し込み中</div>' : `<button class="btn primary wide" id="mBid" style="margin-top:8px" ${open ? '' : 'disabled'}>${open ? '獲得を申し込む' : '移籍の期間になったら申し込める'}</button>`}${inBid ? '' : outBtn}</section>`;
+    const blocked = isBlocked(G, pid);
+    return `<section class="card" id="offerCard"><h2>獲得の交渉</h2><div class="list small">
+      <div>移籍金（相場）：<b>${value ? yen(value) : 'なし（フリー）'}</b></div><div>給料の目安：<b>年${offerSalary(w, 0).toLocaleString()}万円</b></div>
+      ${G.budget ? `<div>補強の予算：あと <b>${yen(Math.max(0, G.budget.cap - G.budget.spent))}</b></div>` : ''}</div>
+      <div class="muted small" style="margin-top:6px">${w.club ? `まず${esc(w.club.name)}と移籍金を、そのあと本人と給料と年数を話す。` : 'フリーなので、本人と給料と年数を話す。'}それぞれ3回まで。まとまらないと、この移籍の期間はもう申し込めない。上の段の選手ほど、下の段のクラブには高い給料でないと来ない。</div>
+      ${inBid ? '<div class="tag" style="margin-top:8px">申し込み中</div>' : blocked ? '<div class="tag bad" style="margin-top:8px">この期間は申し込めない</div>' : `<button class="btn primary wide" id="mNego" style="margin-top:8px" ${open ? '' : 'disabled'}>${open ? '交渉を始める' : '移籍の期間になったら交渉できる'}</button>`}${inBid ? '' : outBtn}</section>`;
   };
   const info = `<section class="card"><h2>この選手のこと</h2><div class="list small"><div>いるところ：<b>${esc(whereTextW(w, k))}</b></div><div>市場の値段：<b>${value ? yen(value) : '0円'}</b></div><div>情報：${srcText[k.src]}（${k.season}年目 ${Math.floor(k.week / 4) + 1}月）${isStale(G, k) ? ' ・ <b>去年の情報</b>' : ''}</div></div>${inShort(G, pid) || G.owner.mk.bids.some((b) => b.pid === pid) ? '' : '<button class="btn small ghost" id="mForget" style="margin-top:8px">リストから消す</button>'}</section>`;
   const bindOffer = (root: HTMLElement, again: () => void) => {
     $$<HTMLElement>('[data-bump]', root).forEach((b) => b.addEventListener('click', () => { bump = +b.dataset.bump!; again(); }));
+    root.querySelector('#mNego')?.addEventListener('click', () => openNego(G, pid, done));
     root.querySelector('#mForget')?.addEventListener('click', () => { forgetKnown(G, pid); closeSheet(); done(`${p.name} をリストから消した`); });
     root.querySelector('#mShort')?.addEventListener('click', () => { const on = toggleShort(G, pid); closeSheet(); done(on ? `${p.name} を候補リストに入れた` : `${p.name} を候補リストから外した`); });
     root.querySelector('#mBid')?.addEventListener('click', () => {
@@ -128,7 +129,7 @@ export function openKnown(G: GameState, pid: number, done: (msg?: string | null)
   };
   /* 下の帯のボタン：候補リストに入っていなければ「入れる」、入っていれば申し込みのところへ動く */
   const dock = () => { const inBid = G.owner.mk.bids.some((b) => b.pid === pid); if (inBid) return null;
-    return inShort(G, pid) ? { label: w.kind === 'ama' ? '獲る ↓' : '申し込む ↓', go: () => document.getElementById('offerCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+    return inShort(G, pid) ? { label: w.kind === 'ama' ? '獲る ↓' : '交渉する ↓', go: () => document.getElementById('offerCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
       : { label: '候補に入れる ＋', go: () => { toggleShort(G, pid); closeSheet(); done(`${p.name} を候補リストに入れた`); } }; };
   if (!k.full) {
     const draw = () => {
@@ -184,3 +185,40 @@ export function bindMarket(G: GameState, root: HTMLElement, done: (msg?: string 
   }));
 }
 void ovr;
+
+/* ---------- 問118：移籍の交渉（3往復まで） ---------- */
+export function openNego(G: GameState, pid: number, done: (msg?: string | null) => void) {
+  const st = startNego(G, pid);
+  if (typeof st === 'string') { done(st); return; }
+  const n = st; const w = playerIndex(G).get(pid)!; const p = w.p; const value = valueOf(w); const base = offerSalary(w, 0);
+  let feeI = 2, salI = 0;
+  const draw = () => {
+    const log = n.log.map((x) => `<div class="nego-line ${x.me ? 'me' : ''}">${esc(x.t)}</div>`).join('');
+    let ctl = '';
+    if (!n.end && n.side === 'club') {
+      const opts = FEE_STEPS.map((f, i) => `<button data-nf="${i}" aria-pressed="${n.ask == null && feeI === i}">${yen(Math.round((value * f) / 100) * 100)}</button>`).join('');
+      ctl = `<section class="card"><h2>移籍金（${3 - n.round}回まで）</h2><div class="seg wide9" role="group" aria-label="移籍金">${opts}</div>${n.ask != null ? `<button class="btn small ghost wide" data-nf="ask" aria-pressed="${feeI === -1}" style="margin-top:6px">言われた額（${yen(n.ask)}）で</button>` : ''}<div class="muted small" style="margin-top:6px">相場は ${yen(value)}。安く言いすぎると、話を打ち切られる。</div></section>`;
+    }
+    if (!n.end && n.side === 'player') {
+      const opts = SAL_STEPS.map((f, i) => `<button data-ns="${i}" aria-pressed="${salI === i}">年${(Math.round((base * f) / 10) * 10).toLocaleString()}万</button>`).join('');
+      ctl = `<section class="card"><h2>給料と契約の年数（${3 - n.round}回まで）</h2><div class="seg wide9" role="group" aria-label="給料">${opts}</div>${n.sAsk != null ? `<button class="btn small ghost wide" data-ns="ask" aria-pressed="${salI === -1}" style="margin-top:6px">言われた額（年${n.sAsk.toLocaleString()}万円）で</button>` : ''}
+        <h3>契約の年数</h3><div class="seg" role="group" aria-label="契約の年数">${[1, 2, 3, 4].map((y) => `<button data-ny="${y}" aria-pressed="${n.years === y}">${y}年</button>`).join('')}</div>
+        <div class="muted small" style="margin-top:6px">${n.fee ? `移籍金 ${yen(n.fee)} は決まっている。` : ''}若い選手は長めの契約を、上の段の選手は高めの給料をほしがる。</div></section>`;
+    }
+    const s = sheet(`<div class="bar"><h2>${esc(p.name)}との交渉</h2>${posTag(p.pos)}</div><section class="card nego">${log}</section>${ctl}`,
+      n.end ? `<div class="in2 one"><button class="btn primary" id="ngClose">${n.end === 'ok' ? '決まった！ 閉じる' : '閉じる'}</button></div>` : `<div class="in2"><button class="btn ghost" id="ngStop">やめる</button><button class="btn primary" id="ngGo">この条件で話す</button></div>`);
+    s.scrollTop = s.scrollHeight;
+    $$<HTMLElement>('[data-nf]').forEach((b) => b.addEventListener('click', () => { feeI = b.dataset.nf === 'ask' ? -1 : +b.dataset.nf!; draw(); }));
+    $$<HTMLElement>('[data-ns]').forEach((b) => b.addEventListener('click', () => { salI = b.dataset.ns === 'ask' ? -1 : +b.dataset.ns!; draw(); }));
+    $$<HTMLElement>('[data-ny]').forEach((b) => b.addEventListener('click', () => { n.years = +b.dataset.ny!; draw(); }));
+    $('#ngClose')?.addEventListener('click', () => { closeSheet(); done(n.end === 'ok' ? `${p.name} が来てくれた！` : `${p.name} との交渉はまとまらなかった`); });
+    $('#ngStop')?.addEventListener('click', () => { closeSheet(); done(n.round ? `${p.name} との交渉をやめた` : null); });
+    $('#ngGo')?.addEventListener('click', () => {
+      if (n.side === 'club') n.fee = feeI === -1 && n.ask != null ? n.ask : Math.round((value * FEE_STEPS[feeI]) / 100) * 100;
+      else n.salary = salI === -1 && n.sAsk != null ? n.sAsk : Math.round((base * SAL_STEPS[salI]) / 10) * 10;
+      const r = new Rng(G.rng); const e = negoTurn(G, n, r); G.rng = r.s;
+      if (e) toast(e); if (n.side === 'player' && n.round === 0) { salI = 0; } draw();
+    });
+  };
+  draw();
+}

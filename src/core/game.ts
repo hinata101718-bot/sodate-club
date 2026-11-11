@@ -16,12 +16,13 @@ import { initOwner, growCtx, gkCtx, youthSkill, weekMoney, popResult, rollContra
 import { afterMyMatch, monthBond, seasonBond, refusesToLeave, ORDER_SHORT, type OrderKind } from './bond';
 import { scoutMonth, resolveBids, learnAward, releaseFree, freeNews, aiTransfers, marketValue } from './market';
 import { sponsorYear, leaguePrize, CUP_PRIZE } from './finance';
-import { ensureMeta, mail, monthMeeting, yearMeeting, judgeGoal, snapshot, potNote, type Msg, type Meeting, type MonthSnap, type Goal } from './meeting';
+import { openReg, applyReg, ensureReg, matchSquad, MAX_SQUAD, REG_WEEKS, type RegMeet } from './squad';
+import { closeMeeting, ensureMeta, mail, monthMeeting, yearMeeting, judgeGoal, snapshot, potNote, type Msg, type Meeting, type MonthSnap, type Goal } from './meeting';
 
 export { makeFixtures };
 export const SAVE_VERSION = 7;
 export interface Row { p: number; w: number; d: number; l: number; gf: number; ga: number; }
-export interface Offer { type: 'offer'; pid: number; club: string; price: number; clubId?: number; listed?: boolean; }
+export interface Offer { type: 'offer'; pid: number; club: string; price: number; clubId?: number; listed?: boolean; base?: number; rounds?: number; }
 export interface CupTie { a: number; b: number; w?: number; s?: [number, number]; pk?: [number, number] | null; }
 export interface Cup { round: number; rounds: CupTie[][]; champion: number | null; }
 export interface League { ids: number[]; fixtures: [number, number][][]; table: Record<number, Row>; }
@@ -67,7 +68,7 @@ export interface GameState {
   /** 問112〜116：メッセージ・経営会議・目標・監督の評価・補強の予算 */
   inbox?: Msg[]; meet?: Meeting | null; snap?: MonthSnap; front?: { acct: string; sales: string };
   goal?: Goal; nextGoal?: Goal | null; goalLog?: { season: number; text: string; level: string; ok: boolean }[]; mgrEval?: number; spMul?: number;
-  budget?: { cap: number; spent: number }; yearStart?: { pop: number; fans: [number, number] }; streak?: number;
+  budget?: { cap: number; spent: number }; regm?: RegMeet | null; breakFix?: boolean; yearStart?: { pop: number; fans: [number, number] }; streak?: number;
   /** オーナーが決めること（段階4）：お金・施設・人・移籍 */
   owner: OwnerState;
 }
@@ -138,7 +139,7 @@ export const myClub = (G: GameState) => clubById(G, ME);
 export const myTier = (G: GameState) => myClub(G).tier;
 export const clubName = (G: GameState, id: number) => (id === ME ? G.club.name : clubById(G, id).name);
 export function teamIn(G: GameState, c: Club): TeamIn {
-  return c.me ? { id: c.id, name: G.club.name, me: true, color: G.club.color, squad: G.squad, mgr: G.mgr, policy: G.policy, injMul: G.owner ? 1 - (G.owner.fac.medical - 1) * 0.1 : 1 } : { id: c.id, name: c.name, me: false, color: c.color, squad: c.squad, mgr: c.mgr };
+  return c.me ? { id: c.id, name: G.club.name, me: true, color: G.club.color, squad: G.owner ? matchSquad(G) : G.squad, mgr: G.mgr, policy: G.policy, injMul: G.owner ? 1 - (G.owner.fac.medical - 1) * 0.1 : 1 } : { id: c.id, name: c.name, me: false, color: c.color, squad: c.squad, mgr: c.mgr };
 }
 /** 順位表（勝ち点、並んだら得失点差、さらに得点） */
 export function standings(G: GameState, tier = myTier(G)) {
@@ -272,7 +273,11 @@ export function advanceWeek(G: GameState): WeekResult {
   try {
     const w = G.week;
     ensureMeta(G);
+    /* 開いたままの会議・表彰式は、決めずに進んだらおすすめどおりで閉じる */
+    if (G.meet) closeMeeting(G);
+    G.cere = null;
     if (G.promo?.open) news.push(...applyPromo(G, r, G.promo.rec));
+    if (G.regm?.open) news.push(...applyReg(G, G.regm.sel));
     bondNews = [];
     if (G.owner) news.push(...resolveBids(G, r));
     homeInfo = null;
@@ -322,6 +327,7 @@ export function advanceWeek(G: GameState): WeekResult {
     G.week++;
     let seasonEnd = false;
     if (G.week >= WEEKS) { news.push(...newSeason(G, r)); seasonEnd = true; news.push(`${G.season}年目が始まった。`); }
+    if (G.owner && REG_WEEKS.includes(G.week)) { openReg(G); news.push(`選手登録の会議（${G.regm!.kind}）が開かれる。試合に出られる23人を決めよう。`); }
     if (G.week === 4) { G.promo = { open: true, rec: recommend(G.youth, G.squad.length) }; news.push('春の昇格会議が開かれる。トップに上げる子を決めよう。'); }
     news.push(...bondNews); bondNews = [];
     /* 問103：お気に入りの選手がクラブを去ったら知らせて、記録に残す */
@@ -519,10 +525,10 @@ function potentialAndRetire(G: GameState, r: Rng): string[] {
 /* ---------- 春の昇格会議（企画書 9-1）：上げる子を決める。上げなかった3年は卒業してクラブを去る ---------- */
 export function applyPromo(G: GameState, r: Rng, ids: number[]): string[] {
   const out: string[] = [];
-  const up = G.youth.filter((p) => ids.includes(p.id)).slice(0, Math.max(0, 25 - G.squad.length));
+  const up = G.youth.filter((p) => ids.includes(p.id)).slice(0, Math.max(0, MAX_SQUAD - G.squad.length));
   for (const p of up) {
     p.grade = undefined; p.snap = undefined; p.contract = 3; p.salary = 150; p.num = 0; p.origin = 'ユース出身'; p.exp = Math.max(p.exp, 5);
-    G.squad.push(p);
+    G.squad.push(p); p.joined = G.season * 48 + G.week; p.reg = false;
   }
   assignNumbers(G.squad);
   if (up.length) out.push(`ユースから ${up.map((p) => p.name).join('、')} をトップに上げた。`);
@@ -599,7 +605,7 @@ export function advanceToDecision(G: GameState, maxWeeks = 8): SkipResult {
     const res = advanceWeek(G); weeks++;
     all.push(...res.report); if (res.match) last = res.match; news.push(...res.news);
     if (res.seasonEnd) { seasonEnd = true; break; }
-    if (G.cere || G.meet || G.pending.length || res.news.some((l) => l.startsWith('移籍の結果')) || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
+    if (G.cere || G.meet || G.regm?.open || G.pending.length || res.news.some((l) => l.startsWith('移籍の結果')) || res.report.some((x) => x.awake) || G.week === AWARD_WEEK + 1 || G.week === 4 || G.week === 8 || G.promo?.open || G.owner?.cands.some((c) => c.src === 'trial' && c.until === G.season * 48 + G.week + 4) || G.owner?.trials.some((p) => p.trialMonths === 0)) break;
   }
   G.news = news;
   return { weeks, report: mergeReports(all), lastMatch: last, seasonEnd, news };
