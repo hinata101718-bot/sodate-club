@@ -33,7 +33,13 @@ export function narrate(r: Rng, scene: string, A: SideLike, D: SideLike, att: On
   B.push(P(ph.open));
   if (ph.duel.length) B.push(P(ph.duel));
   if (ph.win.length) B.push(P(ok ? ph.win : ph.lose));
-  if (fires.length) B.splice(Math.max(1, B.length - 1), 0, fires.map((u) => ({ sp: u.sp, t: u.t, me: u.me })));
+  /* 特殊能力の札は、それが働いた場面の直前に出す（クロス・パス・起点の能力は、ボールを出す行の前。勝負の能力は、勝ち負けの行の前） */
+  const early = fires.filter((u) => ['feed', 'cross', 'pass', 'win'].includes(u.step ?? '') || (!u.step && assist && u.t === assist.p.name && ['チャンスメーカー', '攻撃参加'].includes(u.sp)));
+  const late = fires.filter((u) => !early.includes(u));
+  if (late.length) B.splice(Math.max(1, B.length - 1), 0, late.map((u) => ({ sp: u.sp, t: u.t, me: u.me })));
+  const feed = early.filter((u) => u.step === 'feed'), mid = early.filter((u) => u.step !== 'feed');
+  if (mid.length) B.splice(Math.min(1, B.length), 0, mid.map((u) => ({ sp: u.sp, t: u.t, me: u.me })));
+  if (feed.length) B.splice(0, 0, feed.map((u) => ({ sp: u.sp, t: u.t, me: u.me })));
   if (ok) {
     if (scene === 'pk') B.push(P(PH.shot.pk));
     else if (scene === 'fk') B.push(P(PH.shot.fk));

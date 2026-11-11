@@ -24,7 +24,7 @@ interface Side {
   t: TeamIn; home: boolean; day: number; style: StyleName; form: string; on: OnPl[]; bench: Player[]; subs: number; goals: number; str: number; offs: OnPl[]; changed: boolean;
   st: Map<Player, St>;
 }
-export interface Fire { sp: string; t: string; me: boolean; gk?: boolean }
+export interface Fire { sp: string; t: string; me: boolean; gk?: boolean; step?: string }
 interface Chance {
   min: number; scene: string; k: number; att: OnPl; assist: OnPl | null; def: OnPl | null; ok: boolean; goal: boolean; save: boolean; shotAv: number; text: Line[];
   flow?: string | null; mem?: boolean; score?: [number, number]; turnover?: boolean;
@@ -317,7 +317,7 @@ function resolveChance(r: Rng, A: Side, D: Side, min: number): Chance | null {
         let v = fx.b;
         if (role === 'att' && marker && pl === ace) { v *= 0.5; if (!markFired) { markFired = true; fires.push({ sp: 'マンマーク', t: marker.p.name, me: D.t.me }); } }
         b += v;
-        if (!out.some((u) => u.sp === s && u.t === pl.p.name) && !fires.some((u) => u.sp === s && u.t === pl.p.name)) out.push({ sp: s, t: pl.p.name, me: side.t.me, gk: pl.pos === 'GK' && role === 'def' });
+        if (!out.some((u) => u.sp === s && u.t === pl.p.name) && !fires.some((u) => u.sp === s && u.t === pl.p.name)) out.push({ sp: s, t: pl.p.name, me: side.t.me, gk: pl.pos === 'GK' && role === 'def', step });
       }
     }
     /* コーチング：味方のDFのIQが少し上がる（指示の効き目なので、札は出さない） */
