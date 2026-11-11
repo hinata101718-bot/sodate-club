@@ -45,14 +45,29 @@ export function peopleHTML(G: GameState): string {
 }
 let coachMarketRole: CoachRole | null = null; let showMgr = false;
 
+/* 問90：施設はアイコンのタイル（2列）。レベルは■□で見せ、押すと説明と「強化する」が出る */
+const fsvg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const FAC_ICON: Record<FacKey, string> = {
+  field: fsvg('<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M12 5v14"/><circle cx="12" cy="12" r="2.5"/><path d="M3 9h3v6H3M21 9h-3v6h3"/>'),
+  youth: fsvg('<path d="M12 21V11"/><path d="M12 11c0-4 3-6 7-6 0 4-3 6-7 6z"/><path d="M12 14c0-3-2-5-6-5 0 3 2 5 6 5z"/>'),
+  stadium: fsvg('<ellipse cx="12" cy="9" rx="9" ry="4"/><path d="M3 9v6c0 2.2 4 4 9 4s9-1.8 9-4V9"/><ellipse cx="12" cy="9" rx="4" ry="1.6"/>'),
+  medical: fsvg('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/>'),
+  dorm: fsvg('<path d="M3 18V8"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/>'),
+};
+let facOpen: FacKey | '' = '';
 export function facHTML(G: GameState): string {
   const o = G.owner;
-  return `<section class="card"><h2>施設</h2><div class="muted">強化には、お金と時間（数週間〜数か月）がかかる。一度に強化できるのは1つ。</div>
-    ${o.build ? `<div style="margin-top:8px"><b>強化中：${FAC_NAME[o.build.key]}</b>（あと${o.build.weeks}週）<div class="bar-meter" style="margin-top:4px"><i style="width:${Math.round(((o.build.total - o.build.weeks) / o.build.total) * 100)}%"></i></div></div>` : ''}</section>
-    ${FAC_KEYS.map((k: FacKey) => { const lv = o.fac[k]; const next = lv + 1; const can = next <= MAX_FAC;
-      const extra = k === 'stadium' ? `<div class="small">いまの席：${STADIUM_CAP[lv].toLocaleString()}人</div>` : k === 'dorm' && lv === 0 ? '<div class="small">まだない</div>' : '';
-      return `<section class="card"><div class="row"><b class="grow">${FAC_NAME[k]}</b><span class="tag">レベル ${lv} / ${MAX_FAC}</span></div><div class="muted small">${FAC_NOTE[k]}</div>${extra}
-      ${can ? `<button class="btn small ${o.build ? 'ghost' : 'primary'}" style="margin-top:8px" data-build="${k}" ${o.build ? 'disabled' : ''}>レベル${next}にする（${yen(facCost(k, next))}・${facWeeks(k, next)}週）</button>` : '<div class="muted small" style="margin-top:6px">いちばん上まで強化した</div>'}</section>`; }).join('')}`;
+  const pips = (lv: number) => `<span class="pips" aria-label="レベル${lv}">${'■'.repeat(lv)}<span class="off">${'□'.repeat(MAX_FAC - lv)}</span></span>`;
+  const building = o.build ? `<section class="card"><b>強化中：${FAC_NAME[o.build.key]}</b>（あと${o.build.weeks}週）<div class="bar-meter" style="margin-top:4px"><i style="width:${Math.round(((o.build.total - o.build.weeks) / o.build.total) * 100)}%"></i></div></section>` : '';
+  const tiles = FAC_KEYS.map((k: FacKey) => `<button class="hubtile factile" data-fopen="${k}" aria-pressed="${facOpen === k}">${FAC_ICON[k]}<span class="hl">${FAC_NAME[k]}</span>${pips(o.fac[k])}${o.build?.key === k ? '<span class="tag">工事中</span>' : ''}</button>`).join('');
+  let detail = '';
+  if (facOpen) {
+    const k = facOpen; const lv = o.fac[k]; const next = lv + 1; const can = next <= MAX_FAC;
+    const extra = k === 'stadium' ? `<div class="small">いまの席：${STADIUM_CAP[lv].toLocaleString()}人</div>` : k === 'dorm' && lv === 0 ? '<div class="small">まだない</div>' : '';
+    detail = `<section class="card"><div class="row"><b class="grow">${FAC_NAME[k]}</b>${pips(lv)}</div><div class="muted small">${FAC_NOTE[k]}</div>${extra}
+      ${can ? `<button class="btn small ${o.build ? 'ghost' : 'primary'}" style="margin-top:8px" data-build="${k}" ${o.build ? 'disabled' : ''}>レベル${next}にする（${yen(facCost(k, next))}・${facWeeks(k, next)}週）</button>${o.build ? '<div class="muted small" style="margin-top:4px">一度に強化できるのは1つ。いまの工事が終わってから。</div>' : ''}` : '<div class="muted small" style="margin-top:6px">いちばん上まで強化した</div>'}</section>`;
+  }
+  return `${building}<div class="hub">${tiles}</div>${detail || '<div class="muted small" style="margin:10px 4px">施設を押すと、くわしい説明と強化が出る。強化には、お金と時間がかかる。</div>'}`;
 }
 
 export function moneyHTML(G: GameState): string {
@@ -123,4 +138,5 @@ export function bindOwner(G: GameState, root: HTMLElement, done: (msg?: string |
   on('data-stv', (v) => { staffView = v as typeof staffView; openRow = ''; });
   on('data-open', (v) => { openRow = openRow === v ? '' : v; });
   on('data-mopen', (v) => { moneyOpen = moneyOpen === v ? '' : v; });
+  on('data-fopen', (v) => { facOpen = facOpen === v ? '' : (v as FacKey); });
 }

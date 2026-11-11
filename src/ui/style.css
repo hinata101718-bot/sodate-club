@@ -217,3 +217,8 @@ svg.mini{width:34px;height:38px}
 .chev{font-size:10px;color:var(--muted)}
 .sdetail{border:1px solid var(--club);border-top:0;border-radius:0 0 10px 10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
 .btns.three .btn{white-space:nowrap;font-size:12px;padding:0 4px}
+/* 施設のタイル（問90） */
+.factile{min-height:118px}
+.factile[aria-pressed="true"]{border-color:var(--club);background:var(--club-soft)}
+.pips{font-size:18px;letter-spacing:2px;color:var(--club);line-height:1}
+.pips .off{color:var(--muted);opacity:.45}
