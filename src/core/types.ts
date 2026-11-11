@@ -72,6 +72,8 @@ export interface Player {
   reg?: boolean; joined?: number;
   /** 問124：コーチが見きわめた成長タイプ（わかるまではなし） */
   gType?: string;
+  /** 表彰歴（年・賞・段・そのときのクラブ） */
+  honors?: { y: number; title: string; tier: number; club: string }[];
 }
 
 export interface Manager {

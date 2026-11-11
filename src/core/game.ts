@@ -68,7 +68,7 @@ export interface GameState {
   /** 問112〜116：メッセージ・経営会議・目標・監督の評価・補強の予算 */
   inbox?: Msg[]; meet?: Meeting | null; snap?: MonthSnap; front?: { acct: string; sales: string };
   goal?: Goal; nextGoal?: Goal | null; goalLog?: { season: number; text: string; level: string; ok: boolean }[]; mgrEval?: number; spMul?: number;
-  budget?: { cap: number; spent: number }; typeNews?: string[];
+  budget?: { cap: number; spent: number }; typeNews?: string[]; honorFix?: boolean;
   /** 月の経営会議で話した、来月の動き（監督の方針・コーチの練習の強さ） */
   plan?: { until: number; tilt: 'def' | 'atk' | null; care: boolean }; regm?: RegMeet | null; breakFix?: boolean; yearStart?: { pop: number; fans: [number, number] }; streak?: number;
   /** オーナーが決めること（段階4）：お金・施設・人・移籍 */
@@ -465,6 +465,8 @@ export function seasonAwards(G: GameState): { awards: Award[]; xi: Award[]; effe
       if (!x) return;
       if (x.club !== ME && G.owner) learnAward(G, x.p, clubById(G, x.club));
       list.push({ title, tier: t, name: x.p.name, club: nameOf(x.club), me: x.club === ME, detail, pos: x.p.pos });
+      /* 感想：選手の表彰歴。選手についていくので、移籍しても残る */
+      (x.p.honors ??= []).push({ y: G.season, title, tier: t, club: nameOf(x.club) });
       if (x.club === ME) gainAward(G, x.p, title, effects);
     };
     const mvp = [...reg].sort((a, b) => mvpScore(b.p) - mvpScore(a.p))[0];

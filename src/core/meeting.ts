@@ -37,6 +37,8 @@ export const unread = (G: GameState) => (G.inbox ?? []).filter((m) => !m.read).l
 function staffName(seed: number) { return `${STAFF_SUR[seed % STAFF_SUR.length]} ${STAFF_GIV[(seed * 7 + 3) % STAFF_GIV.length]}`; }
 export function ensureMeta(G: GameState) {
   ensureReg(G); fixBreak(G);
+  /* 表彰歴をつける前のセーブ：自分の選手の分だけ、リーグの歴史から埋めておく */
+  if (!G.honorFix) { G.honorFix = true; for (const p of G.squad) if (!p.honors) { const h = G.history.flatMap((r) => [...r.awards, ...(r.xi ?? [])].filter((a) => a.me && a.name === p.name).map((a) => ({ y: r.season, title: a.title, tier: a.tier, club: a.club }))); if (h.length) p.honors = h; } }
   G.front ??= { acct: staffName(G.club.name.length * 13 + 5), sales: staffName(G.club.name.length * 29 + 11) };
   G.mgrEval ??= 60;
   if (!G.goal || G.goal.season !== G.season) G.goal = goalOptions(G, myTierOf(G), G.season)[1];
