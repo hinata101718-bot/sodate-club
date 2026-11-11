@@ -35,13 +35,17 @@ export function boot() {
   const pr = readPrefs(); applyThemeMode(pr.theme); setSound(pr.sound);
   const g = loadFrom(app.kv, AUTO_KEY);
   if (g) app.G = g;
-  $$<HTMLButtonElement>('.navbtn').forEach((b) => b.addEventListener('click', () => { sfx('tap'); setTab(b.dataset.tab!); }));
+  $$<HTMLButtonElement>('.navbtn').forEach((b) => { b.innerHTML = ICON[b.dataset.tab === 'team' ? 'teamNav' : b.dataset.tab!] + b.innerHTML; b.addEventListener('click', () => { sfx('tap'); setTab(b.dataset.tab!); }); });
   $('#menuBtn').addEventListener('click', () => { sfx('tap'); setTab('settings'); });
   if (g) render(); else startNew(false);
 }
+/* 下のメニューは4つ（ホーム・チーム・経営・リーグ）。チーム・経営・リーグは、押すと大きなアイコンが並ぶ（問82：サカつくを手本に） */
+const GROUP_OF: Record<string, string> = { home: 'home', team: 'team', squad: 'team', youth: 'team', tr: 'team', biz: 'biz', fac: 'biz', people: 'biz', money: 'biz', league: 'league', table: 'league', cup: 'league', rec: 'league' };
+const PAGE_TITLE: Record<string, string> = { squad: 'トップチーム', youth: 'ユース', tr: '移籍', fac: '施設', people: 'スタッフ', money: 'お金', table: '順位表', cup: '勝ち抜きの大会', rec: 'リーグの歴史' };
+const GROUP_NAME: Record<string, string> = { team: 'チーム', biz: '経営', league: 'リーグ' };
 export function setTab(t: string) {
   app.tab = t;
-  $$('.navbtn').forEach((b) => b.setAttribute('aria-current', b.dataset.tab === t ? 'page' : 'false'));
+  $$('.navbtn').forEach((b) => b.setAttribute('aria-current', b.dataset.tab === (GROUP_OF[t] ?? t) ? 'page' : 'false'));
   render(); window.scrollTo(0, 0);
 }
 export function render() {
@@ -50,13 +54,15 @@ export function render() {
   $('#crest').innerHTML = emblemSVG(G.club.emblem);
   $('#clubName').textContent = G.club.name;
   const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
-  $('#clubSub').textContent = `${G.club.city} ・ ${myTier(G)}部${pl ? ` ${myRank(G)}位` : ''} ・ ${G.season}年目 ${monthOf(G.week)}月`;
+  $('#clubSub').textContent = `${G.season}年目 ${monthOf(G.week)}月 ・ ${myTier(G)}部${pl ? ` ${myRank(G)}位` : ''} ・ お金 ${yen(G.owner.money)}`;
   const v = $('#view');
-  const views: Record<string, () => string> = { home: homeHTML, squad: squadHTML, youth: () => youthHTML(G, promoSel()), people: () => peopleHTML(G), fac: () => facHTML(G), money: () => moneyHTML(G), table: tableHTML, settings: settingsHTML };
-  v.innerHTML = (views[app.tab] || homeHTML)();
+  const views: Record<string, () => string> = { home: homeHTML, team: () => hubHTML('team'), biz: () => hubHTML('biz'), league: () => hubHTML('league'), squad: squadHTML, tr: () => transferHTML(G), youth: () => youthHTML(G, promoSel()), people: () => peopleHTML(G), fac: () => facHTML(G), money: () => moneyHTML(G), table: tableHTML, cup: () => cupHTML(G), rec: () => recordHTML(G), settings: settingsHTML };
+  const grp = GROUP_OF[app.tab];
+  const crumb = PAGE_TITLE[app.tab] && grp ? `<div class="crumb"><button class="btn small ghost" data-go="${grp}">‹ ${GROUP_NAME[grp]}</button><h2>${PAGE_TITLE[app.tab]}</h2></div>` : '';
+  v.innerHTML = crumb + (views[app.tab] || homeHTML)();
   bindView(v);
   bindOwner(G, v, (msg) => { if (msg) toast(msg); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
-  $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { squadView = 'tr'; mv.sub = 'cond'; setTab('squad'); }));
+  $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTab('tr'); }));
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
 }
 let selCache: { key: string; set: Set<number> } | null = null;
@@ -109,7 +115,7 @@ function homeHTML(): string {
     <div class="muted">${dateText(G)}${isWindow(G.week) ? ' ・ 移籍の期間' : ''} ・ お金 ${yen(G.owner.money)}${G.owner.debt ? `（借金 ${yen(G.owner.debt)}）` : ''}</div></section>
   <section class="card"><h2>次の目標</h2><div class="goal">${esc(currentGoal(G))}</div>
     ${last ? `<div class="muted">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
-  <section class="card">${nextHTML(G)}<button class="btn small ghost" data-go="table" style="margin-top:10px">順位表・大会・記録を見る</button></section>
+  <section class="card">${nextHTML(G)}<button class="btn small ghost" data-go="table" style="margin-top:10px">順位表を見る</button></section>
   ${pend || promo || owner || notes || yrep || news || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${promo}${pend}${owner}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
   <div class="btns">
     <button class="btn primary" data-act="week">1週進む</button>
@@ -122,16 +128,52 @@ function homeHTML(): string {
     <div class="muted" style="margin-top:8px">監督：${esc(G.mgr.name)} ・ ${esc(G.mgr.style)}（${esc(STYLES[G.mgr.style].note)}）・ 並び方 ${G.mgr.forms.join(' / ')}</div>
   </section>`;
 }
-let squadView = 'top';
 function squadHTML(): string {
   const G = app.G;
   const order: Record<string, number> = { GK: 0, CB: 1, SB: 2, DM: 3, CM: 4, AM: 5, WG: 6, ST: 7 };
   const list = [...G.squad].sort((a, b) => order[a.pos] - order[b.pos] || ovr(b) - ovr(a));
-  const n = G.pending.length + G.owner.cands.length + G.owner.trials.filter((p) => !p.trialMonths).length;
-  const seg = `<div class="seg" role="group" aria-label="選手の画面"><button data-sv="top" aria-pressed="${squadView === 'top'}">トップチーム</button><button data-sv="tr" aria-pressed="${squadView === 'tr'}">移籍・候補${n ? `（${n}）` : ''}</button></div>`;
-  if (squadView === 'tr') return seg + transferHTML(G);
-  return seg + `<section class="card"><h2>トップチーム ${list.length}人</h2><div class="plist">${list.map(plRow).join('')}</div></section>`;
+  return `<section class="card"><h2>${list.length}人</h2><div class="plist">${list.map(plRow).join('')}</div></section>`;
 }
+/** チーム・経営・リーグの入り口：大きなアイコンと、ひとことの様子だけ（くわしくは押してから：問82のD） */
+function hubHTML(g: string): string {
+  const G = app.G;
+  const t0 = G.leagues[myTier(G)].table[ME]; const pl = t0.w + t0.d + t0.l;
+  const offers = G.pending.length; const bids = G.owner.mk.bids.length;
+  const tiles: Record<string, [string, string, string, string][]> = {
+    team: [
+      ['squad', 'トップチーム', `${G.squad.length}人${G.squad.some((p) => p.inj) ? ` ・ ケガ${G.squad.filter((p) => p.inj).length}人` : ''}`, ICON.team],
+      ['youth', 'ユース', `${G.youth.length}人${G.promo?.open ? ' ・ 昇格会議' : ''}`, ICON.youth],
+      ['tr', '移籍', `${isWindow(G.week) ? '移籍の期間中' : '期間外'}${offers ? ` ・ オファー${offers}件` : ''}${bids ? ` ・ 申し込み中${bids}件` : ''}`, ICON.tr],
+    ],
+    biz: [
+      ['fac', '施設', G.owner.build ? '工事中' : '強化できる', ICON.fac],
+      ['people', 'スタッフ', `監督・コーチ・スカウト${G.owner.scouts.length}人`, ICON.people],
+      ['money', 'お金', yen(G.owner.money), ICON.money],
+    ],
+    league: [
+      ['table', '順位表', `${myTier(G)}部${pl ? ` ${myRank(G)}位` : ' ・ 開幕前'}`, ICON.table],
+      ['cup', '勝ち抜きの大会', cupResultText(G), ICON.cup],
+      ['rec', 'リーグの歴史', G.history.length ? `${G.history.length}年ぶん` : '1年目が終わるとのる', ICON.rec],
+    ],
+  };
+  return `<div class="hub">${tiles[g].map(([k, l, s, ic]) => `<button class="hubtile" data-go="${k}">${ic}<span class="hl">${l}</span><span class="hs">${esc(s)}</span></button>`).join('')}</div>`;
+}
+const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+export const ICON: Record<string, string> = {
+  home: svg('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>'),
+  teamNav: svg('<path d="M7 4l-4 3 2 3 2-1v11h10V9l2 1 2-3-4-3h-3a2 2 0 0 1-4 0z"/>'),
+  biz: svg('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2"/><path d="M3 13h18"/>'),
+  league: svg('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4"/><path d="M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4"/><path d="M8 20h8"/>'),
+  team: svg('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 15c3 0 6 2 6 5"/>'),
+  youth: svg('<path d="M12 21V11"/><path d="M12 11c0-4 3-6 7-6 0 4-3 6-7 6z"/><path d="M12 14c0-3-2-5-6-5 0 3 2 5 6 5z"/>'),
+  tr: svg('<path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/>'),
+  fac: svg('<path d="M3 20h18"/><path d="M5 20V8l7-4 7 4v12"/><rect x="9" y="12" width="6" height="8"/>'),
+  people: svg('<circle cx="12" cy="7" r="3.5"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/><path d="M12 14l-1.5 3 1.5 4 1.5-4z"/>'),
+  money: svg('<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/>'),
+  table: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v16"/>'),
+  cup: svg('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M12 13v4"/><path d="M8 20h8"/>'),
+  rec: svg('<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h7M9 14h7M9 18h4"/>'),
+};
 export function plRow(p: Player): string {
   const o = ovr(p);
   return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.req ? ' <span class="tag">起用を依頼中</span>' : ''}${p.retiring ? ' <span class="tag bad">今季で引退</span>' : ''}${p.listed ? ' <span class="tag away">売りに出している</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}${p.fat >= 40 ? ' ・ 疲れ' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
@@ -139,12 +181,10 @@ export function plRow(p: Player): string {
 let tableView = 'mine';
 function tableHTML(): string {
   const G = app.G; const tier = myTier(G);
-  const views: [string, string][] = [['mine', `${tier}部`], ...[1, 2, 3].filter((t) => t !== tier).map((t) => [`t${t}`, `${t}部`] as [string, string]), ['cup', '大会'], ['rec', '記録']];
+  const views: [string, string][] = [['mine', `${tier}部`], ...[1, 2, 3].filter((t) => t !== tier).map((t) => [`t${t}`, `${t}部`] as [string, string])];
   const seg = `<div class="seg tight" role="group" aria-label="表の切りかえ">${views.map(([k, l]) => `<button data-tv="${k}" aria-pressed="${tableView === k}">${l}</button>`).join('')}</div>`;
   let body = '';
-  if (tableView === 'cup') body = cupHTML(G);
-  else if (tableView === 'rec') body = recordHTML(G);
-  else {
+  {
     const t = tableView === 'mine' ? tier : +tableView.slice(1);
     const rows = standings(G, t); const played = rows[0] ? rows[0].w + rows[0].d + rows[0].l : 0;
     body = `<section class="card"><h2>${t}部 ・ ${played}試合まで</h2><div style="overflow-x:auto"><table>
@@ -185,9 +225,8 @@ function settingsHTML(): string {
 function bindView(v: HTMLElement) {
   const G = app.G;
   $$<HTMLElement>('[data-act]', v).forEach((b) => b.addEventListener('click', () => act(b.dataset.act!)));
-  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { squadView = 'tr'; mv.sub = 'known'; setTab('squad'); }));
+  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'known'; setTab('tr'); }));
   $$<HTMLElement>('[data-go]', v).forEach((b) => b.addEventListener('click', () => setTab(b.dataset.go!)));
-  $$<HTMLElement>('[data-sv]', v).forEach((b) => b.addEventListener('click', () => { squadView = b.dataset.sv!; render(); }));
   $$<HTMLElement>('[data-tv]', v).forEach((b) => b.addEventListener('click', () => { tableView = b.dataset.tv!; render(); }));
   $$<HTMLElement>('[data-pol]', v).forEach((b) => b.addEventListener('click', () => { G.policy = b.dataset.pol as Policy; sfx('tap'); autosave(); render(); }));
   $$<HTMLElement>('[data-pid]', v).forEach((b) => b.addEventListener('click', () => showPlayer(+b.dataset.pid!, render)));
