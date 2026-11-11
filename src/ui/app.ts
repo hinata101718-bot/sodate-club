@@ -3,7 +3,7 @@ import { advanceToDecision, advanceWeek, answerOffer, newGame, standings, myTier
 import { CUP_ROUND_NAMES, monthOf, isWindow } from '../core/calendar';
 import { openNewClub } from './newclub';
 import { youthHTML, bindYouth } from './youthview';
-import { peopleHTML, facHTML, moneyHTML, transferHTML, bindOwner } from './ownerview';
+import { peopleHTML, facHTML, moneyHTML, transferHTML, bindOwner, setTrView } from './ownerview';
 import { listPlayer, renewalOffer, setRenew } from '../core/owner';
 import { ovr } from '../core/player';
 import { STYLES } from '../core/constants';
@@ -62,7 +62,7 @@ export function render() {
   v.innerHTML = crumb + (views[app.tab] || homeHTML)();
   bindView(v);
   bindOwner(G, v, (msg) => { if (msg) toast(msg); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
-  $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTab('tr'); }));
+  $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTrView('market'); setTab('tr'); }));
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
 }
 let selCache: { key: string; set: Set<number> } | null = null;
@@ -232,7 +232,7 @@ function settingsHTML(): string {
 function bindView(v: HTMLElement) {
   const G = app.G;
   $$<HTMLElement>('[data-act]', v).forEach((b) => b.addEventListener('click', () => act(b.dataset.act!)));
-  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'known'; setTab('tr'); }));
+  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'known'; setTrView('market'); setTab('tr'); }));
   $$<HTMLElement>('[data-go]', v).forEach((b) => b.addEventListener('click', () => setTab(b.dataset.go!)));
   $$<HTMLElement>('[data-tv]', v).forEach((b) => b.addEventListener('click', () => { tableView = b.dataset.tv!; render(); }));
   $$<HTMLElement>('[data-pol]', v).forEach((b) => b.addEventListener('click', () => { G.policy = b.dataset.pol as Policy; sfx('tap'); autosave(); render(); }));

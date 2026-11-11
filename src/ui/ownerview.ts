@@ -71,12 +71,19 @@ export function transferHTML(G: GameState): string {
     <div class="row wrap">${src === 'trial' ? [1, 2, 3].map((m) => `<button class="btn small primary" data-trial="${c.id}:${m}">${m}か月あずかる</button>`).join('') : `<button class="btn small primary" data-sign="${c.id}">獲る（${yen(c.fee)}）</button>`}<button class="btn small ghost" data-detail="${c.id}">くわしく</button><button class="btn small ghost" data-drop="${c.id}">見送る</button></div></div>`; }).join('');
   const trials = o.trials.map((p) => `<div class="slot"><div class="grow">${posTag(p.pos)} <b>${esc(p.name)}</b> <span class="small">${p.age}歳</span><div class="muted small">${p.trialMonths ? `あと${p.trialMonths}か月` : '練習の期間が終わった'}${lastTrial(G, p.id)}</div></div>${p.trialMonths ? '' : `<button class="btn small primary" data-tsign="${p.id}">取る</button><button class="btn small ghost" data-tno="${p.id}">断る</button>`}</div>`).join('');
   const listed = G.squad.filter((p) => p.listed);
-  return `${offers ? `<section class="card"><h2>オファー</h2><div class="list">${offers}</div><div class="muted small" style="margin-top:6px">値段の交渉はできない。受けるか断るかだけ。</div></section>` : ''}
-    <section class="card"><h2>移籍</h2><div class="muted">${win ? '<b>いまは移籍の期間</b>（夏：7〜8月、冬：12月）。' : '移籍の期間は、夏（7〜8月）と冬（12月）。'}トップ ${G.squad.length}人（25人まで）。</div>
-      ${listed.length ? `<div class="small" style="margin-top:6px">売りに出している：${listed.map((p) => esc(p.name)).join('、')}（移籍の期間に買い手を探す）</div>` : '<div class="muted small" style="margin-top:6px">選手を売りに出すときは、選手の画面の「売りに出す」を押す。</div>'}</section>
-    ${marketHTML(G)}
-    <section class="card"><h2>練習生</h2><div class="list">${cand('trial')}${trials}${!trials && !cand('trial') ? '<div class="muted">「テストを受けさせてください」と、ときどきやってくる。1〜3か月あずかって、月1回の報告で伸び方を見てから決める。</div>' : ''}</div></section>`;
+  /* 問86：オファー・移籍市場・練習生を、上のボタンで切りかえる（件数を出す） */
+  const nOffer = G.pending.length; const nTrial = o.cands.filter((c) => c.src === 'trial').length + o.trials.filter((p) => !p.trialMonths).length;
+  const cnt = (n: number) => (n ? `（${n}）` : '');
+  const seg = `<div class="seg" role="group" aria-label="移籍の画面"><button data-trv="offer" aria-pressed="${trView === 'offer'}">オファー${cnt(nOffer)}</button><button data-trv="market" aria-pressed="${trView === 'market'}">移籍市場${cnt(o.mk.bids.length)}</button><button data-trv="trial" aria-pressed="${trView === 'trial'}">練習生${cnt(nTrial)}</button></div>
+    <div class="muted small" style="margin:8px 2px 4px">${win ? '<b>いまは移籍の期間</b>' : '移籍の期間は夏（7〜8月）と冬（12月）'} ・ トップ ${G.squad.length}人（25人まで）</div>`;
+  if (trView === 'market') return seg + marketHTML(G);
+  if (trView === 'trial') return seg + `<section class="card"><h2>練習生</h2><div class="list">${cand('trial')}${trials}${!trials && !cand('trial') ? '<div class="muted">「テストを受けさせてください」と、ときどきやってくる。1〜3か月あずかって、伸び方を見てから決める。</div>' : ''}</div></section>`;
+  return seg + `<section class="card"><h2>届いたオファー</h2>${offers ? `<div class="list">${offers}</div><div class="muted small" style="margin-top:6px">値段の交渉はできない。受けるか断るかだけ。</div>` : '<div class="muted">いまはオファーがない。</div>'}</section>
+    <section class="card"><h2>売りに出している選手</h2>${listed.length ? `<div>${listed.map((p) => esc(p.name)).join('、')}</div><div class="muted small" style="margin-top:6px">移籍の期間に買い手を探す。</div>` : '<div class="muted">いない。売りに出すときは、選手の画面の「売りに出す」を押す。</div>'}</section>`;
 }
+/** 移籍の画面の切りかえ（セーブには入れない） */
+export let trView: 'offer' | 'market' | 'trial' = 'market';
+export const setTrView = (v: typeof trView) => { trView = v; };
 function lastTrial(G: GameState, id: number) { const r = [...G.owner.trialLog].reverse().find((x) => x.lines.some((l) => l.pid === id)); const l = r?.lines.find((x) => x.pid === id); return l ? ` ・ ${l.words} ${l.arrow}` : ''; }
 
 export function bindOwner(G: GameState, root: HTMLElement, done: (msg?: string | null) => void, openCand: (id: number) => void) {
@@ -99,4 +106,5 @@ export function bindOwner(G: GameState, root: HTMLElement, done: (msg?: string |
   on('data-tno', (id) => { decideTrial(G, +id, false); });
   $$<HTMLElement>('[data-detail]', root).forEach((b) => b.addEventListener('click', () => openCand(+b.dataset.detail!)));
   bindMarket(G, root, done);
+  on('data-trv', (v) => { trView = v as typeof trView; });
 }

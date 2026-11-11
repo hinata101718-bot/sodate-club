@@ -41,7 +41,7 @@ export function marketHTML(G: GameState): string {
   const o = G.owner; const mk = o.mk; const open = marketOpen(G);
   const sub = `<div class="seg" role="group" aria-label="移籍市場"><button data-mv-sub="known" aria-pressed="${mv.sub === 'known'}">知っている選手</button><button data-mv-sub="free" aria-pressed="${mv.sub === 'free'}">フリー</button><button data-mv-sub="cond" aria-pressed="${mv.sub === 'cond'}">スカウトの条件</button></div>`;
   const bids = mk.bids.length ? `<div class="list" style="margin-top:8px">${mk.bids.map((b) => { const w = playerIndex(G).get(b.pid); return w ? `<div class="slot"><div class="grow small"><b>${esc(w.p.name)}</b> に申し込み中（${b.fee ? `移籍金 ${yen(b.fee)}・` : ''}給料 年${b.salary.toLocaleString()}万円${b.bump ? `・上乗せ +${b.bump}%` : ''}）<br><span class="muted">結果は次の週のお知らせで届く</span></div><button class="btn small ghost" data-unbid="${b.pid}">やめる</button></div>` : ''; }).join('')}</div>` : '';
-  const head = `<section class="card"><h2>移籍市場</h2><div class="muted small">${open ? '<b>いまは移籍の期間</b>。知っている選手なら、誰にでも申し込める。' : 'プロとフリーの選手に申し込めるのは、移籍の期間（夏：7〜8月、冬：12月）だけ。高校生・大学生はいつでも獲れる。'}お金 ${yen(o.money)}。</div>${bids}<div style="margin-top:8px">${sub}</div></section>`;
+  const head = `<section class="card">${sub}<div class="muted small" style="margin-top:8px">${open ? '知っている選手なら、誰にでも申し込める。' : 'プロとフリーの選手は、移籍の期間だけ申し込める。高校生・大学生はいつでも獲れる。'}</div>${bids}</section>`;
   if (mv.sub === 'cond') return head + condHTML(G);
   let list = rows(G).filter((r) => (mv.sub === 'free' ? r.w.kind === 'free' : true));
   if (mv.pos) list = list.filter((r) => r.w.p.pos === mv.pos);
