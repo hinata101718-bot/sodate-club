@@ -1,4 +1,5 @@
 /* 人（監督・コーチ・スカウト）・施設・お金・移籍の画面（企画書 14-2） */
+import { evalWord } from '../core/meeting';
 import type { GameState } from '../core/game';
 import { myTier, answerOffer } from '../core/game';
 import { STYLES, POS, type Pos } from '../core/constants';
@@ -24,7 +25,7 @@ const srow = (key: string, role: string, name: string, right: string, detail: st
 export function peopleHTML(G: GameState): string {
   const o = G.owner; const cw = coachWindow(G);
   const seg = `<div class="seg" role="group" aria-label="スタッフの画面"><button data-stv="mgr" aria-pressed="${staffView === 'mgr'}">監督</button><button data-stv="coach" aria-pressed="${staffView === 'coach'}">コーチ</button><button data-stv="scout" aria-pressed="${staffView === 'scout'}">スカウト（${o.scouts.length}）</button></div><div style="height:10px"></div>`;
-  if (staffView === 'mgr') return seg + `<section class="card"><h2>監督</h2>${mgrCard(G.mgr)}<div class="muted small" style="margin-top:6px">試合の作戦・交代・練習は監督が決める。オーナーが伝えられるのは、トップチームの画面の「方針」と、選手の画面の「この選手を使ってほしい」だけ。</div>
+  if (staffView === 'mgr') return seg + `<section class="card"><h2>監督</h2>${mgrCard(G.mgr)}<div style="margin-top:6px">オーナーからの評価：<b>${evalWord(G.mgrEval ?? 60)}</b>${G.goal ? ` ・ 今年の目標「${esc(G.goal.text)}」` : ''}</div><div class="muted small" style="margin-top:6px">試合の作戦・交代・練習は監督が決める。オーナーが伝えられるのは、トップチームの画面の「方針」と、選手の画面の「この選手を使ってほしい」だけ。</div>
       <button class="btn small ghost" data-act="mgrmarket" style="margin-top:8px">ほかの監督の候補を見る</button></section>
     ${showMgr ? `<section class="card"><h2>監督の候補</h2><div class="muted small">入れかえると、いまの監督に年俸の半分（${(Math.round(G.mgr.salary / 20) * 10).toLocaleString()}万円）を払う。</div><div class="list" style="margin-top:6px">${o.market.mgr.map((m) => mgrCard(m, `<button class="btn small primary" data-hire-mgr="${m.id}">この監督にする</button>`)).join('')}</div></section>` : ''}`;
   const pay = (n: number) => `<span class="small muted">年${n.toLocaleString()}万</span>`;
@@ -105,7 +106,7 @@ export function transferHTML(G: GameState): string {
   const nShort = (o.mk.short ?? []).length;
   /* 感想24：オファー・候補リスト・スカウト・練習生の4つ */
   const seg = `<div class="seg" role="group" aria-label="移籍の画面"><button data-trv="offer" aria-pressed="${trView === 'offer'}">オファー${cnt(nOffer)}</button><button data-trv="short" aria-pressed="${trView === 'short'}">候補リスト${cnt(nShort)}</button><button data-trv="scout" aria-pressed="${trView === 'scout'}">スカウト</button></div>
-    <div class="muted small" style="margin:8px 2px 4px">${win ? '<b>いまは移籍の期間</b>' : '移籍の期間は夏（7〜8月）と冬（12月）'} ・ トップ ${G.squad.length}人（25人まで）</div>`;
+    <div class="muted small" style="margin:8px 2px 4px">${win ? '<b>いまは移籍の期間</b>' : '移籍の期間は夏（7〜8月）と冬（12月）'} ・ トップ ${G.squad.length}人（35人まで）</div>`;
   if (trView === 'scout') return seg + marketHTML(G);
   if (trView === 'short') return seg + shortHTML(G);
   void nTrial; void trials;

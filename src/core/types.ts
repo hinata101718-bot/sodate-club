@@ -66,6 +66,10 @@ export interface Player {
   ast?: number; seasonAst?: number; seasonRt?: number; seasonRtN?: number;
   /** 賞をとった名声（市場の値段が上がる。毎年半分になる：問111） */
   fame?: number;
+  /** 年末の伸びしろの見立ての記録（問120） */
+  potLog?: { y: number; arrow: string; why: string }[];
+  /** 選手登録（試合に出られる23人：感想42）と、クラブに入った週 */
+  reg?: boolean; joined?: number;
 }
 
 export interface Manager {

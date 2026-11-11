@@ -358,6 +358,33 @@ button.pp{cursor:pointer}
 .sdetail[hidden]{display:none}
 .rtmini{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px}
 .pp-sub{max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 問112：メッセージ */
+.top .mailbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-right:6px}
+.top .mailbtn svg{width:22px;height:22px}
+.mbadge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--danger);color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center}
+.mbadge[hidden]{display:none}
+.mface{flex:none;width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-family:var(--f-disp);background:color-mix(in srgb,var(--club) 18%,var(--card));color:var(--club);border:2px solid var(--club)}
+.mrow.unread{border-color:var(--club)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);margin-right:6px;vertical-align:middle}
+/* 問113〜116：経営会議 */
+.meet{display:flex;flex-direction:column;gap:12px}
+.mspeak{display:flex;align-items:center;gap:12px;animation:ceremonyIn .3s ease-out}
+.mspeak .mface{width:56px;height:56px;font-size:22px}
+.mrole{font-size:13px;color:var(--muted);font-weight:700}
+.mwho{font-family:var(--f-disp);font-size:20px;font-weight:800}
+.mbubble p{margin:0 0 6px}.mbubble p:last-child{margin:0}
+.mchoices{display:flex;flex-direction:column;gap:8px}
+.mchoice{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:52px;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.mchoice[aria-pressed="true"]{border-color:var(--club);background:color-mix(in srgb,var(--club) 12%,var(--card))}
+@media (prefers-reduced-motion:reduce){.mspeak{animation:none}}
+/* 感想42：選手登録 */
+.regrow.on{border-color:var(--club);background:color-mix(in srgb,var(--club) 10%,var(--card))}
+.regchk{width:24px;height:24px;flex:none;border-radius:6px;border:2px solid var(--club);display:inline-flex;align-items:center;justify-content:center;color:var(--club);font-weight:900}
+/* 問118：交渉 */
+.nego{display:flex;flex-direction:column;gap:8px}
+.nego-line{align-self:flex-start;max-width:88%;padding:8px 12px;border-radius:14px 14px 14px 4px;background:var(--line);font-size:14px}
+.nego-line.me{align-self:flex-end;border-radius:14px 14px 4px 14px;background:color-mix(in srgb,var(--club) 22%,var(--card))}
+.regend{display:flex;align-items:center;gap:8px}
 /* ===== ゲームらしい見た目（frontend-design）：情報は増やさず、形と質感だけを変える =====
    いちばんの見せ場は、総合力のメダル（灰・銅・銀・金）。育って色が変わるのを「集める」楽しさにする。
    ほかは、パネルの段差・テレビ中継ふうのスコア・スポーツの数字の書体で、静かに支える */
@@ -384,8 +411,8 @@ body{background:repeating-linear-gradient(180deg,var(--bg) 0 64px,color-mix(in s
 .pl:active,.hubtile:active,.srow:active{box-shadow:0 1px 0 var(--ledge);transform:translateY(2px)}
 
 /* 総合力のメダル（一覧の右はし）。色の境目は企画書8-2のまま */
-.ovr{display:grid;place-items:center;width:48px;height:44px;flex:none}
-.ovr .v{display:grid;place-items:center;width:46px;height:42px;font-family:var(--f-num);font-style:italic;font-weight:800;font-size:24px;letter-spacing:.01em;line-height:1;
+.ovr{display:grid;place-items:center;min-width:48px;min-height:44px;flex:none;white-space:nowrap}
+.ovr .v[class*="c-"]{display:grid;place-items:center;width:46px;height:42px;font-family:var(--f-num);font-style:italic;font-weight:800;font-size:24px;letter-spacing:.01em;line-height:1;
   clip-path:polygon(50% 0,100% 18%,100% 74%,50% 100%,0 74%,0 18%);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.35);padding-right:2px}
 .ovr .v.c-gray{background:color-mix(in srgb,var(--gray) 30%,var(--card));color:var(--fg);text-shadow:none}
 .ovr .v.c-bronze{background:var(--m-bronze)}
@@ -440,4 +467,6 @@ nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
 .pp-sub{font-size:15px;font-weight:800}
 
 @media (prefers-reduced-motion: reduce){.ovr .v.c-gold{animation:none}.pl:active,.hubtile:active,.srow:active,.btn:active{transform:none}}
-.ovr.big{width:60px;height:56px}.ovr.big .v{width:58px;height:54px;font-size:32px}
+.ovr.big{min-width:60px;min-height:56px}.ovr.big .v[class*="c-"]{width:58px;height:54px;font-size:32px}
+/* まだくわしく調べていない選手の「60〜65」は、メダルにせずそのまま */
+.ovr .v:not([class*="c-"]){font-family:var(--f-num);font-style:italic;font-size:20px;color:var(--muted)}
