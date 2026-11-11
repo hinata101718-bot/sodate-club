@@ -122,7 +122,8 @@ describe('版4（夜1）のセーブの変換', () => {
     expect(G.version).toBe(SAVE_VERSION);
     expect(G.week).toBe(raw.state.week);
     expect(G.squad.length).toBe(raw.state.squad.length);
-    expect(G.owner.money).toBe(raw.state.owner.money);
+    /* 問125：版8でお金の桁をそろえた（約2.5倍） */
+    expect(G.owner.money).toBe(Math.round((raw.state.owner.money * 2.5) / 100) * 100);
     expect(G.owner.scouts.every((s) => s.cond!.pos.join() === 'ST' && s.cond!.amax === 20)).toBe(true);
     expect((G.owner as any).wish).toBeUndefined();
     expect(Object.keys(G.owner.mk.known).length).toBe(raw.state.owner.cands.filter((c: any) => c.src !== 'trial').length);

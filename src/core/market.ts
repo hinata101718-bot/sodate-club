@@ -41,7 +41,8 @@ export function marketValue(p: Player, tier: number | null): number {
   const ct = p.contract <= 1 ? 0.6 : p.contract === 2 ? 0.85 : 1;
   const tf = tier === 1 ? 1.3 : tier === 2 ? 1.1 : 1;
   const fm = 1 + Math.min(0.35, (p.fame ?? 0) * 0.12);
-  return Math.max(200, Math.round((Math.pow(Math.max(0, o - 40), 2) * 4.5 * age * ct * tf * fm) / 100) * 100);
+  /* 問125：移籍金の相場は、年俸の1.5年分くらいを目安に（若さ・契約の残り・段・名声で上下） */
+  return Math.max(200, Math.round((salaryFor(o) * 1.5 * age * ct * tf * fm) / 100) * 100);
 }
 /** 総合力のだいたい（例：「60台」） */
 export const ovrRange = (o: number) => `${Math.floor(o / 10) * 10}台`;

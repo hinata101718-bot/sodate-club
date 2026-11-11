@@ -13,7 +13,8 @@ export interface MakeOpts {
 export function randomName(r: Rng): string { return r.pick(SURNAMES) + ' ' + r.pick(GIVEN); }
 
 /** 給料（万円/年）。強いほど高い */
-export function salaryFor(o: number): number { return Math.max(120, Math.round(Math.pow(Math.max(30, o) - 25, 2.1) / 4.2 / 10) * 10); }
+/** 年俸（万円）。問125：Jリーグの目安に合わせた（3部の先発 約1,000万・2部 約2,700万・1部 約7,500万） */
+export function salaryFor(o: number): number { const d = o - 55; return Math.max(300, Math.min(30000, Math.round((1000 * Math.exp(0.05 * d + 0.003 * d * Math.abs(d) * (d > 0 ? 1 : 0.4))) / 10) * 10)); }
 
 /** 選手を作る。level はそのポジションでの強さの目安（総合力のおおよそ） */
 export function makePlayer(r: Rng, ids: Ids, level: number, pos: Pos, opts: MakeOpts = {}): Player {

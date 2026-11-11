@@ -20,7 +20,7 @@ import { openReg, applyReg, ensureReg, matchSquad, MAX_SQUAD, REG_WEEKS, type Re
 import { closeMeeting, ensureMeta, mail, monthMeeting, yearMeeting, judgeGoal, snapshot, potNote, type Msg, type Meeting, type MonthSnap, type Goal } from './meeting';
 
 export { makeFixtures };
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 export interface Row { p: number; w: number; d: number; l: number; gf: number; ga: number; }
 export interface Offer { type: 'offer'; pid: number; club: string; price: number; clubId?: number; listed?: boolean; base?: number; rounds?: number; }
 export interface CupTie { a: number; b: number; w?: number; s?: [number, number]; pk?: [number, number] | null; }
@@ -177,7 +177,7 @@ export function cupAlive(G: GameState): boolean {
 
 export interface WeekResult { match: MatchView | null; report: ReportEntry[]; seasonEnd?: boolean; news: string[]; }
 
-let homeInfo: { oppTier: number; cup: boolean } | null = null;
+let homeInfo: { oppTier: number; cup: boolean; home: boolean; won: boolean } | null = null;
 /** バランスの確かめ用（ふだんは使わない） */
 export const STATS = { on: false, matches: [] as { tier: number; hs: number; as: number; sh: number; sa: number }[] };
 function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
@@ -194,7 +194,7 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
       if (STATS.on) STATS.matches.push({ tier: t, hs: teamStrength(hc.me ? G.squad : hc.squad), as: teamStrength(ac.me ? G.squad : ac.squad), sh, sa });
       th.gf += sh; th.ga += sa; ta.gf += sa; ta.ga += sh;
       if (sh > sa) { th.w++; th.p += 3; ta.l++; } else if (sh < sa) { ta.w++; ta.p += 3; th.l++; } else { th.d++; ta.d++; th.p++; ta.p++; }
-      if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); if (h === ME) homeInfo = { oppTier: t, cup: false }; } }
+      if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); homeInfo = { oppTier: t, cup: false, home: h === ME, won: (h === ME ? sh - sa : sa - sh) > 0 }; } }
     }
   }
   void tier;
@@ -252,7 +252,7 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
     const isMine = t.a === ME || t.b === ME;
     const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, final, pre: isMine ? { info: `勝ち抜きの大会、${CUP_ROUND_NAMES[round]}です。`, stakes: { kind: final ? '決勝' : '' } } : undefined, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `勝ち抜きの大会 ${CUP_ROUND_NAMES[round]}` });
     t.s = res.score; t.pk = res.pk; t.w = res.winner === 0 ? t.a : t.b;
-    if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { const meA = t.a === ME; popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); if (meA && !final) homeInfo = { oppTier: clubById(G, t.b).tier, cup: true }; } }
+    if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { const meA = t.a === ME; popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); homeInfo = { oppTier: clubById(G, meA ? t.b : t.a).tier, cup: true, home: meA && !final, won: t.w === ME }; } }
   }
   G.cup.rounds[round] = ties; G.cup.round = round + 1;
   if (final) G.cup.champion = ties[0].w!;

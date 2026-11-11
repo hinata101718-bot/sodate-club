@@ -23,7 +23,7 @@ export function makeManager(r: Rng, ids: { n: number }, q = 0.5, style?: StyleNa
     id: ids.n++, name: staffName(r), style: st, forms,
     youth: Math.round((0.7 + r.next() * 0.7) * 100) / 100,
     obey: Math.round((0.25 + r.next() * 0.7) * 100) / 100,
-    grow, salary: Math.round((800 + q * 4000 + r.next() * 600) / 10) * 10, age: r.int(38, 64),
+    grow, salary: Math.round((1200 + q * 6000 + r.next() * 900) / 10) * 10, age: r.int(38, 64),
   };
 }
 export function youthWord(m: Manager) { return m.youth >= 1.2 ? '若手をどんどん使う' : m.youth <= 0.85 ? 'ベテランを信じる' : '若手もベテランも、その時の調子で使う'; }
@@ -43,12 +43,12 @@ export interface Scout { id: number; name: string; region: string; pos: Pos | nu
 /** 腕のいい人ほど給料が高い（問30） */
 export function makeCoach(r: Rng, ids: { n: number }, role: CoachRole, q = r.next()): Coach {
   const skill = Math.round(Math.min(1, Math.max(0.05, q * 0.9 + r.next() * 0.15)) * 100) / 100;
-  return { id: ids.n++, name: staffName(r), role, skill, salary: Math.round((250 + skill * skill * 1500) / 10) * 10, age: r.int(32, 66) };
+  return { id: ids.n++, name: staffName(r), role, skill, salary: Math.round((375 + skill * skill * 2250) / 10) * 10, age: r.int(32, 66) };
 }
 export function makeScout(r: Rng, ids: { n: number }, q = r.next()): Scout {
   const skill = Math.round(Math.min(1, Math.max(0.05, q * 0.9 + r.next() * 0.15)) * 100) / 100;
   const P: (Pos | null)[] = [null, null, 'GK', 'CB', 'SB', 'DM', 'CM', 'AM', 'WG', 'ST'];
-  return { id: ids.n++, name: staffName(r), region: r.pick(REGIONS), pos: r.pick(P), skill, salary: Math.round((200 + skill * skill * 1100) / 10) * 10, age: r.int(30, 68), cond: { pos: [], region: null, vmin: null, vmax: null, amin: null, amax: null } };
+  return { id: ids.n++, name: staffName(r), region: r.pick(REGIONS), pos: r.pick(P), skill, salary: Math.round((300 + skill * skill * 1650) / 10) * 10, age: r.int(30, 68), cond: { pos: [], region: null, vmin: null, vmax: null, amin: null, amax: null } };
 }
 export const skillWord = (s: number) => (s >= 0.8 ? 'とても腕がいい' : s >= 0.6 ? '腕がいい' : s >= 0.4 ? 'ふつう' : 'まだ経験が浅い');
 export const skillStars = (s: number) => Math.max(1, Math.min(5, Math.round(s * 5)));

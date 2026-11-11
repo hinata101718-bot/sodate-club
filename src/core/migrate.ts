@@ -11,8 +11,26 @@ import { startYouth } from './youth';
 import { initOwner } from './owner';
 import { sponsorYear } from './finance';
 import { initMarket, anyCond } from './market';
-import { ovr } from './player';
+import { ovr, salaryFor } from './player';
 export const MIGRATIONS: Record<number, (s: any) => any> = {
+  /* 版7 → 版8（問125：お金の桁をJリーグの目安にそろえた）。お金・借金・予算は約2.5倍、選手の給料は新しい目安で、スタッフの給料は1.5倍。
+     帳簿に新しい項目（グッズ・分配金・運営費）を足す */
+  7: (s: any) => {
+    const o = s.owner;
+    if (o) {
+      const add = (L: any) => { if (L) for (const k of ['goods', 'dist', 'ops']) L[k] ??= 0; };
+      add(o.ledger); add(o.lastLedger); if (s.snap) add(s.snap.led);
+      o.money = Math.round((o.money * 2.5) / 100) * 100; o.debt = Math.round((o.debt * 2.5) / 100) * 100;
+      if (s.budget) { s.budget.cap = Math.round(s.budget.cap * 2.5); s.budget.spent = Math.round(s.budget.spent * 2.5); }
+      const tier = (s.clubs ?? []).find((c: any) => c.me)?.tier ?? 3;
+      o.sponsor = sponsorYear(tier, s.club?.pref ?? '静岡県', o.pop ?? 20);
+      for (const p of s.squad ?? []) p.salary = Math.max(p.salary ?? 0, salaryFor(ovr(p)));
+      const x3 = (m: any) => { if (m && typeof m.salary === 'number') m.salary = Math.round(m.salary * 1.5); };
+      x3(s.mgr); for (const k of Object.keys(o.coaches ?? {})) x3(o.coaches[k]); for (const sc of o.scouts ?? []) x3(sc);
+      if (o.market) { for (const m of o.market.mgr ?? []) x3(m); for (const k of Object.keys(o.market.coach ?? {})) for (const c of o.market.coach[k]) x3(c); for (const sc of o.market.scout ?? []) x3(sc); }
+    }
+    return s;
+  },
   /* 版6 → 版7（1年間のプレイのあとの直し）。対戦で見ただけの選手は、候補リストの人だけ残す（問100）。練習生は帰ってもらう（問119） */
   6: (s: any) => {
     const mk = s.owner?.mk;
