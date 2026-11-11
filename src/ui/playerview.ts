@@ -53,7 +53,7 @@ export function openPlayer(p: Player, o: PlayerViewOpts) {
   const layer = $('#layer');
   const hist = p.hist.length ? `<table><thead><tr><th class="l">年</th><th>年齢</th><th>総合力</th></tr></thead><tbody>${p.hist.slice(-8).map((h, i, arr) => `<tr><td class="l">${h.y}年目</td><td>${p.age - (arr.length - i)}歳</td><td>${val(h.ovr)}</td></tr>`).join('')}<tr><td class="l">いま</td><td>${p.age}歳</td><td>${val(ov)}</td></tr></tbody></table>` : '<div class="muted">まだ記録がない（年末に1年ぶんがのる）</div>';
   layer.innerHTML = `<div class="sheet" role="dialog" aria-label="選手"><div class="in">
-    <div class="bar"><span class="num" style="font-size:16px">${p.num || ''}</span><h2>${esc(p.name)}</h2><span class="ovr ${colorOf(ov)}">${ov}</span></div>
+    <div class="bar"><span class="num" style="font-size:16px">${p.num || ''}</span><h2>${esc(p.name)}</h2><span class="ovr big">${val(ov)}</span></div>
     <div class="row wrap">${posTag(p.pos)}<span class="muted">${p.age}歳 ・ ${p.height}cm ・ 利き足 ${p.foot === '両' ? '両足' : p.foot} ・ ${esc(p.pref)}出身 ・ ${esc(p.origin)}</span></div>
     ${p.inj ? `<div class="tag bad">ケガ（あと${p.inj}週）</div>` : ''}
     <section class="card"><h2>能力</h2>${radarSVG(p)}<div class="attrs" style="margin-top:8px">${order.map((i) => { const v = Math.floor(p.a[i]); const u = rep ? rep.ups[i] : 0; return `<div class="attr ${u >= 2 ? 'glow' : ''}"><span class="k">${L[i]}</span><span>${val(v)}${u > 0 ? `<span class="up">+${u}</span>` : u < 0 ? `<span class="down">${u}</span>` : ''}</span></div>`; }).join('')}</div>
