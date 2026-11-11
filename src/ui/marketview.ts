@@ -48,7 +48,9 @@ export function marketHTML(G: GameState): string {
   const head = `<section class="card">${sub}<div class="muted small" style="margin-top:8px">${mv.sub === 'cond' ? 'スカウトは毎月、この条件で選手を調べてくる。' : '気になった選手を押して「候補リストに入れる」。申し込みは候補リストからする。'}</div></section>`;
   if (mv.sub === 'cond') return head + condHTML(G);
   const allRows = rows(G); const nSeen = allRows.filter((r) => r.k.src === 'match').length;
-  let list = allRows.filter((r) => r.k.src !== 'match' || inShort(G, r.k.pid)); void nSeen;
+  /* 候補リストに入れた選手・申し込み中の選手は、スカウトの報告からは外す（候補リストのほうで見る）。外すと、また報告にもどる */
+  const bidSet = new Set(G.owner.mk.bids.map((b) => b.pid));
+  let list = allRows.filter((r) => r.k.src !== 'match' && !inShort(G, r.k.pid) && !bidSet.has(r.k.pid)); void nSeen;
   if (mv.pos) list = list.filter((r) => r.w.p.pos === mv.pos);
   if (mv.where) list = list.filter((r) => (mv.where === 'ama' ? r.w.kind === 'ama' : mv.where === 'free' ? r.w.kind === 'free' : r.w.club?.tier === +mv.where));
   const sorters: Record<string, (a: Row, b: Row) => number> = {
@@ -63,7 +65,7 @@ export function marketHTML(G: GameState): string {
       ${sel('data-mv-where', 'いるところ', mv.where, [['', '全部'], ['1', '1部'], ['2', '2部'], ['3', '3部'], ['ama', '高校・大学'], ['free', 'フリー']])}
       ${sel('data-mv-sort', '並べかえ', mv.sort, [['ovr', '強い順'], ['age', '若い順'], ['value', '高い順'], ['new', '新しい順']])}</div>`;
   const empty = 'まだ知っている選手がいない（条件に合う選手もいない）。スカウトが毎月調べてくるほか、対戦した相手の先発・年末に表彰された選手・フリーの選手のお知らせもここに出る。';
-  return head + `<section class="card"><h2>スカウトが調べた選手（${all}人）</h2><div style="margin-top:4px">${filt}</div>
+  return head + `<section class="card"><h2>スカウトが調べた選手（${all}人）</h2>${shortList(G).length ? `<div class="muted small">候補リストに入れた${shortList(G).length}人は、ここではなく「候補リスト」に出る。</div>` : ''}<div style="margin-top:4px">${filt}</div>
     <div class="plist" style="margin-top:8px">${shown.map((r) => rowHTML(G, r)).join('') || `<div class="muted">${empty}</div>`}</div>
     ${all > shown.length ? `<button class="btn small ghost wide" data-mv-more="1" style="margin-top:8px">のこり${all - shown.length}人も見る</button>` : ''}
     ${all ? `<button class="btn small ghost wide" data-forget-all="1" style="margin-top:8px">${mv.confirm ? '本当に消す？（もう一度押す）' : '候補に入れていない人をまとめて消す'}</button><div class="muted small" style="margin-top:4px">選手を左にスワイプしても消せる。消した選手も、スカウトがまた調べてきたら出てくる。</div>` : ''}</section>`;
