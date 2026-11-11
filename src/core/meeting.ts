@@ -69,12 +69,15 @@ export function expectedRank(G: GameState, tier: number): number {
   const others = G.clubs.filter((c) => !c.me && c.tier === tier).map((c) => teamStrength(c.squad)).sort((a, b) => b - a).slice(0, 11);
   return 1 + others.filter((s) => s > me + 0.5).length;
 }
-export function goalOptions(G: GameState, tier: number, season: number): Goal[] {
-  const e = expectedRank(G, tier);
-  let hard = Math.max(1, e - 3), just = clamp(e, 1, 12), easy = Math.min(tier < 3 ? 10 : 12, e + 3);
+/** ahead：12月に来年の目標を出すときは、冬の補強・キャンプ・若手の伸びのぶん、少し上を見る（10シーズンの確かめで合わせた） */
+export function goalOptions(G: GameState, tier: number, season: number, ahead = 0): Goal[] {
+  const e = expectedRank(G, tier) - ahead; const cap = tier < 3 ? 10 : 12;
+  let hard = clamp(e - 3, 1, cap), just = clamp(e, 1, cap), easy = clamp(e + 3, 1, cap);
   if (tier > 1 && hard <= 2) hard = tier === 1 ? hard : 2;
-  if (just <= hard) just = Math.min(12, hard + 2);
-  if (easy <= just) easy = Math.min(12, just + 2);
+  if (just <= hard) just = Math.min(cap, hard + 2);
+  if (easy <= just) easy = Math.min(cap, just + 2);
+  if (just <= hard) hard = Math.max(1, just - 1);
+  if (easy <= just) just = Math.max(hard + 1, easy - 1);
   const mk = (rank: number, level: Level): Goal => ({ tier, rank, text: goalText(tier, rank), level, season });
   return [mk(hard, 'むずかしい'), mk(just, 'ちょうどいい'), mk(easy, 'かんたん')];
 }
@@ -165,7 +168,7 @@ export function yearMeeting(G: GameState, judged: string[]): Meeting {
   const avgFans = s0.fans[1] ? Math.round(s0.fans[0] / s0.fans[1]) : 0;
   const nt = nextTier(G);
   items.push({ role: '営業', who: G.front!.sales, lines: [`クラブの人気は ${Math.round(s0.pop)} から ${Math.round(o.pop)} に${o.pop >= s0.pop ? '上がりました' : '下がりました'}。`, avgFans ? `ホームの試合には、1試合 平均 ${avgFans.toLocaleString()}人のお客さんが来ました。` : 'ホームの試合のお客さんの記録は、来年からとります。', `今年のスポンサー収入は ${man(o.sponsor)}。来年は ${man(Math.round(sponsorYear(nt, G.club.pref, o.pop) * (G.spMul ?? 1)))} くらいの見こみです。`] });
-  const opts = goalOptions(G, nt, G.season + 1);
+  const opts = goalOptions(G, nt, G.season + 1, 2);
   const ml = [`今年は ${t}部 ${rk}位でした。`, ...judged, `監督の評価：${evalWord(G.mgrEval ?? 60)}`];
   if ((G.mgrEval ?? 60) < 25) ml.push('結果を出せず、申し訳ありません。監督を代えるなら、経営 → スタッフ から入れかえられます。');
   ml.push(`来年（${nt}部）の目標を3つ考えました。オーナーが選んでください。`);

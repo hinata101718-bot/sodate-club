@@ -94,7 +94,8 @@ function youthComment(p: Player, stars: number, total: number): string {
 }
 /** 昇格会議で、コーチがすすめる子（3年の上位と、1・2年のとびぬけた子） */
 export function recommend(youth: Player[], topSize: number): number[] {
-  const room = Math.max(0, 35 - topSize);
+  /* トップは35人まで持てるが、コーチのおすすめは30人までにとどめる（給料がふくらみすぎないように） */
+  const room = Math.max(0, 30 - topSize);
   const score = (p: Player) => p.pot * 0.6 + avgW(p) * 0.4;
   const g3 = youth.filter((p) => p.grade === 3).sort((a, b) => score(b) - score(a));
   const pick = g3.filter((p) => score(p) >= 52).slice(0, Math.max(1, Math.min(3, room)));
