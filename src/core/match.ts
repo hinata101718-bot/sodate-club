@@ -62,20 +62,23 @@ export function pickLineup(r: Rng, t: TeamIn, form: string, assume = false): { l
   }
   t.heard = heard;
   const h = (p: Player) => heard.get(p.id) === true;
-  for (const pos of slots) {
-    let best: Player | null = null, bs = -1e9;
-    for (const p of sq) {
-      if (used.has(p.id)) continue;
-      let s = posRating(p, pos) + p.cond * 1.5 - p.fat * 0.06;
-      s += t.me ? youthBonus(p.age, yb) : p.age <= 21 ? 2.2 * (yb - 1) * 3 + (yb > 1 ? 1.5 : 0) : 0;
-      if (t.me) s += mgrView(p, t.mgr);
-      if (h(p) && p.ord!.kind === 'start') s += 8;
-      if (h(p) && p.ord!.kind === 'pos') s += p.ord!.pos === pos ? 14 : -6;
-      if (h(p) && p.ord!.kind === 'sub') s -= 30;
-      if (s > bs) { bs = s; best = p; }
-    }
-    if (best) { used.add(best.id); lineup.push({ p: best, pos, sub: false }); }
-  }
+  /* 枠と選手の組み合わせを全部くらべて、いちばん合う組から決めていく（前から順に埋めると、
+     いい中盤の選手が先にサイドバックの枠にとられ、適性のない場所で使われることがあった） */
+  const score = (p: Player, pos: Pos) => {
+    let s = posRating(p, pos) + p.cond * 1.5 - p.fat * 0.06;
+    s += t.me ? youthBonus(p.age, yb) : p.age <= 21 ? 2.2 * (yb - 1) * 3 + (yb > 1 ? 1.5 : 0) : 0;
+    if (t.me) s += mgrView(p, t.mgr);
+    if (h(p) && p.ord!.kind === 'start') s += 8;
+    if (h(p) && p.ord!.kind === 'pos') s += p.ord!.pos === pos ? 14 : -6;
+    if (h(p) && p.ord!.kind === 'sub') s -= 30;
+    return s;
+  };
+  const pairs: { i: number; p: Player; s: number }[] = [];
+  slots.forEach((pos, i) => { for (const p of sq) pairs.push({ i, p, s: score(p, pos) }); });
+  pairs.sort((a, b) => b.s - a.s);
+  const filled: (Player | null)[] = slots.map(() => null);
+  for (const x of pairs) { if (filled[x.i] || used.has(x.p.id)) continue; filled[x.i] = x.p; used.add(x.p.id); }
+  slots.forEach((pos, i) => { const p = filled[i]; if (p) lineup.push({ p, pos, sub: false }); });
   return { lineup, bench: sq.filter((p) => !used.has(p.id)) };
 }
 export function chooseForm(m: Manager, myStr: number, oppStr: number, squad?: Player[]): string {
