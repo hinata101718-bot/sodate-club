@@ -23,9 +23,11 @@ export function toast(msg: string) {
   const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg;
   document.body.appendChild(el); clearTimeout(toastTimer); toastTimer = window.setTimeout(() => el.remove(), 2200);
 }
-export function sheet(html: string, dock = ''): HTMLElement {
+/** keep：同じ画面を描き直すとき、いまの位置（スクロール）を保つ（選手登録などで、押すたびに上にもどらないように） */
+export function sheet(html: string, dock = '', keep = false): HTMLElement {
   const layer = $('#layer');
+  const prev = keep ? (layer.querySelector('.sheet') as HTMLElement | null)?.scrollTop ?? 0 : 0;
   layer.innerHTML = `<div class="sheet" role="dialog"><div class="in">${html}</div></div>${dock ? `<div class="dock">${dock}</div>` : ''}`;
-  const s = layer.querySelector('.sheet') as HTMLElement; s.scrollTop = 0; return s;
+  const s = layer.querySelector('.sheet') as HTMLElement; s.scrollTop = prev; return s;
 }
 export function closeSheet() { $('#layer').innerHTML = ''; }

@@ -6,7 +6,9 @@ import { $, $$, esc, posTag, sheet, toast, val } from './dom';
 
 export function openRegMeet(G: GameState, done: (msg: string[]) => void, back: () => void) {
   const m = G.regm; if (!m?.open) { back(); return; }
+  let first = true;
   const draw = () => {
+    const keep = !first; first = false;
     const sel = new Set(m.sel); const gk = G.squad.filter((p) => sel.has(p.id) && p.pos === 'GK').length;
     const order: Record<string, number> = { GK: 0, CB: 1, SB: 2, DM: 3, CM: 4, AM: 5, WG: 6, ST: 7 };
     const list = [...G.squad].sort((a, b) => order[a.pos] - order[b.pos] || ovr(b) - ovr(a));
@@ -21,7 +23,7 @@ export function openRegMeet(G: GameState, done: (msg: string[]) => void, back: (
         ${m.scout.length ? `<div class="mspeak" style="margin-top:10px"><span class="mface" aria-hidden="true">ス</span><div class="grow"><div class="mrole">スカウト</div><div class="mwho">${esc(G.owner.scouts[0]?.name ?? '')}</div></div></div><div class="talk-bubble">${m.scout.map((x) => `${esc(nm(x.pid))}：「${esc(x.text)}」`).join('<br>')}</div>` : ''}</section>
       <section class="card"><h2>登録 ${sel.size} / ${REG_SIZE}人 ${sel.size > REG_SIZE ? '<span class="tag bad">多すぎる</span>' : ''}${gk < 2 ? ' <span class="tag bad">キーパーが2人より少ない</span>' : ''}</h2>
         <div class="row" style="gap:6px;margin-bottom:8px"><button class="btn small ghost" id="rgRec">監督のおすすめにもどす</button></div><div class="plist">${rows}</div></section>`,
-      `<div class="in2"><button class="btn ghost" id="rgBack">あとで</button><button class="btn primary" id="rgGo" ${sel.size > REG_SIZE || sel.size < 16 ? 'disabled' : ''}>この${sel.size}人で決める</button></div>`);
+      `<div class="in2"><button class="btn ghost" id="rgBack">あとで</button><button class="btn primary" id="rgGo" ${sel.size > REG_SIZE || sel.size < 16 ? 'disabled' : ''}>この${sel.size}人で決める</button></div>`, keep);
     $('#rgBack').addEventListener('click', back);
     $('#rgRec').addEventListener('click', () => { m.sel = [...m.rec]; draw(); });
     $('#rgGo').addEventListener('click', () => done(applyReg(G, m.sel)));
