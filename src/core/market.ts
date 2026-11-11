@@ -57,8 +57,19 @@ export interface Known {
   p?: Player; from?: string; fee?: number;
 }
 export interface Bid { pid: number; bump: number; fee: number; salary: number; at: number; }
-export interface MarketState { known: Record<number, Known>; free: Player[]; bids: Bid[]; result: number; }
-export const initMarket = (): MarketState => ({ known: {}, free: [], bids: [], result: -1 });
+export interface MarketState { known: Record<number, Known>; free: Player[]; bids: Bid[]; result: number;
+  /** 候補リスト（感想24：スカウトの報告から気になった選手を入れておき、あとで誰に申し込むか決める）。古いセーブにはないので、なければ空 */
+  short?: number[]; }
+export const shortList = (G: GameState) => (G.owner.mk.short ??= []);
+export const inShort = (G: GameState, pid: number) => shortList(G).includes(pid);
+export function toggleShort(G: GameState, pid: number): boolean {
+  const s = shortList(G); const i = s.indexOf(pid);
+  if (i >= 0) { s.splice(i, 1); return false; }
+  if (!G.owner.mk.known[pid]) return false;
+  s.push(pid); return true;
+}
+const dropShort = (G: GameState, pid: number) => { const s = shortList(G); const i = s.indexOf(pid); if (i >= 0) s.splice(i, 1); };
+export const initMarket = (): MarketState => ({ known: {}, free: [], bids: [], result: -1, short: [] });
 export const absWeek = (G: GameState) => G.season * 48 + G.week;
 const tierOf = (G: GameState) => G.clubs.find((c) => c.me)!.tier;
 export const marketOpen = (G: GameState) => (G.week >= 24 && G.week <= 31) || G.week >= 44;
@@ -217,7 +228,7 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
     if (G.owner.money < fee) return 'お金が足りない。';
     G.owner.money -= fee; G.owner.ledger.buy += fee;
     const p = w.p; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
-    G.squad.push(p); assignNumbers(G.squad); delete mk.known[pid];
+    G.squad.push(p); assignNumbers(G.squad); delete mk.known[pid]; dropShort(G, pid);
     void r; return null;
   }
   if (!marketOpen(G)) return 'プロとフリーの選手は、移籍の期間（7〜8月・12月）にしか申し込めない。';
@@ -244,7 +255,7 @@ export function resolveBids(G: GameState, r: Rng): string[] {
     if (w.club) replaceInClub(G, w.club, p, r);
     else mk.free = mk.free.filter((x) => x !== p);
     p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = 3; p.salary = b.salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
-    G.squad.push(p); assignNumbers(G.squad); delete mk.known[p.id];
+    G.squad.push(p); assignNumbers(G.squad); delete mk.known[p.id]; dropShort(G, p.id);
     out.push(`移籍の結果：${w.club ? `${w.club.name}から` : 'フリーの'} ${who} が来てくれた！${b.fee ? `（移籍金 ${manText(b.fee)}、` : '（'}給料 年${b.salary.toLocaleString()}万円）`);
   }
   mk.result = due.length ? now : mk.result;
@@ -310,5 +321,6 @@ export function newMarketSeason(G: GameState, r: Rng) {
   for (const k of Object.values(mk.known)) if (k.p) k.p.age++;
   const idx = playerIndex(G);
   for (const k of Object.values(mk.known)) if (!idx.has(k.pid) || G.season - k.season >= 2) delete mk.known[k.pid];
+  mk.short = shortList(G).filter((pid) => mk.known[pid]);
   mk.bids = [];
 }

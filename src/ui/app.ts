@@ -62,7 +62,7 @@ export function render() {
   v.innerHTML = crumb + (views[app.tab] || homeHTML)();
   bindView(v);
   bindOwner(G, v, (msg) => { if (msg) toast(msg); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
-  $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTrView('market'); setTab('tr'); }));
+  $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTrView('scout'); setTab('tr'); }));
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
 }
 let selCache: { key: string; set: Set<number> } | null = null;
@@ -104,7 +104,7 @@ function homeHTML(): string {
   const news = (G.news || []).filter(Boolean).map((n) => `<div class="item"><span class="grow">${esc(n)}</span></div>`).join('');
   const walk = G.owner.cands.filter((c) => c.src === 'trial').length + G.owner.trials.filter((p) => p.trialMonths === 0).length;
   const scoutN = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.season === G.season && k.week === G.week - 1).length;
-  const owner = (walk ? `<div class="item"><span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN ? `<div class="item"><span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">移籍市場を見る</button></div>` : '');
+  const owner = (walk ? `<div class="item"><span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN ? `<div class="item"><span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">スカウトの報告を見る</button></div>` : '');
   const promo = G.promo?.open ? `<div class="item"><span class="grow"><b>春の昇格会議</b>：ユースからトップに上げる子を決める（決めずに進むと、コーチのおすすめどおりになる）</span><button class="btn small primary" data-go="youth">決める</button></div>` : '';
   const notes = G.yearNotes?.length && G.week >= 44 ? `<div class="item"><span class="grow">コーチから、選手${G.yearNotes.length}人についてのひとこと</span><button class="btn small ghost" data-act="notes">見る</button></div>` : '';
   const yrep = G.youthLog.length && G.youthLog[G.youthLog.length - 1].season === G.season && G.week >= 8 && G.week % 4 === 1 ? `<div class="item"><span class="grow">ユースの報告会議（${G.youthLog[G.youthLog.length - 1].month}月）</span><button class="btn small ghost" data-go="youth">見る</button></div>` : '';
@@ -150,7 +150,7 @@ function hubHTML(g: string): string {
     team: [
       ['squad', 'トップチーム', `${G.squad.length}人${G.squad.some((p) => p.inj) ? ` ・ ケガ${G.squad.filter((p) => p.inj).length}人` : ''}`, ICON.team],
       ['youth', 'ユース', `${G.youth.length}人${G.promo?.open ? ' ・ 昇格会議' : ''}`, ICON.youth],
-      ['tr', '移籍', `${isWindow(G.week) ? '移籍の期間中' : '期間外'}${offers ? ` ・ オファー${offers}件` : ''}${bids ? ` ・ 申し込み中${bids}件` : ''}`, ICON.tr],
+      ['tr', '移籍', `${isWindow(G.week) ? '移籍の期間中' : '期間外'}${offers ? ` ・ オファー${offers}件` : ''}${bids ? ` ・ 申し込み中${bids}件` : ` ・ 候補${(G.owner.mk.short ?? []).length}人`}`, ICON.tr],
     ],
     biz: [
       ['fac', '施設', G.owner.build ? '工事中' : '強化できる', ICON.fac],
@@ -232,7 +232,7 @@ function settingsHTML(): string {
 function bindView(v: HTMLElement) {
   const G = app.G;
   $$<HTMLElement>('[data-act]', v).forEach((b) => b.addEventListener('click', () => act(b.dataset.act!)));
-  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'known'; setTrView('market'); setTab('tr'); }));
+  $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'known'; setTrView('scout'); setTab('tr'); }));
   $$<HTMLElement>('[data-go]', v).forEach((b) => b.addEventListener('click', () => setTab(b.dataset.go!)));
   $$<HTMLElement>('[data-tv]', v).forEach((b) => b.addEventListener('click', () => { tableView = b.dataset.tv!; render(); }));
   $$<HTMLElement>('[data-pol]', v).forEach((b) => b.addEventListener('click', () => { G.policy = b.dataset.pol as Policy; sfx('tap'); autosave(); render(); }));

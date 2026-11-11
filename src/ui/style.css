@@ -222,3 +222,5 @@ svg.mini{width:34px;height:38px}
 .factile[aria-pressed="true"]{border-color:var(--club);background:var(--club-soft)}
 .pips{font-size:18px;letter-spacing:2px;color:var(--club);line-height:1}
 .pips .off{color:var(--muted);opacity:.45}
+.seg4 button{min-width:0;font-size:12px}
+.badge{display:inline-block;min-width:16px;height:16px;line-height:16px;border-radius:8px;background:var(--danger,#c0392b);color:#fff;font-size:11px;margin-left:2px;padding:0 4px;vertical-align:1px}

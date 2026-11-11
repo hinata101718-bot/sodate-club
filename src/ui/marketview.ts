@@ -6,14 +6,14 @@ import { ovr } from '../core/player';
 import { Rng } from '../core/rng';
 import {
   BUMPS, SCOUT_REGIONS, VALUE_STEPS, bid, cancelBid, chanceWord, condText, fromTierOf, isStale, joinChance, marketOpen, offerSalary, ovrRange,
-  playerIndex, regionLabel, scoutCond, sellChance, valueOf, type Known, type Where,
+  playerIndex, regionLabel, scoutCond, sellChance, valueOf, inShort, shortList, toggleShort, type Known, type Where,
 } from '../core/market';
 import type { Player } from '../core/types';
 import { $$, closeSheet, esc, posTag, sheet, val, yen } from './dom';
 import { openPlayer } from './playerview';
 
 /** 画面の状態（セーブには入れない） */
-export const mv = { sub: 'known' as 'known' | 'free' | 'cond', pos: '' as Pos | '', where: '', sort: 'ovr', more: false };
+export const mv = { sub: 'known' as 'known' | 'cond', pos: '' as Pos | '', where: '', sort: 'ovr', more: false };
 const AGE_STEPS = [16, 18, 20, 22, 24, 26, 28, 30, 32, 35];
 
 interface Row { k: Known; w: Where; value: number; o: number; }
@@ -33,17 +33,17 @@ const srcText: Record<string, string> = { scout: 'スカウトが調べた', mat
 function rowHTML(G: GameState, r: Row): string {
   const k = r.k; const p = r.w.p;
   const strength = k.full ? val(k.ovr) : `<span class="v">${ovrRange(k.ovr)}</span>`;
-  return `<button class="pl" data-known="${k.pid}">${posTag(p.pos)}<span style="min-width:0"><span class="pname">${esc(p.name)}${G.owner.mk.bids.some((b) => b.pid === k.pid) ? ' <span class="tag">申し込み中</span>' : ''}</span><br>
+  return `<button class="pl" data-known="${k.pid}">${posTag(p.pos)}<span style="min-width:0"><span class="pname">${esc(p.name)}${G.owner.mk.bids.some((b) => b.pid === k.pid) ? ' <span class="tag">申し込み中</span>' : inShort(G, k.pid) ? ' <span class="tag gold">候補</span>' : ''}</span><br>
     <span class="pmeta">${p.age}歳 ・ ${esc(whereText(r))} ・ ${r.value ? yen(r.value) : '移籍金なし'}</span><br><span class="pmeta">${srcText[k.src]}${k.scout ? `（${esc(k.scout)}）` : ''} ${fresh(G, k)}</span></span><span class="ovr">${strength}</span></button>`;
 }
 
 export function marketHTML(G: GameState): string {
   const o = G.owner; const mk = o.mk; const open = marketOpen(G);
-  const sub = `<div class="seg" role="group" aria-label="移籍市場"><button data-mv-sub="known" aria-pressed="${mv.sub === 'known'}">知っている選手</button><button data-mv-sub="free" aria-pressed="${mv.sub === 'free'}">フリー</button><button data-mv-sub="cond" aria-pressed="${mv.sub === 'cond'}">スカウトの条件</button></div>`;
-  const bids = mk.bids.length ? `<div class="list" style="margin-top:8px">${mk.bids.map((b) => { const w = playerIndex(G).get(b.pid); return w ? `<div class="slot"><div class="grow small"><b>${esc(w.p.name)}</b> に申し込み中（${b.fee ? `移籍金 ${yen(b.fee)}・` : ''}給料 年${b.salary.toLocaleString()}万円${b.bump ? `・上乗せ +${b.bump}%` : ''}）<br><span class="muted">結果は次の週のお知らせで届く</span></div><button class="btn small ghost" data-unbid="${b.pid}">やめる</button></div>` : ''; }).join('')}</div>` : '';
-  const head = `<section class="card">${sub}<div class="muted small" style="margin-top:8px">${open ? '知っている選手なら、誰にでも申し込める。' : 'プロとフリーの選手は、移籍の期間だけ申し込める。高校生・大学生はいつでも獲れる。'}</div>${bids}</section>`;
+  const sub = `<div class="seg" role="group" aria-label="スカウト"><button data-mv-sub="known" aria-pressed="${mv.sub === 'known'}">調べた選手</button><button data-mv-sub="cond" aria-pressed="${mv.sub === 'cond'}">探す条件</button></div>`;
+  void mk; void open;
+  const head = `<section class="card">${sub}<div class="muted small" style="margin-top:8px">${mv.sub === 'cond' ? 'スカウトは毎月、この条件で選手を調べてくる。' : '気になった選手を押して「候補リストに入れる」。申し込みは候補リストからする。'}</div></section>`;
   if (mv.sub === 'cond') return head + condHTML(G);
-  let list = rows(G).filter((r) => (mv.sub === 'free' ? r.w.kind === 'free' : true));
+  let list = rows(G);
   if (mv.pos) list = list.filter((r) => r.w.p.pos === mv.pos);
   if (mv.where) list = list.filter((r) => (mv.where === 'ama' ? r.w.kind === 'ama' : mv.where === 'free' ? r.w.kind === 'free' : r.w.club?.tier === +mv.where));
   const sorters: Record<string, (a: Row, b: Row) => number> = {
@@ -55,12 +55,22 @@ export function marketHTML(G: GameState): string {
   /* 問87：絞りこみは1行に3つ（ポジション・いるところ・並べかえ） */
   const sel = (attr: string, label: string, cur: string, opts: string[][]) => `<label class="selw"><span class="small muted">${label}</span><select class="sel" ${attr}>${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
   const filt = `<div class="selrow">${sel('data-mv-posel', 'ポジション', mv.pos, [['', '全部'], ...POS.map((p) => [p, p])])}
-      ${mv.sub === 'known' ? sel('data-mv-where', 'いるところ', mv.where, [['', '全部'], ['1', '1部'], ['2', '2部'], ['3', '3部'], ['ama', '高校・大学'], ['free', 'フリー']]) : ''}
+      ${sel('data-mv-where', 'いるところ', mv.where, [['', '全部'], ['1', '1部'], ['2', '2部'], ['3', '3部'], ['ama', '高校・大学'], ['free', 'フリー']])}
       ${sel('data-mv-sort', '並べかえ', mv.sort, [['ovr', '強い順'], ['age', '若い順'], ['value', '高い順'], ['new', '新しい順']])}</div>`;
-  const empty = mv.sub === 'free' ? 'フリーの選手の情報は、移籍の期間（7月・12月のはじめ）にお知らせで届く。スカウトが見つけてくることもある。' : 'まだ知っている選手がいない（条件に合う選手もいない）。スカウトが毎月調べてくるほか、対戦した相手の先発や、年末に表彰された選手もここに出る。';
-  return head + `<section class="card"><h2>${mv.sub === 'free' ? 'フリーの選手' : '知っている選手'}（${all}人）</h2><div style="margin-top:4px">${filt}</div>
+  const empty = 'まだ知っている選手がいない（条件に合う選手もいない）。スカウトが毎月調べてくるほか、対戦した相手の先発・年末に表彰された選手・フリーの選手のお知らせもここに出る。';
+  return head + `<section class="card"><h2>調べた選手・知っている選手（${all}人）</h2><div style="margin-top:4px">${filt}</div>
     <div class="plist" style="margin-top:8px">${shown.map((r) => rowHTML(G, r)).join('') || `<div class="muted">${empty}</div>`}</div>
     ${all > shown.length ? `<button class="btn small ghost wide" data-mv-more="1" style="margin-top:8px">のこり${all - shown.length}人も見る</button>` : ''}</section>`;
+}
+
+/** 候補リスト（感想24）：気になった選手を集めておき、ここから申し込む */
+export function shortHTML(G: GameState): string {
+  const mk = G.owner.mk; const open = marketOpen(G); const idx = playerIndex(G);
+  const bids = mk.bids.length ? `<section class="card"><h2>申し込み中</h2><div class="list">${mk.bids.map((b) => { const w = idx.get(b.pid); return w ? `<div class="slot"><div class="grow small"><b>${esc(w.p.name)}</b>（${b.fee ? `移籍金 ${yen(b.fee)}・` : ''}給料 年${b.salary.toLocaleString()}万円${b.bump ? `・+${b.bump}%` : ''}）<br><span class="muted">結果は次の週のお知らせで届く</span></div><button class="btn small ghost" data-unbid="${b.pid}">やめる</button></div>` : ''; }).join('')}</div></section>` : '';
+  const list: Row[] = shortList(G).map((pid) => { const k = mk.known[pid]; const w = idx.get(pid); return k && w ? { k, w, value: valueOf(w), o: k.ovr } : null; }).filter((x): x is Row => !!x);
+  const total = list.reduce((s, r) => s + r.value, 0);
+  return `${bids}<section class="card"><h2>候補リスト（${list.length}人）</h2><div class="muted small">${open ? '<b>いまは移籍の期間</b>。選手を押して申し込む。' : 'プロとフリーの選手は、移籍の期間（夏：7〜8月、冬：12月）に申し込める。高校生・大学生はいつでも獲れる。'}${list.length ? ` 全員の移籍金の合計：${yen(total)}` : ''}</div>
+    <div class="plist" style="margin-top:8px">${list.map((r) => rowHTML(G, r)).join('') || '<div class="muted">まだいない。「スカウト」で選手を押して「候補リストに入れる」と、ここに集まる。</div>'}</div></section>`;
 }
 
 function condHTML(G: GameState): string {
@@ -88,18 +98,21 @@ export function openKnown(G: GameState, pid: number, done: (msg?: string | null)
   let bump = 0;
   const offerHTML = () => {
     const inBid = G.owner.mk.bids.some((b) => b.pid === pid);
-    if (w.kind === 'ama') return `<section class="card"><h2>獲得</h2><div>契約金 ${yen(k.fee ?? 100)} ・ 給料 年${p.salary.toLocaleString()}万円 ・ 3年契約</div><div class="muted small">高校生・大学生は、いつでも獲れる（すぐにトップに入る）。</div><button class="btn primary wide" id="mBid" style="margin-top:8px">獲る</button></section>`;
+    if (!inShort(G, pid) && !inBid) return `<section class="card"><h2>候補リスト</h2><div class="muted small">気になったら候補リストに入れておこう。申し込みは、候補リストの中から決める。</div><button class="btn primary wide" id="mShort" style="margin-top:8px">候補リストに入れる</button></section>`;
+    const outBtn = '<button class="btn small ghost" id="mShort" style="margin-top:8px">候補リストから外す</button>';
+    if (w.kind === 'ama') return `<section class="card"><h2>獲得</h2><div>契約金 ${yen(k.fee ?? 100)} ・ 給料 年${p.salary.toLocaleString()}万円 ・ 3年契約</div><div class="muted small">高校生・大学生は、いつでも獲れる（すぐにトップに入る）。</div><button class="btn primary wide" id="mBid" style="margin-top:8px">獲る</button>${outBtn}</section>`;
     const sc = w.club ? sellChance(w.club, p) : 1;
     return `<section class="card"><h2>獲得を申し込む</h2><div class="list small">
       <div>移籍金（相場）：<b>${value ? yen(value) : 'なし（フリー）'}</b></div><div>給料：<b>年${offerSalary(w, bump).toLocaleString()}万円</b>（3年契約）</div>
       ${w.club ? `<div>${esc(w.club.name)}が売ってくれる見こみ：<b>${chanceWord(sc)}</b></div>` : ''}<div>本人が来てくれる見こみ：<b>${chanceWord(joinChance(fromT, tier, bump))}</b></div></div>
       <h3>給料の上乗せ</h3><div class="seg" role="group" aria-label="給料の上乗せ">${BUMPS.map((b) => `<button data-bump="${b}" aria-pressed="${bump === b}">${b ? `+${b}%` : '上乗せなし'}</button>`).join('')}</div>
       <div class="muted small" style="margin-top:6px">値段の交渉はしない。相場の額で申し込み、${w.club ? '相手のクラブが売るか、' : ''}選手本人が来るかを決める。上の段の選手ほど、下の段のクラブには来にくい。結果は次の週のお知らせで届く。</div>
-      ${inBid ? '<div class="tag" style="margin-top:8px">申し込み中</div>' : `<button class="btn primary wide" id="mBid" style="margin-top:8px" ${open ? '' : 'disabled'}>${open ? '獲得を申し込む' : '移籍の期間になったら申し込める'}</button>`}</section>`;
+      ${inBid ? '<div class="tag" style="margin-top:8px">申し込み中</div>' : `<button class="btn primary wide" id="mBid" style="margin-top:8px" ${open ? '' : 'disabled'}>${open ? '獲得を申し込む' : '移籍の期間になったら申し込める'}</button>`}${inBid ? '' : outBtn}</section>`;
   };
   const info = `<section class="card"><h2>この選手のこと</h2><div class="list small"><div>いるところ：<b>${esc(whereTextW(w, k))}</b></div><div>市場の値段：<b>${value ? yen(value) : '0円'}</b></div><div>情報：${srcText[k.src]}（${k.season}年目 ${Math.floor(k.week / 4) + 1}月）${isStale(G, k) ? ' ・ <b>去年の情報</b>' : ''}</div></div></section>`;
   const bindOffer = (root: HTMLElement, again: () => void) => {
     $$<HTMLElement>('[data-bump]', root).forEach((b) => b.addEventListener('click', () => { bump = +b.dataset.bump!; again(); }));
+    root.querySelector('#mShort')?.addEventListener('click', () => { const on = toggleShort(G, pid); closeSheet(); done(on ? `${p.name} を候補リストに入れた` : `${p.name} を候補リストから外した`); });
     root.querySelector('#mBid')?.addEventListener('click', () => {
       const r = new Rng(G.rng); const e = bid(G, pid, bump, r); G.rng = r.s;
       closeSheet(); done(e ?? (w.kind === 'ama' ? `${p.name} を獲った` : `${p.name} に申し込んだ。結果は次の週に届く`));

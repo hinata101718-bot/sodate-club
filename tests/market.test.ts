@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { newGame, advanceWeek, advanceToDecision, SAVE_VERSION, type GameState } from '../src/core/game';
-import { marketValue, sellChance, joinChance, bid, isStarter, playerIndex, scoutMonth, isStale, type ScoutCond } from '../src/core/market';
+import { marketValue, sellChance, joinChance, bid, isStarter, playerIndex, scoutMonth, isStale, toggleShort, inShort, shortList, type ScoutCond } from '../src/core/market';
 import { makePlayer, ovr } from '../src/core/player';
 import { TIER_LVL } from '../src/core/world';
 import { Rng } from '../src/core/rng';
@@ -114,5 +114,19 @@ describe('版4（夜1）のセーブの変換', () => {
     expect(G.season).toBe(2);
     expect(saveTo(kv, slotKey(3), G)).toBe(true);
     expect(loadFrom(kv, slotKey(3))!.season).toBe(2);
+  });
+});
+
+describe('候補リスト（感想24）', () => {
+  it('知っている選手だけ入れられ、獲れたらリストから消える。古いセーブにリストがなくても動く', () => {
+    const G = newGame({ seed: 57 }); toWeek(G, 24, 1); G.owner.money = 1e7; G.squad = G.squad.slice(0, 20);
+    delete (G.owner.mk as any).short;
+    const c = G.clubs.find((x) => !x.me && x.tier === 3)!; const p = [...c.squad].sort((a, b) => ovr(a) - ovr(b))[0];
+    expect(toggleShort(G, p.id)).toBe(false);
+    G.owner.mk.known[p.id] = { pid: p.id, full: true, season: G.season, week: G.week, src: 'scout', ovr: ovr(p), age: p.age, club: c.name };
+    expect(toggleShort(G, p.id)).toBe(true); expect(inShort(G, p.id)).toBe(true);
+    p.contract = 1; G.pending = [];
+    for (let i = 0; i < 5 && inShort(G, p.id); i++) { if (!G.owner.mk.bids.length) bid(G, p.id, 50, new Rng(i)); advanceWeek(G); }
+    if (G.squad.some((x) => x.id === p.id)) expect(shortList(G).includes(p.id)).toBe(false);
   });
 });

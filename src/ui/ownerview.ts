@@ -9,7 +9,7 @@ import { ovr } from '../core/player';
 import { Rng } from '../core/rng';
 import type { Manager } from '../core/types';
 import { $$, esc, posTag, val, yen } from './dom';
-import { marketHTML, bindMarket } from './marketview';
+import { marketHTML, bindMarket, shortHTML } from './marketview';
 import { condText, scoutCond } from '../core/market';
 
 const stars = (s: number) => '★'.repeat(skillStars(s)) + '☆'.repeat(5 - skillStars(s));
@@ -101,16 +101,19 @@ export function transferHTML(G: GameState): string {
   const listed = G.squad.filter((p) => p.listed);
   /* 問86：オファー・移籍市場・練習生を、上のボタンで切りかえる（件数を出す） */
   const nOffer = G.pending.length; const nTrial = o.cands.filter((c) => c.src === 'trial').length + o.trials.filter((p) => !p.trialMonths).length;
-  const cnt = (n: number) => (n ? `（${n}）` : '');
-  const seg = `<div class="seg" role="group" aria-label="移籍の画面"><button data-trv="offer" aria-pressed="${trView === 'offer'}">オファー${cnt(nOffer)}</button><button data-trv="market" aria-pressed="${trView === 'market'}">移籍市場${cnt(o.mk.bids.length)}</button><button data-trv="trial" aria-pressed="${trView === 'trial'}">練習生${cnt(nTrial)}</button></div>
+  const cnt = (n: number) => (n ? `<span class="badge">${n}</span>` : '');
+  const nShort = (o.mk.short ?? []).length;
+  /* 感想24：オファー・候補リスト・スカウト・練習生の4つ */
+  const seg = `<div class="seg seg4" role="group" aria-label="移籍の画面"><button data-trv="offer" aria-pressed="${trView === 'offer'}">オファー${cnt(nOffer)}</button><button data-trv="short" aria-pressed="${trView === 'short'}">候補リスト${cnt(nShort)}</button><button data-trv="scout" aria-pressed="${trView === 'scout'}">スカウト</button><button data-trv="trial" aria-pressed="${trView === 'trial'}">練習生${cnt(nTrial)}</button></div>
     <div class="muted small" style="margin:8px 2px 4px">${win ? '<b>いまは移籍の期間</b>' : '移籍の期間は夏（7〜8月）と冬（12月）'} ・ トップ ${G.squad.length}人（25人まで）</div>`;
-  if (trView === 'market') return seg + marketHTML(G);
+  if (trView === 'scout') return seg + marketHTML(G);
+  if (trView === 'short') return seg + shortHTML(G);
   if (trView === 'trial') return seg + `<section class="card"><h2>練習生</h2><div class="list">${cand('trial')}${trials}${!trials && !cand('trial') ? '<div class="muted">「テストを受けさせてください」と、ときどきやってくる。1〜3か月あずかって、伸び方を見てから決める。</div>' : ''}</div></section>`;
   return seg + `<section class="card"><h2>届いたオファー</h2>${offers ? `<div class="list">${offers}</div><div class="muted small" style="margin-top:6px">値段の交渉はできない。受けるか断るかだけ。</div>` : '<div class="muted">いまはオファーがない。</div>'}</section>
     <section class="card"><h2>売りに出している選手</h2>${listed.length ? `<div>${listed.map((p) => esc(p.name)).join('、')}</div><div class="muted small" style="margin-top:6px">移籍の期間に買い手を探す。</div>` : '<div class="muted">いない。売りに出すときは、選手の画面の「売りに出す」を押す。</div>'}</section>`;
 }
 /** 移籍の画面の切りかえ（セーブには入れない） */
-export let trView: 'offer' | 'market' | 'trial' = 'market';
+export let trView: 'offer' | 'short' | 'scout' | 'trial' = 'short';
 export const setTrView = (v: typeof trView) => { trView = v; };
 function lastTrial(G: GameState, id: number) { const r = [...G.owner.trialLog].reverse().find((x) => x.lines.some((l) => l.pid === id)); const l = r?.lines.find((x) => x.pid === id); return l ? ` ・ ${l.words} ${l.arrow}` : ''; }
 
