@@ -17,21 +17,31 @@ const mgrCard = (m: Manager, btn = '') => `<div class="slot" style="flex-directi
   <div class="small"><b>${esc(m.style)}</b>（${esc(STYLES[m.style].note)}）・ 並び方 ${m.forms.join(' / ')}</div>
   <div class="muted small">${esc(youthWord(m))} ・ ${esc(obeyWord(m))} ・ ${esc(growWord(m))}</div>${btn}</div>`;
 
+/* 問88：スタッフは「監督・コーチ・スカウト」を上で切りかえ、一覧は1人1行（押すとくわしく） */
+export let staffView: 'mgr' | 'coach' | 'scout' = 'coach';
+let openRow = '';
+const srow = (key: string, role: string, name: string, right: string, detail: string) => `<div class="srow-wrap"><button class="srow" data-open="${key}" aria-expanded="${openRow === key}"><span class="srole">${role}</span><span class="grow sname">${name}</span>${right}<span class="chev" aria-hidden="true">${openRow === key ? '▲' : '▼'}</span></button>${openRow === key ? `<div class="sdetail">${detail}</div>` : ''}</div>`;
 export function peopleHTML(G: GameState): string {
   const o = G.owner; const cw = coachWindow(G);
-  const coaches = COACH_ROLES.map((k) => { const c = o.coaches[k]; return `<div class="slot" style="flex-direction:column;align-items:stretch;gap:4px"><div class="row"><b class="grow">${COACH_NAME[k]}</b>${c ? `<span class="small" style="color:var(--gold)">${stars(c.skill)}</span>` : '<span class="tag bad">いない</span>'}</div>
-    <div class="muted small">受け持ち：${esc(COACH_NOTE[k])}</div>${c ? `<div class="small">${esc(c.name)}（${c.age}歳）・ ${skillWord(c.skill)} ・ 年${c.salary.toLocaleString()}万円</div>` : ''}
-    ${cw ? `<div class="row wrap">${c ? `<button class="btn small ghost" data-fire-coach="${k}">やめてもらう</button>` : ''}<button class="btn small ghost" data-coach-market="${k}">候補を見る</button></div>` : ''}</div>`; }).join('');
-  const market = coachMarketRole ? `<section class="card"><h2>${COACH_NAME[coachMarketRole]}の候補</h2><div class="list">${o.market.coach[coachMarketRole].map((c) => `<div class="slot"><div class="grow"><b>${esc(c.name)}</b> <span class="small">${c.age}歳</span><div class="small"><span style="color:var(--gold)">${stars(c.skill)}</span> ${skillWord(c.skill)} ・ 年${c.salary.toLocaleString()}万円</div></div><button class="btn small primary" data-hire-coach="${coachMarketRole}:${c.id}">雇う</button></div>`).join('')}</div></section>` : '';
-  const scouts = o.scouts.map((s) => `<div class="slot"><div class="grow"><b>${esc(s.name)}</b> <span class="small">${s.age}歳</span><div class="small"><span style="color:var(--gold)">${stars(s.skill)}</span> ${skillWord(s.skill)} ・ 年${s.salary.toLocaleString()}万円</div><div class="muted small">探す条件：${esc(condText(scoutCond(s)))}</div><div class="row wrap" style="margin-top:4px"><button class="btn small primary" data-go-cond="1">探す条件を決める</button><button class="btn small ghost" data-fire-scout="${s.id}">やめてもらう</button></div></div></div>`).join('') || '<div class="muted">いない</div>';
-  const smarket = o.market.scout.map((s) => `<div class="slot"><div class="grow"><b>${esc(s.name)}</b><div class="small"><span style="color:var(--gold)">${stars(s.skill)}</span> ${skillWord(s.skill)} ・ 年${s.salary.toLocaleString()}万円</div></div><button class="btn small primary" data-hire-scout="${s.id}" ${o.scouts.length >= 3 ? 'disabled' : ''}>雇う</button></div>`).join('');
-  return `<section class="card"><h2>監督</h2>${mgrCard(G.mgr)}<div class="muted small" style="margin-top:6px">試合の作戦・交代・練習はオーナーは決めない。伝えられるのは、ホームの「若手の使い方の方針」と、選手の画面の「この選手を使ってほしい」だけ。</div>
+  const seg = `<div class="seg" role="group" aria-label="スタッフの画面"><button data-stv="mgr" aria-pressed="${staffView === 'mgr'}">監督</button><button data-stv="coach" aria-pressed="${staffView === 'coach'}">コーチ</button><button data-stv="scout" aria-pressed="${staffView === 'scout'}">スカウト（${o.scouts.length}）</button></div><div style="height:10px"></div>`;
+  if (staffView === 'mgr') return seg + `<section class="card"><h2>監督</h2>${mgrCard(G.mgr)}<div class="muted small" style="margin-top:6px">試合の作戦・交代・練習は監督が決める。オーナーが伝えられるのは、トップチームの画面の「方針」と、選手の画面の「この選手を使ってほしい」だけ。</div>
       <button class="btn small ghost" data-act="mgrmarket" style="margin-top:8px">ほかの監督の候補を見る</button></section>
-    ${showMgr ? `<section class="card"><h2>監督の候補</h2><div class="muted small">入れかえると、いまの監督に年俸の半分（${(Math.round(G.mgr.salary / 20) * 10).toLocaleString()}万円）を払う。</div><div class="list" style="margin-top:6px">${o.market.mgr.map((m) => mgrCard(m, `<button class="btn small primary" data-hire-mgr="${m.id}">この監督にする</button>`)).join('')}</div></section>` : ''}
-    <section class="card"><h2>コーチ（5人）</h2>${cw ? '' : '<div class="muted small">コーチの入れかえは、年に1回、冬（12月）にまとめて行う。</div>'}<div class="list" style="margin-top:6px">${coaches}</div></section>
-    ${market}
-    <section class="card"><h2>スカウト（3人まで）</h2><div class="list">${scouts}</div>
-      <h3>雇えるスカウト</h3><div class="list">${smarket}</div></section>`;
+    ${showMgr ? `<section class="card"><h2>監督の候補</h2><div class="muted small">入れかえると、いまの監督に年俸の半分（${(Math.round(G.mgr.salary / 20) * 10).toLocaleString()}万円）を払う。</div><div class="list" style="margin-top:6px">${o.market.mgr.map((m) => mgrCard(m, `<button class="btn small primary" data-hire-mgr="${m.id}">この監督にする</button>`)).join('')}</div></section>` : ''}`;
+  const pay = (n: number) => `<span class="small muted">年${n.toLocaleString()}万</span>`;
+  const st = (sk: number) => `<span class="small" style="color:var(--gold)">${stars(sk)}</span>`;
+  if (staffView === 'coach') {
+    const rows = COACH_ROLES.map((k) => { const c = o.coaches[k];
+      return srow(`c:${k}`, COACH_NAME[k].replace('コーチ', ''), c ? esc(c.name) : '<span class="tag bad">いない</span>', c ? st(c.skill) : '',
+        `<div class="small">受け持ち：${esc(COACH_NOTE[k])}</div>${c ? `<div class="small">${c.age}歳 ・ ${skillWord(c.skill)} ・ 年${c.salary.toLocaleString()}万円</div>` : ''}
+        ${cw ? `<div class="row wrap" style="margin-top:6px">${c ? `<button class="btn small ghost" data-fire-coach="${k}">やめてもらう</button>` : ''}<button class="btn small ghost" data-coach-market="${k}">候補を見る</button></div>` : '<div class="muted small" style="margin-top:4px">入れかえは冬（12月）だけ。</div>'}`); }).join('');
+    const market = coachMarketRole ? `<section class="card"><h2>${COACH_NAME[coachMarketRole]}の候補</h2><div class="list">${o.market.coach[coachMarketRole].map((c) => `<div class="slot"><div class="grow"><b>${esc(c.name)}</b> <span class="small">${c.age}歳</span><div class="small"><span style="color:var(--gold)">${stars(c.skill)}</span> ${skillWord(c.skill)} ・ 年${c.salary.toLocaleString()}万円</div></div><button class="btn small primary" data-hire-coach="${coachMarketRole}:${c.id}">雇う</button></div>`).join('')}</div></section>` : '';
+    return seg + `<section class="card"><h2>コーチ（5人）</h2><div class="slist">${rows}</div></section>${market}`;
+  }
+  const scouts = o.scouts.map((s) => srow(`s:${s.id}`, `${s.age}歳`, esc(s.name), st(s.skill),
+    `<div class="small">${s.age}歳 ・ ${skillWord(s.skill)} ・ 年${s.salary.toLocaleString()}万円</div><div class="muted small">探す条件：${esc(condText(scoutCond(s)))}</div><div class="row wrap" style="margin-top:6px"><button class="btn small primary" data-go-cond="1">探す条件を決める</button><button class="btn small ghost" data-fire-scout="${s.id}">やめてもらう</button></div>`)).join('') || '<div class="muted">いない</div>';
+  const smarket = o.market.scout.map((s) => `<div class="slot"><div class="grow"><b>${esc(s.name)}</b> ${st(s.skill)} ${pay(s.salary)}</div><button class="btn small primary" data-hire-scout="${s.id}" ${o.scouts.length >= 3 ? 'disabled' : ''}>雇う</button></div>`).join('');
+  return seg + `<section class="card"><h2>スカウト（3人まで）</h2><div class="slist">${scouts}</div></section>
+    <section class="card"><h2>雇えるスカウト</h2><div class="list">${smarket}</div></section>`;
 }
 let coachMarketRole: CoachRole | null = null; let showMgr = false;
 
@@ -107,4 +117,6 @@ export function bindOwner(G: GameState, root: HTMLElement, done: (msg?: string |
   $$<HTMLElement>('[data-detail]', root).forEach((b) => b.addEventListener('click', () => openCand(+b.dataset.detail!)));
   bindMarket(G, root, done);
   on('data-trv', (v) => { trView = v as typeof trView; });
+  on('data-stv', (v) => { staffView = v as typeof staffView; openRow = ''; });
+  on('data-open', (v) => { openRow = openRow === v ? '' : v; });
 }

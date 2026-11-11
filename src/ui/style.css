@@ -208,3 +208,11 @@ svg.mini{width:34px;height:38px}
 .crumb h2{margin:0;font-size:18px}
 .selrow{display:flex;gap:8px}.selrow .selw{min-width:0;flex:1}.selrow .sel{padding:0 4px}
 .seg button{white-space:nowrap;padding:0 4px}
+/* スタッフの1行の一覧（問88） */
+.slist{display:flex;flex-direction:column;gap:6px}
+.srow{width:100%;min-height:48px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:inherit;padding:6px 10px;cursor:pointer;text-align:left;font-size:14px}
+.srow[aria-expanded="true"]{border-color:var(--club);border-bottom-left-radius:0;border-bottom-right-radius:0}
+.srole{font-size:12px;color:var(--muted);min-width:4.5em}
+.sname{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{font-size:10px;color:var(--muted)}
+.sdetail{border:1px solid var(--club);border-top:0;border-radius:0 0 10px 10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
