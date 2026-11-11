@@ -256,3 +256,42 @@ header.top::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height
 .confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;animation:conf-fall linear forwards}
 @keyframes conf-fall{to{transform:translate(var(--dx),105vh) rotate(var(--rot))}}
 @media (prefers-reduced-motion: reduce){.btn:active,.hubtile:active,.srow:active,.pl:active,.seg button:active,.navbtn:active{transform:none}.navbtn[aria-current="page"] svg{transform:none}}
+/* ===== 問93：今の形と、最近のサカつくのあいだくらいのにぎやかさ ===== */
+/* ホームの看板（クラブのエンブレム・順位・目標。スタジアムの絵を背に） */
+.hero{position:relative;overflow:hidden;border-radius:18px;padding:16px;color:var(--club-ink);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--club) 78%,#fff) 0%,var(--club) 45%,color-mix(in srgb,var(--club) 70%,#000) 100%);
+  box-shadow:0 6px 18px color-mix(in srgb,var(--club) 35%,transparent)}
+.hero-bg{position:absolute;inset:auto 0 0 0;width:100%;height:100%;color:var(--club-ink);pointer-events:none}
+.hero-in{position:relative;display:flex;align-items:center;gap:14px}
+.hero-crest{width:64px;height:70px;flex:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+.hero-rank{font-family:var(--f-disp);font-size:20px;font-weight:800;line-height:1.1}
+.hero-rank b{font-size:44px;margin-left:6px;color:#ffe27a;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+.hero-rank small{font-size:18px;margin-left:2px}
+.hero-pts{font-size:13px;opacity:.92}
+.hero-goal{position:relative;margin-top:12px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.22);border-radius:10px;padding:8px 10px;font-family:var(--f-disp);font-weight:700;font-size:15px}
+.hero-flag{flex:none;background:var(--gold);color:#1a1a1a;font-size:12px;border-radius:6px;padding:1px 8px}
+.hero-note{position:relative;font-size:12px;opacity:.9;margin-top:6px}
+/* 帯の見出し（ホームのカード） */
+.card.band{padding-top:0;overflow:hidden}
+.card.band>h2{margin:0 -14px 12px;padding:9px 14px;color:var(--club-ink);letter-spacing:.06em;
+  background:linear-gradient(90deg,var(--club) 0%,color-mix(in srgb,var(--club) 70%,var(--gold)) 100%)}
+.card.band>h2::before{background:var(--gold)}
+/* 今週の試合：VS */
+.vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px}
+.vs-side{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;min-width:0}
+.vs-crest{width:48px;height:52px}
+.vs-name{font-family:var(--f-disp);font-weight:800;font-size:14px;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere}
+.vs-sub{font-size:12px;color:var(--muted)}
+.vs-mid{display:flex;flex-direction:column;align-items:center;gap:4px}
+.vs-mid b{font-family:var(--f-disp);font-size:26px;font-style:italic;color:var(--gold);text-shadow:0 1px 0 rgba(0,0,0,.15)}
+/* ボタン：つやと影 */
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--club) 75%,#fff) 0%,var(--club) 55%);box-shadow:0 3px 0 color-mix(in srgb,var(--club) 60%,#000),0 6px 12px color-mix(in srgb,var(--club) 25%,transparent)}
+.btn.primary:active{box-shadow:0 1px 0 color-mix(in srgb,var(--club) 60%,#000)}
+.btn.go{font-size:18px;min-height:56px}
+.btn.ghost{box-shadow:0 2px 0 color-mix(in srgb,var(--club) 30%,transparent)}
+/* 下のメニュー：選んでいるところに丸い印 */
+.navbtn[aria-current="page"]{position:relative}
+.navbtn[aria-current="page"]::before{content:"";position:absolute;top:6px;width:44px;height:30px;border-radius:15px;background:var(--club-soft);z-index:-1}
+nav.bottom .in{position:relative;z-index:0}
+/* 入り口のページ見出し（‹ チーム など）をリボンふうに */
+.crumb h2{font-family:var(--f-disp);font-size:18px;font-weight:800;padding:4px 14px 4px 10px;color:var(--club-ink);background:var(--club);clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}

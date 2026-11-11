@@ -78,12 +78,17 @@ function promoSel(): Set<number> {
   return selCache.set;
 }
 
+/** ホームの看板に描くスタジアム（飾り） */
+const STADIUM_SVG = `<svg class="hero-bg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><g fill="currentColor"><path d="M0 160V96q200-58 400 0v64z" opacity=".22"/><path d="M0 160v-40q200-40 400 0v40z" opacity=".3"/><rect x="40" y="18" width="4" height="70" opacity=".35"/><rect x="356" y="18" width="4" height="70" opacity=".35"/><rect x="28" y="10" width="28" height="12" rx="2" opacity=".5"/><rect x="344" y="10" width="28" height="12" rx="2" opacity=".5"/></g><g stroke="currentColor" fill="none" opacity=".35"><ellipse cx="200" cy="150" rx="150" ry="22"/><path d="M200 128v44"/><ellipse cx="200" cy="150" rx="22" ry="6"/></g></svg>`;
 function nextHTML(G: GameState): string {
   const e = eventOf(G);
   const oppLine = (opp: number, home: boolean | null, extra = '') => { const c = clubById(G, opp); return `<div class="next-match">${home == null ? '<span class="tag">中立</span>' : `<span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span>`}<span class="grow">${esc(c.name)}</span><span class="muted small">${c.tier}部${oppRank(c.id, c.tier)} ・ ${esc(c.mgr.style)}</span></div>${extra}`; };
   /* 問85：順位表のボタンのかわりに、相手の順位を出す */
   const oppRank = (id: number, tier: number) => { const rows = standings(G, tier); const r = rows[0] && rows[0].w + rows[0].d + rows[0].l ? rows.findIndex((x) => x.id === id) + 1 : 0; return r ? ` ${r}位` : ''; };
-  if (e.kind === 'league') return `<h2>今週の試合 ・ リーグ第${e.round}節</h2>${oppLine(e.opp, e.home)}`;
+  if (e.kind === 'league') { const c = clubById(G, e.opp); const me = clubById(G, ME);
+    const side = (x: typeof c, sub: string) => `<div class="vs-side">${emblemSVG(x.emblem, 'vs-crest')}<span class="vs-name">${esc(x.name)}</span><span class="vs-sub">${sub}</span></div>`;
+    const mine = side(me, `${me.tier}部${oppRank(me.id, me.tier)}`); const theirs = side(c, `${c.tier}部${oppRank(c.id, c.tier)} ・ ${esc(c.mgr.style)}`);
+    return `<h2>今週の試合 ・ リーグ第${e.round}節</h2><div class="vs">${e.home ? mine : theirs}<div class="vs-mid"><b>VS</b><span class="tag ${e.home ? '' : 'away'}">${e.home ? 'ホーム' : 'アウェイ'}</span></div>${e.home ? theirs : mine}</div>`; }
   if (e.kind === 'cup') {
     const nm = CUP_ROUND_NAMES[e.round];
     if (!cupAlive(G)) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">大会はもう負けている。今週は試合がない。</div>`;
@@ -121,15 +126,17 @@ function homeHTML(): string {
   const lastM = lm ? `<div class="item">${ni('ball')}<span class="grow">前の試合 ${esc(lm.home.name)} ${lm.score[0]}-${lm.score[1]} ${esc(lm.away.name)}${lm.pk ? `（PK ${lm.pk.join('-')}）` : ''}</span><button class="btn small ghost" data-act="replay">見どころ</button></div>` : '';
   const last = G.history[G.history.length - 1];
   return `
-  <section class="card"><h2>いまの位置と目標</h2>
-    <div class="goal">${tbl.w + tbl.d + tbl.l ? `${tier}部 ${rank}位 <span class="muted small">勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</span>` : `${tier}部 ・ 開幕前`}</div>
-    <div style="margin-top:4px">目標：<b>${esc(currentGoal(G))}</b></div>
-    ${G.owner.debt ? `<div class="muted small">借金 ${yen(G.owner.debt)}</div>` : ''}
-    ${last ? `<div class="muted small">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
-  <section class="card">${nextHTML(G)}</section>
-  ${pend || promo || owner || notes || yrep || news || lastRep || lastM ? `<section class="card notice"><h2>今週のお知らせ</h2>${promo}${pend}${owner}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
+  <section class="hero">${STADIUM_SVG}
+    <div class="hero-in">${emblemSVG(G.club.emblem, 'hero-crest')}<div class="grow">
+      <div class="hero-rank">${tbl.w + tbl.d + tbl.l ? `${tier}部 <b>${rank}</b><small>位</small>` : `${tier}部 <small>開幕前</small>`}</div>
+      ${tbl.w + tbl.d + tbl.l ? `<div class="hero-pts">勝ち点 ${tbl.p}（${tbl.w}勝${tbl.d}分${tbl.l}敗）</div>` : ''}</div></div>
+    <div class="hero-goal"><span class="hero-flag">目標</span>${esc(currentGoal(G))}</div>
+    ${G.owner.debt ? `<div class="hero-note">借金 ${yen(G.owner.debt)}</div>` : ''}
+    ${last ? `<div class="hero-note">${last.season}年目は ${last.tier}部 ${last.rank}位${last.promoted ? 'で昇格！' : last.relegated ? 'で降格' : ''}・大会は${esc(last.cup)}</div>` : ''}</section>
+  <section class="card band">${nextHTML(G)}</section>
+  ${pend || promo || owner || notes || yrep || news || lastRep || lastM ? `<section class="card notice band"><h2>今週のお知らせ</h2>${promo}${pend}${owner}${notes}${news}${yrep}${lastM}${lastRep}</section>` : ''}
   <div class="btns">
-    <button class="btn primary" data-act="week">1週進む</button>
+    <button class="btn primary go" data-act="week">1週進む <span aria-hidden="true">▶</span></button>
     <button class="btn ghost" data-act="skip">次に決めることまで進む</button>
   </div>
 `;
