@@ -189,7 +189,7 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
       const hc = clubById(G, h), ac = clubById(G, a);
       const isMine = h === ME || a === ME;
       const big = isMine && li >= 17 && contention(G, t);
-      const res = simulateMatch(r, teamIn(G, hc), teamIn(G, ac), { record: true, label: `${G.season}年目 リーグ第${li + 1}節`, big, title: `${t}部 第${li + 1}節` });
+      const res = simulateMatch(r, teamIn(G, hc), teamIn(G, ac), { record: true, label: `${G.season}年目 リーグ第${li + 1}節`, big, title: `${t}部 第${li + 1}節`, pre: isMine ? preInfo(G, t, li, hc, ac, big) : undefined });
       const [sh, sa] = res.score; const th = L.table[h], ta = L.table[a];
       if (STATS.on) STATS.matches.push({ tier: t, hs: teamStrength(hc.me ? G.squad : hc.squad), as: teamStrength(ac.me ? G.squad : ac.squad), sh, sa });
       th.gf += sh; th.ga += sa; ta.gf += sa; ta.ga += sh;
@@ -199,6 +199,15 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
   }
   void tier;
   return mine;
+}
+/** 実況の前ふり（問122・123）：順位と、大事な試合か（優勝・昇格・残留・同じ地方どうし） */
+function preInfo(G: GameState, t: number, li: number, hc: Club, ac: Club, big: boolean): { info: string; stakes: { kind: '' | '優勝' | '昇格' | '残留' | '地元' } } {
+  const rows = standings(G, t); const played = rows[0] ? rows[0].w + rows[0].d + rows[0].l : 0;
+  const rk = (id: number) => rows.findIndex((x) => x.id === id) + 1;
+  const info = played ? `リーグ第${li + 1}節、${rk(hc.id)}位と${rk(ac.id)}位の対戦です。` : `リーグ第${li + 1}節です。`;
+  const me = rk(ME);
+  const kind = big ? (t === 1 ? '優勝' : '昇格') : li >= 17 && t < 3 && me >= 10 ? '残留' : prefByName(hc.pref).region === prefByName(ac.pref).region ? '地元' : '';
+  return { info, stakes: { kind } };
 }
 /** 自分の試合のあと：信頼と不満が動き、頼みを聞いてくれたかをお知らせにのせる（問93〜95） */
 let bondNews: string[] = [];
@@ -241,7 +250,7 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
   const final = round === 5;
   for (const t of ties) {
     const isMine = t.a === ME || t.b === ME;
-    const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `勝ち抜きの大会 ${CUP_ROUND_NAMES[round]}` });
+    const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, final, pre: isMine ? { info: `勝ち抜きの大会、${CUP_ROUND_NAMES[round]}です。`, stakes: { kind: final ? '決勝' : '' } } : undefined, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `勝ち抜きの大会 ${CUP_ROUND_NAMES[round]}` });
     t.s = res.score; t.pk = res.pk; t.w = res.winner === 0 ? t.a : t.b;
     if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { const meA = t.a === ME; popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); if (meA && !final) homeInfo = { oppTier: clubById(G, t.b).tier, cup: true }; } }
   }

@@ -5,6 +5,7 @@ import type { Rng } from './rng';
 import type { Line, Token } from './types';
 import type { Fire, OnPl } from './match';
 import { PH } from './phrases';
+import { pickFresh } from './commentary';
 
 interface SideLike { t: { me: boolean } }
 
@@ -27,7 +28,8 @@ export function narrate(r: Rng, scene: string, A: SideLike, D: SideLike, att: On
     if (last < tpl.length) out.push(tpl.slice(last));
     return out;
   };
-  const P = (list: string[]) => fill(r.pick(list));
+  /* 問123 C：同じ試合の中で、同じ言い回しはなるべくくり返さない */
+  const P = (list: string[]) => fill(pickFresh(r, list));
   const B: Line[] = [];
   const ph = PH[scene] || PH.through;
   B.push(P(ph.open));

@@ -1,4 +1,5 @@
 /* 試合の画面：見どころ（メイン）と実況（問35〜37・問63、感想 1〜3・8〜18） */
+import { ANNOUNCER, ANALYST } from '../core/commentary';
 import type { MatchView, ViewItem } from '../core/types';
 import { $, esc, lineHTML, posTag } from './dom';
 import { oppColor, oppVars } from './theme';
@@ -59,6 +60,7 @@ export function openMatch(m: MatchView, myColor: string, after: (() => void) | n
   };
   const openCard = (it: ViewItem) => {
     cur = it;
+    if (it.kind === 'talk' && it.who) { feed.insertAdjacentHTML('beforeend', `<div class="mic ${it.who === '解説' ? 'ana' : ''}"><span class="mic-who">${it.who}<small>${it.who === '解説' ? ANALYST : ANNOUNCER}</small></span><span class="mic-txt"><span class="res"></span></span></div>`); card = feed.lastElementChild as HTMLElement; lines = it.lines; k = 0; return; }
     if (it.kind === 'talk') { feed.insertAdjacentHTML('beforeend', `<div class="talk"><b>${it.min}分</b>　<span class="res"></span></div>`); card = feed.lastElementChild as HTMLElement; lines = it.lines; k = 0; return; }
     feed.insertAdjacentHTML('beforeend', `<div class="scene ${it.me ? '' : 'opp'}"><div class="head"><span class="minute">${it.min}分</span><span class="res"></span></div></div>`);
     card = feed.lastElementChild as HTMLElement; lines = it.lines; k = 0;
@@ -74,6 +76,8 @@ export function openMatch(m: MatchView, myColor: string, after: (() => void) | n
         return `<div class="srow-wrap"><button class="srow rtrow" data-rt="${i}" aria-expanded="false">${posTag(p.pos)}<span class="grow sname">${esc(p.name)}${p.sub ? ' <span class="muted small">途中から</span>' : ''}${momMe === p.name ? ' <span class="tag gold">MOM</span>' : ''}</span>${p.goals ? `<span class="small">⚽${p.goals > 1 ? p.goals : ''}</span>` : ''}${p.ast ? `<span class="small">A${p.ast > 1 ? p.ast : ''}</span>` : ''}<span class="rt ${rc(rt)}">${rt.toFixed(1)}</span></button>
           ${s ? `<div class="sdetail rtd" hidden><div class="rtmini"><span>出場 ${p.min ?? 90}分</span><span>パス ${s.pa}本（成功 ${s.pa ? Math.round((s.pc / s.pa) * 100) : 0}%）</span><span>シュート ${s.sh}（枠内 ${s.ot}）</span><span>決定機を作った ${s.kp}</span><span>ボールを奪った ${s.tk}</span><span>ドリブル成功 ${s.dr}</span>${p.pos === 'GK' ? `<span>セーブ ${s.sv}</span>` : ''}</div></div>` : ''}</div>`; }).join('');
       const mom = m.mom ? `<div class="mom"><span class="tag gold">MOM</span> <span class="${m.mom.me ? 'n-me' : 'n-op'}">${esc(m.mom.name)}</span>（${esc(m.mom.club)}）<b class="rt r-top">${m.mom.rt.toFixed(1)}</b></div>` : '';
+      const recap = (m.recap ?? []).map((x) => `<div class="mic ${x.who === '解説' ? 'ana' : ''}"><span class="mic-who">${x.who}<small>${x.who === '解説' ? ANALYST : ANNOUNCER}</small></span><span>${lineHTML(x.line)}</span></div>`).join('');
+      if (recap) feed.insertAdjacentHTML('beforeend', `<div class="recap">${recap}</div>`);
       feed.insertAdjacentHTML('beforeend', `<div class="card endcard"><h2>試合のまとめ</h2><div class="goal">試合終了 ${m.score.join(' - ')}${m.pk ? `（PK戦 ${m.pk.join(' - ')}）` : ''}</div>
         <div class="muted">決定機 ${m.chances[0] + m.chances[1]}回（${esc(m.home.name)} ${m.chances[0]}回 ・ ${esc(m.away.name)} ${m.chances[1]}回）</div>
         ${sco ? `<div style="margin-top:6px">得点：${sco}</div>` : ''}

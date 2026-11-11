@@ -507,3 +507,13 @@ nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
 .statement .st-stamp{width:auto;min-width:40px;height:30px;padding:0 6px;border-radius:15px;white-space:nowrap}
 .statement .st-title{padding-right:56px;padding-left:56px}
 .statement td.wrap{white-space:normal;text-align:right;min-width:40%}
+.chlist{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
+/* 問122：実況と解説 */
+.mic{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.55;padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--club) 9%,var(--card));border:1px solid color-mix(in srgb,var(--club) 22%,var(--line));animation:in .3s ease-out}
+.mic.ana{background:color-mix(in srgb,var(--gold) 12%,var(--card));border-color:color-mix(in srgb,var(--gold) 35%,var(--line))}
+.mic-who{flex:none;display:flex;flex-direction:column;align-items:center;min-width:52px;font-family:var(--f-disp);font-weight:800;font-size:13px;color:var(--club)}
+.mic.ana .mic-who{color:color-mix(in srgb,var(--gold) 70%,#000)}
+.mic-who small{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.recap{display:flex;flex-direction:column;gap:8px}
+@media (prefers-reduced-motion:reduce){.mic{animation:none}}
+.mic-txt{flex:1;min-width:0}

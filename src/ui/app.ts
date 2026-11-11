@@ -1,4 +1,5 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
+import { showChangesOnce } from './changes';
 import { raiseOffer } from '../core/nego';
 import { openRegMeet, openSwap } from './regview';
 import { canSwapOut, REG_SIZE, regd, MAX_SQUAD } from '../core/squad';
@@ -73,7 +74,7 @@ export function boot() {
   $$<HTMLButtonElement>('.navbtn').forEach((b) => { b.innerHTML = ICON[b.dataset.tab === 'team' ? 'teamNav' : b.dataset.tab!] + b.innerHTML; b.addEventListener('click', () => { setTab(b.dataset.tab!); }); });
   $('#menuBtn').addEventListener('click', () => { setTab('settings'); });
   $('#mailBtn').addEventListener('click', () => openInbox(app.G, () => { closeSheet(); render(); }, autosave, msgGo));
-  if (g) render(); else startNew(false);
+  if (g) { render(); showChangesOnce(app.kv, false, () => render()); } else { showChangesOnce(app.kv, true, () => {}); startNew(false); }
 }
 /* 下のメニューは4つ（ホーム・チーム・経営・リーグ）。チーム・経営・リーグは、押すと大きなアイコンが並ぶ（問82：サカつくを手本に） */
 const GROUP_OF: Record<string, string> = { home: 'home', team: 'team', squad: 'team', youth: 'team', tr: 'team', biz: 'biz', fac: 'biz', people: 'biz', money: 'biz', league: 'league', table: 'league', cup: 'league', rec: 'league' };

@@ -97,6 +97,10 @@ export interface ViewItem {
   me: boolean;
   lines: Line[];
   goal?: { scorer: string; score: [number, number]; flow?: string | null; mem?: boolean; team: string; me: boolean };
+  /** 実況・解説の言葉（問122） */
+  who?: '実況' | '解説';
+  /** 並べる順（同じ分の中で） */
+  ord?: number;
 }
 
 export interface MatchView {
@@ -116,6 +120,8 @@ export interface MatchView {
     st?: { pa: number; pc: number; tk: number; sh: number; ot: number; sv: number; dr: number; kp: number } }[];
   /** その試合でいちばんよかった選手（問108） */
   mom?: { name: string; me: boolean; rt: number; club: string };
+  /** 試合のあとの実況と解説のふり返り（問122） */
+  recap?: { who: '実況' | '解説'; line: Line }[];
 }
 
 export interface ReportEntry {

@@ -8,6 +8,7 @@ import { SP_MAP, type Step } from './data/specials';
 import { ovr, posRating, teamStrength } from './player';
 import type { Line, Manager, MatchView, Player, Token, ViewItem } from './types';
 import { narrate } from './narrate';
+import { resetPhrases, playLine, goalComment, LATE_TIE, pickFresh, preTalk, halfTalk, fullTalk, type PlayKind, type Stakes, type Who, type MicLine } from './commentary';
 
 export type Policy = '若手多め' | 'ふつう' | '勝ち優先';
 export interface TeamIn { id: number; name: string; me: boolean; color: string; squad: Player[]; mgr: Manager; policy?: Policy; injMul?: number;
@@ -15,7 +16,9 @@ export interface TeamIn { id: number; name: string; me: boolean; color: string; 
   heard?: Map<number, boolean>;
   /** 監督の今月の方針（月の経営会議で話したこと）：守りを固める／攻めに出る */
   tilt?: 'def' | 'atk' | null; }
-export interface MatchOpts { record?: boolean; label?: string; big?: boolean; cup?: boolean; neutral?: boolean; title?: string; }
+export interface MatchOpts { record?: boolean; label?: string; big?: boolean; cup?: boolean; neutral?: boolean; title?: string;
+  /** 実況の前ふり（問122・123）：順位などのひとことと、大事な試合か */
+  pre?: { info: string; stakes: Stakes }; final?: boolean; }
 export interface OnPl { p: Player; pos: Pos; sub: boolean; }
 /** 1試合の選手ごとの数字（問107） */
 export interface St { pa: number; pc: number; tk: number; sh: number; ot: number; sv: number; dr: number; kp: number; as: number; g: number; dw: number; dl: number; ga: number; from: number; to: number }
@@ -29,7 +32,7 @@ interface Chance {
   min: number; scene: string; k: number; att: OnPl; assist: OnPl | null; def: OnPl | null; ok: boolean; goal: boolean; save: boolean; shotAv: number; text: Line[];
   flow?: string | null; mem?: boolean; score?: [number, number]; turnover?: boolean;
 }
-interface Ev { t: number; kind: 'talk' | 'flow' | 'memo'; text: Line; me: boolean; }
+interface Ev { t: number; kind: 'talk' | 'flow' | 'memo'; text: Line; me: boolean; who?: Who; after?: boolean; pre?: boolean; good?: boolean; hl?: boolean }
 
 export interface MatchResult { score: [number, number]; pk: [number, number] | null; winner: 0 | 1 | null; view: MatchView; }
 
@@ -154,15 +157,29 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
     return { t, home: ix === 0 && !opts.neutral, day: (r.next() - 0.5) * 8, style: t.mgr.style, form, on: lineup, bench, subs: 0, goals: 0, str: myS, offs: [], changed: false, st: new Map(lineup.map((x) => [x.p, zeroSt()])) };
   });
   const ev: Ev[] = []; const log: Chance[] = [];
+  const mic = home.me || away.me; resetPhrases();
+  const poss: [number, number] = [0, 0]; let possHalf: [number, number] = [0, 0]; let lateTie = false;
   const T = (side: Side, pl: OnPl | Player): Token => ({ t: ('p' in pl ? pl.p : pl).name, me: side.t.me });
   const C = (side: Side): Token => ({ t: side.t.name, me: side.t.me });
   for (const s of sides) for (const x of s.on) if (s.t.me && x.p.apps === 0) ev.push({ t: 1, kind: 'memo', text: [T(s, x), ' がプロとして初めてピッチに立つ。'], me: true });
+  /* 問122 C：試合の前の実況と解説 */
+  if (mic) {
+    const ms = sides.find((x) => x.t.me)!; const ace = [...ms.on].filter((x) => x.pos !== 'GK').sort((a, b) => b.p.seasonGoals - a.p.seasonGoals || ovr(b.p) - ovr(a.p))[0];
+    for (const m of preTalk(r, C(sides[0]), C(sides[1]), opts.pre?.info ?? '', opts.pre?.stakes ?? { kind: '' }, ace ? { name: T(ms, ace), goals: ace.p.seasonGoals } : null)) ev.push({ t: 0, kind: 'talk', me: false, text: m.line, who: m.who, pre: true, hl: true });
+  }
   ev.push({ t: 0, kind: 'talk', me: false, text: ['キックオフ。', C(sides[0]), ' は ', sides[0].form, '、', C(sides[1]), ' は ', sides[1].form, ' で入った。'] });
   const pending: { k: number; min: number }[] = [];
   for (let blk = 0; blk < 6; blk++) {
     const t0 = blk * 15;
     if (blk === 3) {
       ev.push({ t: 45, kind: 'talk', me: false, text: ['前半終了。', C(sides[0]), ' ', String(sides[0].goals), ' - ', String(sides[1].goals), ' ', C(sides[1]), '。'] });
+      if (mic) {
+        possHalf = [...poss] as [number, number]; const tot = Math.max(1, poss[0] + poss[1]);
+        const shots = sides.map((x) => [...x.st.values()].reduce((t, y) => t + y.sh, 0)) as [number, number];
+        let star: { name: Token; why: string } | null = null; let bs = 2.5;
+        for (const x of sides) for (const [p, y] of x.st) { const v = y.g * 3 + y.as * 2 + y.kp + y.tk * 0.35 + y.dr * 0.45 + y.sv * 0.6; if (v > bs) { bs = v; star = { name: { t: p.name, me: x.t.me }, why: y.g ? 'もう点も取りました。' : y.sv >= 2 ? 'キーパーが当たっていますね。' : y.tk >= 4 ? '何度もボールを奪っています。' : y.dr >= 3 ? 'ドリブルで仕掛け続けています。' : y.kp >= 2 ? 'チャンスを何度も作っています。' : 'ボールがよく集まっています。' }; } }
+        for (const m of halfTalk(r, { score: [sides[0].goals, sides[1].goals], poss: [Math.round((poss[0] / tot) * 100), 100 - Math.round((poss[0] / tot) * 100)], shots, names: [C(sides[0]), C(sides[1])], star })) ev.push({ t: 45, kind: 'talk', me: false, text: m.line, who: m.who, after: true, hl: true });
+      }
       ev.push({ t: 46, kind: 'talk', me: false, text: [r.pick(['後半が始まる。', '後半のキックオフ。', '選手たちがピッチにもどってきた。後半開始。'])] });
     }
     /* 点差で監督が動く（問56・問62） */
@@ -204,8 +221,19 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
       /* この1分のボールの動き。決定機がある分は、その攻めの流れが決定機につながる */
       const here: { k: number; min: number }[] = [];
       while (ci < minutes.length && minutes[ci].min <= mm) here.push(minutes[ci++]);
-      if (!here.length) { const k = r.next() < share ? 0 : 1; flow(r, sides[k], sides[1 - k], mm, press[1 - k], false, 11, 5); if (r.next() < 0.85) flow(r, sides[1 - k], sides[k], mm, press[k], false, 7, 2); }
+      const notes: { k: PlayKind; A: Side; D: Side; a: OnPl; d: OnPl | null }[] = [];
+      const nt = mic ? (A: Side, D: Side) => (k: PlayKind, a: OnPl, d: OnPl | null) => notes.push({ k, A, D, a, d }) : () => undefined;
+      if (!here.length) { const k = r.next() < share ? 0 : 1; poss[k]++; flow(r, sides[k], sides[1 - k], mm, press[1 - k], false, 11, 5, nt(sides[k], sides[1 - k])); if (r.next() < 0.85) flow(r, sides[1 - k], sides[k], mm, press[k], false, 7, 2, nt(sides[1 - k], sides[k])); }
+      else poss[here[0].k]++;
       for (const { k } of here) flow(r, sides[k], sides[1 - k], mm, press[1 - k], true);
+      /* 問121：試合の流れの目立つ出来事を、実況の1行にする（1分に1つまで） */
+      if (notes.length && r.next() < 0.34) {
+        const mine = notes.filter((x) => x.A.t.me ? ['dr', 'off', 'chain'].includes(x.k) : ['tk', 'blk', 'sv'].includes(x.k));
+        const n0 = mine.length && r.next() < 0.6 ? r.pick(mine) : r.pick(notes);
+        const map: Record<string, Token> = { A: T(n0.A, n0.a), T: C(n0.A), O: C(n0.D) }; if (n0.d) map.D = T(n0.D, n0.d);
+        const good = (n0.A.t.me && n0.k === 'dr') || (n0.D.t.me && ['tk', 'sv', 'blk'].includes(n0.k));
+        ev.push({ t: mm, kind: 'talk', me: good, text: playLine(r, n0.k, map), good });
+      }
     for (const { k, min } of here) {
       const A = sides[k], D = sides[1 - k];
       const res = resolveChance(r, A, D, Math.min(90, min));
@@ -220,6 +248,15 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
         res.flow = tie ? '同点' : lead ? '勝ち越し' : before[k] < before[1 - k] && A.goals > D.goals ? '逆転' : null;
         if (A.t.me && res.att.p.goals === 0 && !log.some((x) => x !== res && x.goal && x.att.p === res.att.p)) res.mem = true;
         res.score = [sides[0].goals, sides[1].goals];
+        /* 問123 A・B：点差・時間帯・選手の特徴で、ゴールのあとにひとこと */
+        if (mic) {
+          const p = res.att.p; const inMatch = log.filter((x) => x.goal && x.att.p === p).length;
+          const head = res.scene === 'cross' || res.scene === 'setpiece' || res.scene === 'longball';
+          const line = goalComment(r, { min, flow: res.flow ?? null, lead: A.goals - D.goals, first: sides[0].goals + sides[1].goals === 1, p, seasonGoals: p.seasonGoals + inMatch, headed: head, mem: !!res.mem, me: A.t.me }, T(A, res.att));
+          if (line) ev.push({ t: Math.min(90, min), kind: 'talk', me: A.t.me, text: line, who: '実況', after: true, hl: true });
+        }
+      } else if (mic && res.ok && min >= 80 && sides[0].goals === sides[1].goals && !lateTie && r.next() < 0.6) {
+        lateTie = true; ev.push({ t: Math.min(90, min), kind: 'talk', me: false, text: [pickFresh(r, LATE_TIE)], who: '実況', after: true, hl: true });
       }
     }
     }
@@ -235,6 +272,20 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
   const rt = rateAll(sides, score);
   if (opts.record) record(r, sides, log, opts.label || '', rt);
   const view = buildView(sides, log, ev, score, pk, !!opts.big, opts.title || '', rt);
+  /* 問122 A：試合のあとの実況と解説のふり返り（試合のまとめの上に出す） */
+  if (mic) {
+    const tot = Math.max(1, poss[0] + poss[1]); const pp: [number, number] = [Math.round((poss[0] / tot) * 100), 100 - Math.round((poss[0] / tot) * 100)];
+    let decider: { name: Token; min: number } | null = null;
+    if (winner != null && !pk) { const lose = score[1 - winner]; const g = log.filter((c) => c.goal && c.k === winner)[lose]; if (g) decider = { name: T(sides[winner], g.att), min: g.min }; }
+    const m = view.mom; let momT: { name: Token; rt: string; why: string } | null = null;
+    if (m) { const sd = sides.find((x) => x.t.name === m.club)!; const pl = [...sd.on, ...sd.offs].find((x) => x.p.name === m.name); const y = pl ? stOf(sd, pl.p) : null;
+      const why = !y ? '' : y.g >= 2 ? `${y.g}点を取りました。` : y.g && y.as ? '点も取って、アシストもしました。' : y.g ? '大事なゴールを決めました。' : y.as ? 'アシストで勝ちに貢献しました。' : y.sv >= 3 ? `${y.sv}本のセーブで、ゴールを守りました。` : y.tk >= 5 ? `ボールを${y.tk}回も奪いました。` : '攻めも守りも、よく走っていました。';
+      momT = { name: { t: m.name, me: m.me }, rt: m.rt.toFixed(1), why }; }
+    let saves: { name: Token; n: number } | null = null;
+    for (const x of sides) { const g = x.on.find((y) => y.pos === 'GK'); if (g) { const n = stOf(x, g.p).sv; if (!saves || n > saves.n) saves = { name: T(x, g), n }; } }
+    void possHalf;
+    view.recap = fullTalk(r, { score, pk, names: [C(sides[0]), C(sides[1])], poss: pp, winner, decider, mom: momT, saves, final: !!opts.final, big: !!opts.big }).map((x: MicLine) => ({ who: x.who, line: x.line }));
+  }
   return { score, pk, winner, view };
 }
 
@@ -469,7 +520,9 @@ function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, numbe
     min: c.min, kind: c.goal ? 'goal' : 'chance', me: sides[c.k].t.me, lines: c.text,
     goal: c.goal ? { scorer: c.att.p.name, score: c.score!, flow: c.flow ?? null, mem: !!c.mem, team: sides[c.k].t.name, me: sides[c.k].t.me } : undefined,
   });
-  const evItem = (e: Ev): ViewItem => ({ min: e.t, kind: e.kind, me: e.me, lines: [e.text] });
+  /* 並べる順：前ふり → キックオフなど → 場面 → 場面のあとのひとこと → 試合終了の笛 */
+  const ordOf = (e: Ev) => (e.pre ? -2 : e.after ? 6 : e.kind === 'talk' ? (e.t >= 90 ? 8 : 0) : 3);
+  const evItem = (e: Ev): ViewItem => ({ min: e.t, kind: e.kind, me: e.me, lines: [e.text], who: e.who, ord: ordOf(e) });
   /* 見どころ（問63）：ゴールは全部、守りの見せ場、流れが変わった場面、記念の場面、残りは惜しい場面 */
   const goals = log.filter((x) => x.goal);
   const flows = ev.filter((e) => e.kind === 'flow');
@@ -483,8 +536,12 @@ function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, numbe
   const hl: ViewItem[] = [...chosen].map(toItem);
   for (const f of flows) hl.push(evItem(f));
   for (const m of memos) hl.push(evItem(m));
-  hl.sort((a, b) => a.min - b.min || (a.kind === 'memo' ? -1 : 1));
-  const full: ViewItem[] = [...log.map(toItem), ...ev.map(evItem)].sort((x, y) => x.min - y.min || (x.kind === 'talk' && y.kind !== 'talk' ? (x.min >= 90 ? 1 : -1) : 0));
+  /* 問121 C・問122：見どころにも、前ふり・前半のふり返り・ゴールのあとのひとこと、自分の選手のいいプレー（2〜3場面）を入れる */
+  for (const e of ev.filter((x) => x.hl)) { if (e.after && e.who === '実況' && e.t !== 45 && !hl.some((h) => h.min === e.t && h.kind === 'goal') && !/同点のまま|どちらに転ぶ|ため息/.test(String(e.text[0]))) continue; hl.push(evItem(e)); }
+  const goods = ev.filter((x) => x.good); for (const e of goods.filter((_, i) => i % Math.max(1, Math.floor(goods.length / 3)) === 0).slice(0, 3)) hl.push(evItem(e));
+  const ordV = (x: ViewItem) => x.ord ?? (x.kind === 'memo' ? 2 : 3);
+  hl.sort((a, b) => a.min - b.min || ordV(a) - ordV(b));
+  const full: ViewItem[] = [...log.map(toItem), ...ev.map(evItem)].sort((x, y) => x.min - y.min || ordV(x) - ordV(y));
   const meSide = sides.find((s) => s.t.me);
   /* 感想：先発はポジション順（GK→DF→MF→FW）、そのあとに途中から入った選手を入った順に */
   const PO: Record<string, number> = { GK: 0, CB: 1, SB: 2, DM: 3, CM: 4, AM: 5, WG: 6, ST: 7 };
@@ -517,26 +574,28 @@ function winner(r: Rng, D: Side): OnPl {
   return r.wpick(f.map((x) => [x, W_WIN[x.pos] * Math.pow(Math.max(10, x.p.a[DEF]), 1.5) + 40] as [OnPl, number]));
 }
 /** 1回の攻め：パスをつなぐ。keep のときは、このあと決定機になる（とちゅうで奪われない） */
-function flow(r: Rng, A: Side, D: Side, t: number, press: number, keep: boolean, maxLen = 7, minLen = 2): void {
+function flow(r: Rng, A: Side, D: Side, t: number, press: number, keep: boolean, maxLen = 7, minLen = 2, note: (k: PlayKind, a: OnPl, d: OnPl | null) => void = () => undefined): void {
   let h = r.wpick(A.on.map((x) => [x, W_HOLD[x.pos]] as [OnPl, number]));
   const n = r.int(minLen, maxLen);
   for (let i = 0; i < n; i++) {
     const sh = stOf(A, h.p);
     /* 決定機にならないシュート（遠め・角度がない）：点にはならない。枠外・ブロック・キーパーが楽に止める */
     if (!keep && i >= 1 && (FWD.includes(h.pos) || h.pos === 'CM') && r.next() < (FWD.includes(h.pos) ? 0.1 : 0.035) * (0.6 + h.p.a[SHT] / 100)) {
-      sh.sh++; if (r.next() >= 0.7) { sh.ot++; stOf(D, gkOf(D).p).sv++; }
+      sh.sh++; const u = r.next();
+      if (u >= 0.7) { sh.ot++; stOf(D, gkOf(D).p).sv++; note('sv', h, gkOf(D)); } else if (u < 0.25) note('blk', h, winner(r, D)); else note('off', h, null);
       return;
     }
     if (FWD.includes(h.pos) && r.next() < 0.16) {
       const d = winner(r, D);
       const win = keep || r.next() < sig((fv(A, h, DRI, t) - fv(D, d, DEF, t)) / 14 + 0.25);
-      if (win) sh.dr++; else { stOf(D, d.p).tk++; return; }
+      if (win) { sh.dr++; if (!keep) note('dr', h, d); } else { stOf(D, d.p).tk++; note('tk', h, d); return; }
     }
     const to = r.wpick(A.on.filter((x) => x !== h).map((x) => [x, W_HOLD[x.pos] * (i >= 2 && FWD.includes(x.pos) ? 1.6 : 1) * (x.pos === 'GK' ? 0.6 : 1)] as [OnPl, number]));
     const pOk = clamp(0.83 + ((fv(A, h, PAS, t) + fv(A, h, IQ, t)) / 2 - press) / 140 - i * 0.012 - (h.pos === 'GK' ? 0.08 : 0) + (FWD.includes(to.pos) ? -0.04 : 0.03), 0.55, 0.97);
     sh.pa++;
-    if (keep || r.next() < pOk) { sh.pc++; h = to; } else { stOf(D, winner(r, D).p).tk++; return; }
+    if (keep || r.next() < pOk) { sh.pc++; h = to; } else { const w = winner(r, D); stOf(D, w.p).tk++; if (r.next() < 0.3) note('tk', h, w); return; }
   }
+  if (!keep && n >= 9) note('chain', h, null);
 }
 function chanceStats(A: Side, D: Side, c: Chance) {
   const g = gkOf(D);
