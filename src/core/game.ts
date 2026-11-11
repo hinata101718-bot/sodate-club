@@ -13,11 +13,12 @@ import type { Manager, MatchView, Player, ReportEntry } from './types';
 import type { Pos } from './constants';
 import { intake, monthlyReport, recommend, startYouth, youthWeek, type YouthReport } from './youth';
 import { initOwner, growCtx, gkCtx, youthSkill, weekMoney, popResult, maybeWalkIn, trialWeek, rollContracts, newOwnerSeason, refreshMarket, earn, type OwnerState } from './owner';
+import { afterMyMatch, monthBond, seasonBond, refusesToLeave, ORDER_SHORT, type OrderKind } from './bond';
 import { scoutMonth, resolveBids, seeOpponent, learnAward, releaseFree, freeNews, aiTransfers, marketValue } from './market';
 import { sponsorYear, leaguePrize, CUP_PRIZE } from './finance';
 
 export { makeFixtures };
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 export interface Row { p: number; w: number; d: number; l: number; gf: number; ga: number; }
 export interface Offer { type: 'offer'; pid: number; club: string; price: number; clubId?: number; listed?: boolean; }
 export interface CupTie { a: number; b: number; w?: number; s?: [number, number]; pk?: [number, number] | null; }
@@ -168,11 +169,21 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
       if (STATS.on) STATS.matches.push({ tier: t, hs: teamStrength(hc.me ? G.squad : hc.squad), as: teamStrength(ac.me ? G.squad : ac.squad), sh, sa });
       th.gf += sh; th.ga += sa; ta.gf += sa; ta.ga += sh;
       if (sh > sa) { th.w++; th.p += 3; ta.l++; } else if (sh < sa) { ta.w++; ta.p += 3; th.l++; } else { th.d++; ta.d++; th.p++; ta.p++; }
-      if (isMine) { mine = res.view; if (G.owner) { seeOpponent(G, h === ME ? ac : hc); popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); if (h === ME) homeInfo = { oppTier: t, cup: false }; } }
+      if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { seeOpponent(G, h === ME ? ac : hc); popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); if (h === ME) homeInfo = { oppTier: t, cup: false }; } }
     }
   }
   void tier;
   return mine;
+}
+/** 自分の試合のあと：信頼と不満が動き、頼みを聞いてくれたかをお知らせにのせる（問93〜95） */
+let bondNews: string[] = [];
+function myAfter(G: GameState, v: MatchView) {
+  afterMyMatch(G, v.played);
+  const o = v.orders ?? [];
+  if (o.length) {
+    const ok = o.filter((x) => x.heard); const ng = o.filter((x) => !x.heard);
+    bondNews.push(`監督への頼み：${o.length}つのうち${ok.length}つを聞いてくれた${ok.length ? `（${ok.map((x) => `${x.name}を${ORDER_SHORT[x.kind as OrderKind]}`).join('・')}）` : ''}${ng.length ? `。聞いてもらえなかった：${ng.map((x) => x.name).join('・')}` : ''}。`);
+  }
 }
 /** 昇格や優勝がかかっているか（見どころを長めにする：問37） */
 function contention(G: GameState, tier: number): boolean {
@@ -202,7 +213,7 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
     const isMine = t.a === ME || t.b === ME;
     const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `勝ち抜きの大会 ${CUP_ROUND_NAMES[round]}` });
     t.s = res.score; t.pk = res.pk; t.w = res.winner === 0 ? t.a : t.b;
-    if (isMine) { mine = res.view; if (G.owner) { const meA = t.a === ME; seeOpponent(G, clubById(G, meA ? t.b : t.a)); popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); if (meA && !final) homeInfo = { oppTier: clubById(G, t.b).tier, cup: true }; } }
+    if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { const meA = t.a === ME; seeOpponent(G, clubById(G, meA ? t.b : t.a)); popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); if (meA && !final) homeInfo = { oppTier: clubById(G, t.b).tier, cup: true }; } }
   }
   G.cup.rounds[round] = ties; G.cup.round = round + 1;
   if (final) G.cup.champion = ties[0].w!;
@@ -216,6 +227,7 @@ export function advanceWeek(G: GameState): WeekResult {
   try {
     const w = G.week;
     if (G.promo?.open) news.push(...applyPromo(G, r, G.promo.rec));
+    bondNews = [];
     if (G.owner) news.push(...resolveBids(G, r));
     homeInfo = null;
     let match: MatchView | null = null;
@@ -239,6 +251,7 @@ export function advanceWeek(G: GameState): WeekResult {
     if (!isOff(w)) youthWeek(r, G.youth, youthCoachSkill(G), ctx.field, isCamp(w));
     if (!isOff(w)) news.push(...trialWeek(G, r, ctx));
     if (w % 4 === 0) news.push(...scoutMonth(G, r));
+    if (w % 4 === 2 && G.owner) news.push(...monthBond(G));
     if (w === AWARD_WEEK) releaseFree(G, r);
     if (w === 24 || w === AWARD_WEEK) news.push(...freeNews(G, r));
     if (w === 25 || w === AWARD_WEEK + 1) news.push(...aiTransfers(G, r));
@@ -258,6 +271,7 @@ export function advanceWeek(G: GameState): WeekResult {
     let seasonEnd = false;
     if (G.week >= WEEKS) { news.push(...newSeason(G, r)); seasonEnd = true; news.push(`${G.season}年目が始まった。`); }
     if (G.week === 4) { G.promo = { open: true, rec: recommend(G.youth, G.squad.length) }; news.push('春の昇格会議が開かれる。トップに上げる子を決めよう。'); }
+    news.push(...bondNews); bondNews = [];
     G.news = news;
     return { match, report: G.lastReport, seasonEnd, news };
   } finally { G.rng = r.s; }
@@ -267,7 +281,9 @@ function maybeOffer(G: GameState, r: Rng) {
   /* 他クラブからのオファー（問41）。移籍の期間だけ */
   if (r.next() > 0.22 || G.pending.length >= 2) return;
   const cands = G.squad.filter((p) => ovr(p) >= 50 && p.inj === 0 && !G.pending.some((e) => e.pid === p.id)); if (!cands.length) return;
-  const p = r.pick(cands);
+  /* 不満がたまっている選手・移籍したい選手には、ほかのクラブも声をかけやすい（問95） */
+  const hot = cands.filter((p) => p.wantOut || (p.unrest ?? 0) >= 50);
+  const p = hot.length && r.next() < 0.6 ? r.pick(hot) : r.pick(cands);
   const buyers = G.clubs.filter((c) => !c.me && c.tier <= Math.max(1, myTier(G)));
   const c = r.pick(buyers);
   G.pending.push({ type: 'offer', pid: p.id, club: c.name, clubId: c.id, price: offerPrice(p, myTier(G)) });
@@ -288,6 +304,7 @@ export function answerOffer(G: GameState, i: number, accept: boolean): string | 
   if (accept && G.squad.length <= 16) return 'トップが16人より少なくなると試合ができなくなるので、受けられない。';
   if (accept) {
     const p = G.squad.find((x) => x.id === e.pid);
+    if (p && refusesToLeave(p, G.season)) { G.pending.splice(i, 1); return `${p.name} は「このクラブに残りたい」と言って、移籍を断った。`; }
     G.squad = G.squad.filter((x) => x.id !== e.pid);
     if (G.owner) earn(G, 'sales', e.price);
     const buyer = e.clubId != null ? G.clubs.find((c) => c.id === e.clubId) : G.clubs.find((c) => c.name === e.club);
@@ -427,6 +444,7 @@ export function decidePromo(G: GameState, ids: number[]): string[] {
 /* ---------- 新しいシーズン：昇格と降格 ---------- */
 function newSeason(G: GameState, r: Rng): string[] {
   const out: string[] = [];
+  if (G.owner) seasonBond(G);
   if (G.owner) out.push(...rollContracts(G));
   const ret = G.squad.filter((p) => p.retiring);
   if (ret.length) out.push(`${ret.map((p) => p.name).join('、')} が引退した。`);

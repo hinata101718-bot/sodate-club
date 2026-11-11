@@ -8,6 +8,7 @@ import { PREFS, REGIONS, prefByName } from './data/prefs';
 import { makePlayer, ovr, salaryFor, assignNumbers } from './player';
 import { TIER_LVL, type Club } from './world';
 import type { Scout } from './staff';
+import { joinBond } from './bond';
 import type { Player } from './types';
 import type { GameState } from './game';
 
@@ -227,7 +228,7 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
     const fee = k.fee ?? 100;
     if (G.owner.money < fee) return 'お金が足りない。';
     G.owner.money -= fee; G.owner.ledger.buy += fee;
-    const p = w.p; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
+    const p = w.p; joinBond(p, false); p.love = 45; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
     G.squad.push(p); assignNumbers(G.squad); delete mk.known[pid]; dropShort(G, pid);
     void r; return null;
   }
@@ -254,7 +255,7 @@ export function resolveBids(G: GameState, r: Rng): string[] {
     if (b.fee) { G.owner.money -= b.fee; G.owner.ledger.buy += b.fee; }
     if (w.club) replaceInClub(G, w.club, p, r);
     else mk.free = mk.free.filter((x) => x !== p);
-    p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = 3; p.salary = b.salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
+    joinBond(p, false); p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = 3; p.salary = b.salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
     G.squad.push(p); assignNumbers(G.squad); delete mk.known[p.id]; dropShort(G, p.id);
     out.push(`移籍の結果：${w.club ? `${w.club.name}から` : 'フリーの'} ${who} が来てくれた！${b.fee ? `（移籍金 ${manText(b.fee)}、` : '（'}給料 年${b.salary.toLocaleString()}万円）`);
   }

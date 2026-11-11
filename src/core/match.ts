@@ -1,4 +1,5 @@
 /* 試合（企画書 13-2：場面ごとの1対1を積み上げて、結果ができあがる） */
+import { obeyChance, youthBonus, mgrView } from './bond';
 import { Rng, clamp, sig } from './rng';
 import { APTF, DEF, DRI, FORM, FORM_ATK, IQ, PAS, PHY, SCENE_BASE, SHT, SPD, STA, STYLES, type Pos, type StyleName } from './constants';
 import { SP_MAP, type Step } from './data/specials';
@@ -7,7 +8,9 @@ import type { Line, Manager, MatchView, Player, Token, ViewItem } from './types'
 import { narrate } from './narrate';
 
 export type Policy = '若手多め' | 'ふつう' | '勝ち優先';
-export interface TeamIn { id: number; name: string; me: boolean; color: string; squad: Player[]; mgr: Manager; policy?: Policy; injMul?: number; }
+export interface TeamIn { id: number; name: string; me: boolean; color: string; squad: Player[]; mgr: Manager; policy?: Policy; injMul?: number;
+  /** オーナーの頼みを聞いたか（選手ごと。試合の中で決まる） */
+  heard?: Map<number, boolean>; }
 export interface MatchOpts { record?: boolean; label?: string; big?: boolean; cup?: boolean; neutral?: boolean; title?: string; }
 export interface OnPl { p: Player; pos: Pos; sub: boolean; }
 interface Side {
@@ -37,17 +40,31 @@ export function youthBias(t: TeamIn): number {
   return pol * t.mgr.youth;
 }
 export function pickLineup(r: Rng, t: TeamIn, form: string): { lineup: OnPl[]; bench: Player[] } {
-  const sq = t.squad.filter((p) => p.inj === 0);
+  let sq = t.squad.filter((p) => p.inj === 0);
   const slots = FORM[form]; const used = new Set<number>(); const lineup: OnPl[] = [];
   const yb = youthBias(t);
-  const obeyed = t.me && r.next() < t.mgr.obey;
+  /* オーナーの頼み（問93）：1人ずつ、聞いてくれるかが決まる。頼みが多いほど聞いてもらいにくい */
+  const heard = new Map<number, boolean>();
+  if (t.me) {
+    const ords = t.squad.filter((p) => p.ord && p.inj === 0); const ch = obeyChance(t.mgr.obey, ords.length);
+    for (const p of ords) heard.set(p.id, r.next() < ch);
+    const out = sq.filter((p) => p.ord?.kind === 'bench' && heard.get(p.id));
+    /* 人が足りないときは、使わないでと言われた選手も出す */
+    if (sq.length - out.length >= slots.length + 2) sq = sq.filter((p) => !out.includes(p));
+    else for (const p of out) heard.set(p.id, false);
+  }
+  t.heard = heard;
+  const h = (p: Player) => heard.get(p.id) === true;
   for (const pos of slots) {
     let best: Player | null = null, bs = -1e9;
     for (const p of sq) {
       if (used.has(p.id)) continue;
       let s = posRating(p, pos) + p.cond * 1.5 - p.fat * 0.06;
-      if (p.age <= 21) s += 2.2 * (yb - 1) * 3 + (yb > 1 ? 1.5 : 0);
-      if (obeyed && p.req) s += 6;
+      s += t.me ? youthBonus(p.age, yb) : p.age <= 21 ? 2.2 * (yb - 1) * 3 + (yb > 1 ? 1.5 : 0) : 0;
+      if (t.me) s += mgrView(p, t.mgr);
+      if (h(p) && p.ord!.kind === 'start') s += 8;
+      if (h(p) && p.ord!.kind === 'pos') s += p.ord!.pos === pos ? 14 : -6;
+      if (h(p) && p.ord!.kind === 'sub') s -= 30;
       if (s > bs) { bs = s; best = p; }
     }
     if (best) { used.add(best.id); lineup.push({ p: best, pos, sub: false }); }
@@ -222,13 +239,23 @@ function doSubs(r: Rng, s: Side, o: Side, ev: Ev[], min: number) {
   if (s.subs >= 5) return;
   const cands = [...s.on].filter((x) => x.pos !== 'GK').sort((x, y) => (y.p.fat + (100 - y.p.a[STA]) * 0.4 - y.p.cond * 8) - (x.p.fat + (100 - x.p.a[STA]) * 0.4 - x.p.cond * 8));
   const lead = s.goals - o.goals;
+  /* オーナーの「途中からでも使ってほしい」（問93）：聞いてくれたら、その選手が得意なポジションの選手と代える */
+  if (s.t.me) for (const on of s.bench.filter((b) => b.inj === 0 && b.ord?.kind === 'sub' && s.t.heard?.get(b.id))) {
+    if (s.subs >= 5) break;
+    const off = cands.filter((x) => on.apt[x.pos] >= 2 && x.pos !== 'GK')[0]; if (!off) continue;
+    s.bench = s.bench.filter((b) => b !== on); cands.splice(cands.indexOf(off), 1);
+    const idx = s.on.indexOf(off); s.on[idx] = { p: on, pos: off.pos, sub: true }; s.offs.push(off); s.subs++;
+    ev.push({ t: min, kind: 'talk', me: false, text: ['交代。', { t: off.p.name, me: true }, ' に代わって、', { t: on.name, me: true }, ' が入る。'] });
+    if (on.apps === 0) ev.push({ t: min, kind: 'memo', me: true, text: [{ t: on.name, me: true }, ' が途中出場。これがプロ初出場だ。'] });
+  }
   const want = 2;
   for (let i = 0; i < want && s.subs < 5; i++) {
     const off = cands[i]; if (!off) break;
     const pool = s.bench.filter((b) => b.inj === 0 && b.apt[off.pos] >= 1);
     if (!pool.length) break;
     const youthTry = (lead >= 2 || (min === 75 && Math.abs(lead) >= 2)) && r.next() < 0.5 * youthBias(s.t);
-    const score = (p: Player) => posRating(p, off.pos) + (youthTry && p.age <= 21 ? 12 : 0) + (p.sp.includes('スーパーサブ') ? 3 : 0) - p.fat * 0.05;
+    const subOrd = (p: Player) => (s.t.me && p.ord?.kind === 'sub' && s.t.heard?.get(p.id) ? 40 : 0);
+    const score = (p: Player) => posRating(p, off.pos) + (youthTry && p.age <= 21 ? 12 : 0) + (p.sp.includes('スーパーサブ') ? 3 : 0) - p.fat * 0.05 + subOrd(p);
     pool.sort((x, y) => score(y) - score(x));
     const on = pool[0]; s.bench = s.bench.filter((b) => b !== on);
     const idx = s.on.indexOf(off); s.on[idx] = { p: on, pos: off.pos, sub: true }; s.offs.push(off); s.subs++;
@@ -443,5 +470,6 @@ function buildView(sides: Side[], log: Chance[], ev: Ev[], score: [number, numbe
     chances: [log.filter((x) => x.k === 0).length, log.filter((x) => x.k === 1).length],
     scorers: goals.map((c) => ({ name: c.att.p.name, min: c.min, me: sides[c.k].t.me })),
     played,
+    orders: meSide ? meSide.t.squad.filter((p) => p.ord && meSide.t.heard?.has(p.id)).map((p) => ({ name: p.name, kind: p.ord!.kind, heard: !!meSide.t.heard!.get(p.id) })) : undefined,
   };
 }

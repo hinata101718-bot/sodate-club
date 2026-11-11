@@ -56,6 +56,10 @@ export interface Player {
   retiring?: boolean;
   /** 練習生（あと何か月預かるか） */
   trialMonths?: number;
+  /** オーナーから監督への頼み（問93） */
+  ord?: { kind: 'start' | 'sub' | 'bench' | 'pos'; pos?: Pos };
+  /** 監督の信頼（0〜100。問94）・クラブへの愛着（0〜100）・出番への不満（0〜100）・「移籍したい」と言っている（問95） */
+  trust?: number; love?: number; unrest?: number; wantOut?: boolean;
 }
 
 export interface Manager {
@@ -95,6 +99,8 @@ export interface MatchView {
   full: ViewItem[];
   chances: [number, number];
   scorers: { name: string; min: number; me: boolean }[];
+  /** オーナーの頼みを監督が聞いたか（問93） */
+  orders?: { name: string; kind: string; heard: boolean }[];
   /** 自分のクラブの出場選手 */
   played: { id: number; name: string; pos: Pos; sub: boolean; goals: number }[];
 }

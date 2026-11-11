@@ -13,6 +13,14 @@ import { sponsorYear } from './finance';
 import { initMarket, anyCond } from './market';
 import { ovr } from './player';
 export const MIGRATIONS: Record<number, (s: any) => any> = {
+  /* 版5 → 版6（問93〜95：監督への頼み・信頼・愛着）。「使ってほしい」の頼みは「先発で使ってほしい」に変える */
+  5: (s: any) => {
+    for (const p of s.squad ?? []) {
+      if (p.req) p.ord = { kind: 'start' };
+      p.trust ??= 50; p.love ??= p.origin === 'ユース出身' ? 65 : 40 + Math.min(20, Math.round((p.apps ?? 0) / 4)); p.unrest ??= 0;
+    }
+    return s;
+  },
   /* 版4（夜1）→ 版5（夜2：移籍市場）。「ほしい選手の希望」はスカウトの条件に、スカウトの候補は「知っている選手」に変える */
   4: (s: any) => {
     const o = s.owner; o.mk = initMarket();

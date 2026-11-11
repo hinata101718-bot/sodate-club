@@ -6,7 +6,8 @@ import { youthHTML, bindYouth } from './youthview';
 import { peopleHTML, facHTML, moneyHTML, transferHTML, bindOwner, setTrView } from './ownerview';
 import { listPlayer, renewalOffer, setRenew } from '../core/owner';
 import { ovr } from '../core/player';
-import { STYLES } from '../core/constants';
+import { STYLES, POS, type Pos } from '../core/constants';
+import { Rng } from '../core/rng';
 import { obeyWord } from '../core/staff';
 import { mgrShort, type Policy } from '../core/match';
 import { AUTO_KEY, listSlots, loadFrom, removeSave, safeStorage, saveTo, type KV } from '../core/save';
@@ -22,6 +23,7 @@ import { marketValue } from '../core/market';
 import { setSound, soundOn, sfx } from './sound';
 import { buildLabel } from './update';
 import { confetti, countUp } from './fx';
+import { setOrder, orderCount, obeyChance, tacticFit, compat, trustStars, loveHearts, unhappy, answerWantOut, COMPAT_MARK, COMPAT_WORD, ORDER_LIMIT, ORDER_NAME, ORDER_SHORT, type OrderKind } from '../core/bond';
 
 export const app = { G: null as unknown as GameState, kv: null as unknown as KV, tab: 'home' };
 const PREFS_KEY = 'sodate-club:prefs';
@@ -95,6 +97,7 @@ export function render() {
   v.innerHTML = crumb + (views[app.tab] || homeHTML)();
   bindView(v);
   bindOwner(G, v, (msg) => { if (msg) toast(msg); if (msg && msg.includes('を獲った')) confetti(); autosave(); render(); }, (id) => { const c = G.owner.cands.find((x) => x.id === id); if (c) openPlayer(c.p, { coachName: c.scout ? 'スカウト' : 'コーチ', coachSkill: 0.5, back: render }); });
+  $$<HTMLElement>('[data-wo]', v).forEach((b) => b.addEventListener('click', () => { const [id, k] = b.dataset.wo!.split(':'); const r = new Rng(G.rng); const msg = answerWantOut(G, +id, k === 'sell', r.next()); G.rng = r.s; toast(msg); autosave(); render(); }));
   $$<HTMLElement>('[data-ssort]', v).forEach((b) => b.addEventListener('click', () => { squadSort = b.dataset.ssort!; render(); }));
   $$<HTMLElement>('[data-go-cond]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'cond'; setTrView('scout'); setTab('tr'); }));
   if (app.tab === 'youth') bindYouth(G, v, promoSel(), render, (msgs) => { selCache = null; autosave(); setTab('home'); msgs.forEach((m) => void m); });
@@ -146,7 +149,8 @@ function homeHTML(): string {
   const news = (G.news || []).filter(Boolean).map((n) => `<div class="item">${ni(newsKind(n))}<span class="grow">${esc(n)}</span></div>`).join('');
   const walk = G.owner.cands.filter((c) => c.src === 'trial').length + G.owner.trials.filter((p) => p.trialMonths === 0).length;
   const scoutN = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.season === G.season && k.week === G.week - 1).length;
-  const owner = (walk ? `<div class="item">${ni('team')}<span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN ? `<div class="item">${ni('scout')}<span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">スカウトの報告を見る</button></div>` : '');
+  const wants = G.squad.filter((p) => p.wantOut).map((p) => `<div class="item">${ni('team')}<span class="grow"><b>${esc(p.name)}</b>（${p.pos}）が「移籍したい」と言っている</span><span class="row" style="gap:6px"><button class="btn small primary" data-wo="${p.id}:keep">残ってもらう</button><button class="btn small ghost" data-wo="${p.id}:sell">売りに出す</button></span></div>`).join('');
+  const owner = wants + (walk ? `<div class="item">${ni('team')}<span class="grow">練習生のことで決めることがある</span><button class="btn small primary" data-go-tr="1">見る</button></div>` : '') + (scoutN ? `<div class="item">${ni('scout')}<span class="grow">スカウトが${scoutN}人の選手を調べてきた</span><button class="btn small ghost" data-go-tr="1">スカウトの報告を見る</button></div>` : '');
   const promo = G.promo?.open ? `<div class="item">${ni('youth')}<span class="grow"><b>春の昇格会議</b>：ユースからトップに上げる子を決める（決めずに進むと、コーチのおすすめどおりになる）</span><button class="btn small primary" data-go="youth">決める</button></div>` : '';
   const notes = G.yearNotes?.length && G.week >= 44 ? `<div class="item">${ni('people')}<span class="grow">コーチから、選手${G.yearNotes.length}人についてのひとこと</span><button class="btn small ghost" data-act="notes">見る</button></div>` : '';
   const yrep = G.youthLog.length && G.youthLog[G.youthLog.length - 1].season === G.season && G.week >= 8 && G.week % 4 === 1 ? `<div class="item">${ni('youth')}<span class="grow">ユースの報告会議（${G.youthLog[G.youthLog.length - 1].month}月）</span><button class="btn small ghost" data-go="youth">見る</button></div>` : '';
@@ -235,7 +239,7 @@ export const ICON: Record<string, string> = {
 };
 export function plRow(p: Player): string {
   const o = ovr(p);
-  return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.req ? ' <span class="tag">起用を依頼中</span>' : ''}${p.retiring ? ' <span class="tag bad">今季で引退</span>' : ''}${p.listed ? ' <span class="tag away">売りに出している</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}${p.fat >= 40 ? ' ・ 疲れ' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
+  return `<button class="pl" data-pid="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname"><span class="num">${p.num || ''}</span>${esc(p.name)}${p.ord ? ` <span class="tag">${ORDER_SHORT[p.ord.kind]}${p.ord.pos ? '・' + p.ord.pos : ''}</span>` : ''}${p.wantOut ? ' <span class="tag bad">移籍したい</span>' : unhappy(p) ? ' <span class="tag away">不満</span>' : ''}${p.retiring ? ' <span class="tag bad">今季で引退</span>' : ''}${p.listed ? ' <span class="tag away">売りに出している</span>' : ''}</span><br><span class="pmeta">${p.age}歳 ・ ${p.seasonApps}試合 ${p.seasonGoals}点${p.inj ? ' ・ ケガ（あと' + p.inj + '週）' : ''}${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}${p.fat >= 40 ? ' ・ 疲れ' : ''}</span></span><span class="ovr">${val(o)}</span></button>`;
 }
 let tableView = 'mine';
 function tableHTML(): string {
@@ -310,13 +314,36 @@ export function showPlayer(id: number, back: () => void) {
   openPlayer(p, {
     report: (app.G.lastReport || []).find((r) => r.pid === id) || null,
     coachName: posCoach(p.pos).name, coachSkill: posCoach(p.pos).skill, mgrName: mgrShort(app.G.mgr), mgrObeyWord: obeyWord(app.G.mgr),
-    onReq: (pl) => { pl.req = !pl.req; autosave(); }, back,
-    extraHTML: contractHTML(p),
+    back,
+    extraHTML: bondHTML(p) + contractHTML(p),
     bindExtra: (root) => {
+      root.querySelectorAll<HTMLElement>('[data-ord]').forEach((b) => b.addEventListener('click', () => {
+        const [k, pos] = b.dataset.ord!.split(':');
+        const cur = p.ord; const same = cur && cur.kind === k && (k !== 'pos' || cur.pos === pos);
+        const e = setOrder(app.G, p.id, !k || same ? null : { kind: k as OrderKind, pos: (pos || undefined) as Pos | undefined });
+        if (e) toast(e); autosave(); showPlayer(id, back);
+      }));
       root.querySelector('#pSell')?.addEventListener('click', () => { listPlayer(app.G, p.id, !p.listed); autosave(); showPlayer(id, back); });
       root.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => { const v = b.dataset.renew!; setRenew(app.G, p.id, v === 'no' ? 1 : +v, v === 'no'); autosave(); showPlayer(id, back); }));
     },
   });
+}
+/** 監督の評価・気持ち（問94・95）と、監督への頼み（問93） */
+function bondHTML(p: Player): string {
+  const G = app.G; const m = G.mgr; const n = orderCount(G.squad);
+  const fit = tacticFit(p, m.style); const c = compat(p, m);
+  const marks = `<div class="bondrow"><span>監督の信頼 <b class="stars">${'★'.repeat(trustStars(p))}<span class="off">${'★'.repeat(5 - trustStars(p))}</span></b></span><span>戦術（${esc(m.style)}）に <b>${COMPAT_MARK[String(fit)]}</b></span></div>
+    <div class="bondrow"><span>監督との相性 <b>${COMPAT_MARK[String(c)]}</b> ${COMPAT_WORD[String(c)]}</span><span>クラブへの愛着 <b class="hearts">${'♥'.repeat(loveHearts(p))}<span class="off">${'♥'.repeat(5 - loveHearts(p))}</span></b></span></div>
+    ${p.wantOut ? '<div class="talk-bubble">「試合に出たい。移籍させてほしい」</div>' : unhappy(p) ? '<div class="talk-bubble">「もっと試合に出たいです…」</div>' : ''}`;
+  const btn = (k: string, label: string) => `<button data-ord="${k}" aria-pressed="${!!p.ord && (p.ord.kind + (p.ord.pos ? ':' + p.ord.pos : '')) === k}">${label}</button>`;
+  const posBtns = POS.filter((x) => x !== p.pos && x !== 'GK' && p.pos !== 'GK').map((x) => btn(`pos:${x}`, `${x}${['', '×', '△', '○', '◎'][p.apt[x] + 1] ?? ''}`)).join('');
+  return `<section class="card"><h2>監督の評価と気持ち</h2>${marks}
+    <div class="muted small" style="margin-top:6px">監督は能力に加えて、戦術に合うか（◎○△）と信頼（★）を見て先発を決める。信頼は試合で活躍すると上がる。</div></section>
+    <section class="card"><h2>監督への頼み（${n}/${ORDER_LIMIT}人）</h2>
+    <div class="seg ordseg" role="group" aria-label="監督への頼み">${btn('start', '先発で')}${btn('sub', '途中から')}${btn('bench', '使わないで')}</div>
+    ${posBtns ? `<h3>このポジションで使ってほしい</h3><div class="seg wide9" role="group" aria-label="ポジションの指定">${posBtns}</div>` : ''}
+    ${p.ord ? `<div class="small" style="margin-top:8px">いまの頼み：<b>${ORDER_NAME[p.ord.kind]}${p.ord.pos ? `（${p.ord.pos}）` : ''}</b></div><button class="btn small ghost" data-ord="" style="margin-top:6px">頼みを取り下げる</button>` : ''}
+    <div class="muted small" style="margin-top:6px">${esc(mgrShort(m))}は、${esc(obeyWord(m))}。頼みが3人をこえると、聞いてもらいにくくなる。いまの見こみ：${Math.round(obeyChance(m.obey, Math.max(1, n + (p.ord ? 0 : 1))) * 100)}%</div></section>`;
 }
 function contractHTML(p: Player): string {
   const G = app.G; const d = G.owner.renew[p.id]; const off = renewalOffer(p);

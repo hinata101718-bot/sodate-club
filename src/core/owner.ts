@@ -9,6 +9,7 @@ import { growPlayer, DEFAULT_CTX, type GrowCtx } from './growth';
 import { monthlyReport, type YouthReport } from './youth';
 import type { Manager, Player } from './types';
 import type { GameState } from './game';
+import { newManagerBond, loveSalaryMul } from './bond';
 import { initMarket, newMarketSeason, type MarketState } from './market';
 
 export interface Cand { id: number; p: Player; src: 'scout' | 'club' | 'trial'; fee: number; note: string; from: string; clubId?: number; scout?: string; until: number; }
@@ -113,7 +114,7 @@ export function hireManager(G: GameState, id: number): string | null {
   const fee = Math.round(G.mgr.salary / 2 / 10) * 10;
   pay(G, 'staff', fee);
   G.owner.market.mgr = G.owner.market.mgr.filter((x) => x !== m).concat([G.mgr]);
-  G.mgr = m; for (const p of G.squad) p.req = false;
+  G.mgr = m; newManagerBond(G);
   return null;
 }
 export function hireCoach(G: GameState, role: CoachRole, id: number): string | null {
@@ -175,7 +176,7 @@ export { marketOpen as inWindow } from './market';
 export function listPlayer(G: GameState, id: number, on: boolean) { const p = G.squad.find((x) => x.id === id); if (p) p.listed = on; }
 /** 契約更新の案（冬の契約更新の時期にまとめて決める）。更新すると給料が上がることがある */
 export function renewalOffer(p: Player): { years: number; salary: number } {
-  const want = salaryFor(ovr(p));
+  const want = Math.round(salaryFor(ovr(p)) * loveSalaryMul(p));
   return { years: p.age >= 31 ? 1 : p.age <= 23 ? 3 : 2, salary: Math.max(p.salary, Math.round((want * (want > p.salary ? 1.05 : 1)) / 10) * 10) };
 }
 export function setRenew(G: GameState, id: number, years: number, no: boolean) {
