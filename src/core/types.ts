@@ -23,6 +23,10 @@ export interface Player {
   cond: number;
   fat: number;
   inj: number;
+  /** 問134：その年のイエローの累積（L＝リーグ・C＝天皇杯）と、出場停止の残り試合 */
+  yc?: { L: number; C: number }; ban?: { L: number; C: number };
+  /** 出場停止・あと1枚になったことの知らせ（監督のメッセージにする） */
+  banMsg?: string[];
   pref: string;
   height: number;
   foot: '右' | '左' | '両';
@@ -126,6 +130,20 @@ export interface MatchView {
   mom?: { name: string; me: boolean; rt: number; club: string };
   /** 試合のあとの実況と解説のふり返り（問122） */
   recap?: { who: '実況' | '解説'; line: Line }[];
+  /** 問135：試合の数字（[ホーム, アウェー]） */
+  stats?: Record<'poss' | 'sh' | 'ot' | 'pa' | 'pc' | 'ck' | 'fo' | 'yc' | 'rc' | 'off' | 'sv', [number, number]>;
+  /** 問139：流れのグラフ（5分ごと・ホームが押していれば＋）と印 */
+  flowG?: { pts: number[]; marks: { min: number; kind: 'goal' | 'red' | 'sub'; side: 0 | 1 }[] };
+  /** 問139：シュートの位置（x は 0〜105、ホームは右のゴールへ攻める。y は 0〜68） */
+  shots?: { min: number; side: 0 | 1; x: number; y: number; goal: boolean; ot: boolean; sp: boolean; who: string; how: string }[];
+  /** 問138：自分の選手の1対1（場所ごとの勝ち負け） */
+  duels?: { zone: string; me: string; opp: string; w: number; l: number; x: number; y: number }[];
+  /** 問137：交代（理由と、入った選手のでき） */
+  subs?: { min: number; side: 0 | 1; off: string; on: string; why: string; rt?: number; g?: number; a?: number }[];
+  /** 問134：カード */
+  cards?: { min: number; side: 0 | 1; who: string; red: boolean }[];
+  /** 問133：自分のクラブのキッカー */
+  kick?: { ck: string; fk: string; pk: string };
 }
 
 export interface ReportEntry {

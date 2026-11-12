@@ -1,7 +1,7 @@
 /* ゲームの状態と、1週ずつ進めるしくみ */
 import { Rng, clamp } from './rng';
 import { makePlayer, makeSquad, ovr, assignNumbers, teamStrength, growthType, salaryFor } from './player';
-import { simulateMatch, pickLineup, chooseForm, type Policy, type TeamIn } from './match';
+import { simulateMatch, banned, kickersFor, featuredDuels, type Comp, pickLineup, chooseForm, type Policy, type TeamIn } from './match';
 import { growPlayer, mergeReports, DEFAULT_CTX } from './growth';
 import { makeManager } from './staff';
 import { prefByName } from './data/prefs';
@@ -144,7 +144,7 @@ export const myTier = (G: GameState) => myClub(G).tier;
 export const clubName = (G: GameState, id: number) => (id === ME ? G.club.name : clubById(G, id).name);
 export function teamIn(G: GameState, c: Club): TeamIn {
   const plan = G.plan && G.plan.until > G.season * 48 + G.week ? G.plan : null;
-  return c.me ? { id: c.id, name: G.club.name, me: true, color: G.club.color, squad: G.owner ? matchSquad(G) : G.squad, mgr: G.mgr, policy: G.policy, tilt: plan?.tilt ?? null, injMul: (plan?.care ? 0.8 : 1) * (G.owner ? 1 - (G.owner.fac.medical - 1) * 0.1 : 1) } : { id: c.id, name: c.name, me: false, color: c.color, squad: c.squad, mgr: c.mgr };
+  return c.me ? { id: c.id, name: G.club.name, me: true, color: G.club.color, squad: G.owner ? matchSquad(G) : G.squad, mgr: G.mgr, policy: G.policy, tilt: plan?.tilt ?? null, kickReq: G.owner?.kick, injMul: (plan?.care ? 0.8 : 1) * (G.owner ? 1 - (G.owner.fac.medical - 1) * 0.1 : 1) } : { id: c.id, name: c.name, me: false, color: c.color, squad: c.squad, mgr: c.mgr };
 }
 /** 順位表（勝ち点、並んだら得失点差、さらに得点） */
 export function standings(G: GameState, tier = myTier(G)) {
@@ -222,6 +222,8 @@ function preInfo(G: GameState, t: number, li: number, hc: Club, ac: Club, big: b
 let bondNews: string[] = [];
 function myAfter(G: GameState, v: MatchView) {
   afterMyMatch(G, v.played);
+  /* 問134：出場停止・あと1枚になったことを、監督が知らせる */
+  for (const p of G.squad) if (p.banMsg?.length) { for (const m of p.banMsg) mail(G, '監督', G.mgr.name, /あと1枚/.test(m) ? `${p.name}：あと1枚で出場停止` : `${p.name}：出場停止`, m + (/あと1枚/.test(m) ? '次の試合で使うかどうかは、私が考えます。' : 'その試合は、ほかの選手で戦います。'), { pid: p.id }); p.banMsg = undefined; }
   const o = v.orders ?? [];
   /* 3連敗したら、監督からメッセージ（問112） */
   const my = v.home.me ? v.score[0] - v.score[1] : v.score[1] - v.score[0];
@@ -293,13 +295,21 @@ export function hasMyMatch(G: GameState): boolean {
   return true;
 }
 /** 試合前の画面（問109）：監督が予定している並び方と先発。頼みは聞いてもらえたとして組む（聞いてくれるかは当日わかる） */
-export function matchPlan(G: GameState): { form: string; lineup: { p: Player; pos: Pos }[]; bench: Player[]; opp: Club | null; home: boolean | null } {
-  const e = eventOf(G); const opp = e.kind === 'league' ? clubById(G, e.opp) : null;
-  const me = teamIn(G, myClub(G));
-  const form = chooseForm(G.mgr, teamStrength(G.squad), opp ? teamStrength(opp.squad) : teamStrength(G.squad), G.squad, me.tilt);
+export function matchPlan(G: GameState): { form: string; lineup: { p: Player; pos: Pos }[]; bench: Player[]; opp: Club | null; home: boolean | null;
+  comp: Comp; kick: { ck: Player | null; fk: Player | null; pk: Player | null }; banned: Player[]; warn: Player[]; duels: ReturnType<typeof featuredDuels> } {
+  const e = eventOf(G); const opp = e.kind === 'league' ? clubById(G, e.opp) : e.kind === 'cup' && e.opp != null ? clubById(G, e.opp) : null;
+  const comp: Comp = e.kind === 'cup' ? 'C' : 'L';
+  const me = teamIn(G, myClub(G)); me.comp = comp;
+  const form = chooseForm(G.mgr, teamStrength(G.squad), opp ? teamStrength(opp.squad) : teamStrength(G.squad), G.squad.filter((p) => !banned(p, comp)), me.tilt);
   const { lineup, bench } = pickLineup(new Rng(1), me, form, true);
   delete me.heard;
-  return { form, lineup: lineup.map((x) => ({ p: x.p, pos: x.pos })), bench: bench.sort((a, b) => ovr(b) - ovr(a)), opp, home: e.kind === 'league' ? e.home : null };
+  /* 問133・134・138：キッカー・出場停止・あと1枚・注目の対決 */
+  const kick = kickersFor(me, lineup);
+  let duels: ReturnType<typeof featuredDuels> = [];
+  if (opp) { const ot = teamIn(G, opp); ot.comp = comp; const of = chooseForm(opp.mgr, teamStrength(opp.squad), teamStrength(G.squad), opp.squad, null); duels = featuredDuels(lineup, pickLineup(new Rng(2), ot, of, true).lineup); }
+  const sq = G.owner ? matchSquad(G) : G.squad;
+  return { form, lineup: lineup.map((x) => ({ p: x.p, pos: x.pos })), bench: bench.sort((a, b) => ovr(b) - ovr(a)), opp, home: e.kind === 'league' ? e.home : null,
+    comp, kick, banned: sq.filter((p) => banned(p, comp)), warn: sq.filter((p) => (p.yc?.[comp] ?? 0) === 3 && !banned(p, comp)), duels };
 }
 /** 1週進める */
 export function advanceWeek(G: GameState): WeekResult {
@@ -632,10 +642,10 @@ function newSeason(G: GameState, r: Rng): string[] {
   }
   for (const m of moves) { const c = clubById(G, m.id); c.tier = m.to; if (!c.me) c.prevRank = 0; }
   /* 選手は1つ年をとる。記録を残す */
-  for (const p of G.squad) { p.hist.push({ y: G.season, ovr: ovr(p), a: p.a.map(Math.floor) }); p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.seasonAst = 0; p.seasonRt = 0; p.seasonRtN = 0; if (p.fame) p.fame = Math.floor(p.fame * 0.5 * 10) / 10; }
+  for (const p of G.squad) { p.hist.push({ y: G.season, ovr: ovr(p), a: p.a.map(Math.floor) }); p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.seasonAst = 0; p.seasonRt = 0; p.seasonRtN = 0; p.yc = { L: 0, C: 0 }; p.ban = { L: 0, C: 0 }; if (p.fame) p.fame = Math.floor(p.fame * 0.5 * 10) / 10; }
   for (const c of G.clubs) {
     if (c.me) continue;
-    for (const p of c.squad) { p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.seasonAst = 0; p.seasonRt = 0; p.seasonRtN = 0; p.inj = 0; p.fat = 0; }
+    for (const p of c.squad) { p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.seasonAst = 0; p.seasonRt = 0; p.seasonRtN = 0; p.inj = 0; p.fat = 0; p.yc = { L: 0, C: 0 }; p.ban = { L: 0, C: 0 }; }
     /* 年をとった選手が何人か去り、新しい選手が入る */
     aiYouth(G, c, r);
     const leave = c.squad.filter((p) => p.age >= 33 || (p.age >= 30 && r.next() < 0.25)).slice(0, 5);

@@ -18,6 +18,8 @@ export interface OwnerState {
   money: number; debt: number; ledger: Ledger; lastLedger: Ledger | null; pop: number; sponsor: number;
   fac: Record<FacKey, number>; build: { key: FacKey; weeks: number; total: number } | null;
   coaches: Record<CoachRole, Coach | null>; scouts: Scout[];
+  /** 問133：オーナーが頼んだキッカー（選手のid） */
+  kick?: { ck?: number; fk?: number; pk?: number };
   /** 移籍市場（知っている選手・フリー・申し込み） */
   mk: MarketState;
   market: { mgr: Manager[]; coach: Record<CoachRole, Coach[]>; scout: Scout[] };

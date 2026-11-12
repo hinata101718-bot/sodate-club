@@ -56,6 +56,7 @@ export function openPlayer(p: Player, o: PlayerViewOpts) {
     <div class="bar"><span class="num" style="font-size:16px">${p.num || ''}</span><h2>${esc(p.name)}</h2><span class="ovr big">${val(ov)}</span></div>
     <div class="row wrap">${posTag(p.pos)}<span class="muted">${p.age}歳 ・ ${p.height}cm ・ 利き足 ${p.foot === '両' ? '両足' : p.foot} ・ ${esc(p.pref)}出身 ・ ${esc(p.origin)}</span></div>
     ${p.inj ? `<div class="tag bad">ケガ（あと${p.inj}週）</div>` : ''}
+    ${(p.yc?.L ?? 0) + (p.yc?.C ?? 0) + (p.ban?.L ?? 0) + (p.ban?.C ?? 0) ? `<div class="small" style="margin-top:4px">今季の警告：リーグ ${p.yc?.L ?? 0}枚・天皇杯 ${p.yc?.C ?? 0}枚（4枚で1試合の出場停止）${p.ban?.L ? ` ・ <span class="tag bad">リーグ あと${p.ban.L}試合 出場停止</span>` : ''}${p.ban?.C ? ` ・ <span class="tag bad">天皇杯 あと${p.ban.C}試合 出場停止</span>` : ''}</div>` : ''}
     <section class="card"><h2>能力</h2>${radarSVG(p)}<div class="attrs" style="margin-top:8px">${order.map((i) => { const v = Math.floor(p.a[i]); const u = rep ? rep.ups[i] : 0; return `<div class="attr ${u >= 2 ? 'glow' : ''}"><span class="k">${L[i]}</span><span>${val(v)}${u > 0 ? `<span class="up">+${u}</span>` : u < 0 ? `<span class="down">${u}</span>` : ''}</span></div>`; }).join('')}</div>
       <div class="muted small" style="margin-top:6px">色：〜69 灰・70〜79 銅・80〜89 銀・90〜99 金</div></section>
     <section class="card"><h2>ポジション適性</h2><div class="apt">${POS.map((x) => `<div>${x}<b>${APT[p.apt[x]]}</b></div>`).join('')}</div>

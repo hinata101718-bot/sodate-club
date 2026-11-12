@@ -525,3 +525,31 @@ nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
 .linkbtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 td .linkbtn{min-height:36px}
 .club-crest{flex:none}.club-crest svg{width:56px;height:62px;display:block}
+/* 問135〜139：試合の図 */
+.flowcard{padding:8px 10px;position:sticky;top:0;z-index:2}
+.flowg{width:100%;height:auto;display:block}
+.flowleg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;color:var(--muted)}
+.mdet{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
+.mdet>summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer;list-style:none}
+.mdet>summary::before{content:'▶';font-size:12px;margin-right:6px;transition:transform .15s}
+.mdet[open]>summary::before{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.mdet>summary::before{transition:none}}
+.mstats{width:100%;border-collapse:collapse;font-size:14px}
+.mstats th{font-size:12px;font-weight:700;padding:4px 2px;width:30%;overflow-wrap:anywhere}
+.mstats th:nth-child(2){width:40%}
+.mstats td{text-align:center;padding:5px 2px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.mstats td.lb{font-size:12px;color:var(--muted)}
+.stbar{display:flex;height:4px;border-radius:2px;overflow:hidden;margin-top:3px;background:var(--line)}
+.stbar span{display:block;height:100%}
+.shotmap svg,.duelmap{width:100%;height:auto;display:block;margin-top:4px}
+.pg-turf{fill:var(--club-soft);stroke:var(--line);stroke-width:.5}
+.pg-ln{fill:none;stroke:var(--line);stroke-width:.45}
+.pg-goal{fill:var(--line)}
+.pg-t{font-size:4.4px;fill:currentColor}
+.pg-t.b{font-weight:700;font-size:4.4px}
+.shotinfo{margin-top:4px;min-height:20px}
+.duellist{margin:6px 0 0;padding-left:0;list-style:none;display:grid;gap:4px}
+.cardi{display:inline-block;width:9px;height:12px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+.cardi.yel{background:#f0c419}.cardi.red{background:#d33}
+.duelrow{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 0;border-top:1px solid var(--line)}
+.duelrow:first-child{border-top:0}

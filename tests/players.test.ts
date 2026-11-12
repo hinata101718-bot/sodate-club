@@ -6,7 +6,7 @@ import { Rng } from '../src/core/rng';
 import { POS } from '../src/core/constants';
 
 describe('特殊能力（企画書 8-8）', () => {
-  it('良い49・悪い8', () => { expect(GOOD_NAMES.length).toBe(49); expect(BAD_NAMES.length).toBe(8); expect(new Set(SPECIALS.map((s) => s.name)).size).toBe(57); });
+  it('良い50・悪い8（ロングスローは問133で追加）', () => { expect(GOOD_NAMES.length).toBe(50); expect(BAD_NAMES.length).toBe(8); expect(new Set(SPECIALS.map((s) => s.name)).size).toBe(58); });
   it('どれにも説明がある', () => { for (const s of SPECIALS) expect(s.desc.length).toBeGreaterThan(5); });
   it('1人0〜5つ。GKはフィールドのしくみの特殊能力を持たない', () => {
     const r = new Rng(2); const ids = { n: 1 };

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { makeSquad, teamStrength } from '../src/core/player';
-import { simulateMatch, type TeamIn } from '../src/core/match';
+import { simulateMatch, banned, type TeamIn } from '../src/core/match';
+import { newGame } from '../src/core/game';
 import { makeManager } from '../src/core/staff';
 
 function team(r: Rng, ids: { n: number }, id: number, lvl: number): TeamIn {
@@ -23,7 +24,8 @@ describe('試合のしくみ（企画書 13-2・問54）', () => {
   }
   it('1試合の得点は平均2.0〜3.0点', () => { const g = goals / n; expect(g).toBeGreaterThanOrEqual(2.0); expect(g).toBeLessThanOrEqual(3.0); });
   it('力の差が3〜6の試合で、強いほうが6〜7割勝つ', () => { const w = strong / sn; expect(w).toBeGreaterThanOrEqual(0.6); expect(w).toBeLessThanOrEqual(0.7); });
-  it('決定機は両チームあわせて8〜12回ほど', () => { const c = chances / n; expect(c).toBeGreaterThanOrEqual(8); expect(c).toBeLessThanOrEqual(13); });
+  /* 問133：セットプレー（コーナー・フリーキック・PK）も場面に入るので、前より多い */
+  it('ゴール前の場面は両チームあわせて14〜26回ほど', () => { const c = chances / n; expect(c).toBeGreaterThanOrEqual(14); expect(c).toBeLessThanOrEqual(26); });
 });
 
 describe('試合の文と見どころ', () => {
@@ -67,5 +69,31 @@ describe('試合の文と見どころ', () => {
       expect(res.winner === 0 || res.winner === 1).toBe(true);
       if (res.score[0] === res.score[1]) expect(res.pk).not.toBeNull();
     }
+  });
+});
+
+describe('試合のリアルさ（問133〜139）', () => {
+  const G = newGame({ seed: 21 }); const r = new Rng(5);
+  const cs = G.clubs.filter((c) => c.tier === 2 && !c.me);
+  const ti = (c: typeof cs[0], me = false) => ({ id: c.id, name: c.name, me, color: c.color, squad: c.squad, mgr: c.mgr });
+  const views = Array.from({ length: 200 }, (_, i) => simulateMatch(r, ti(cs[i % 11], true), ti(cs[(i + 3) % 11]), { record: true }).view);
+  const avg = (f: (v: typeof views[0]) => number) => views.reduce((s, v) => s + f(v), 0) / views.length / 2;
+  it('数字が本物に近い（パス・シュート・枠内・コーナー・ファウル・イエロー）', () => {
+    expect(avg((v) => v.stats!.pa[0] + v.stats!.pa[1])).toBeGreaterThan(380); expect(avg((v) => v.stats!.pa[0] + v.stats!.pa[1])).toBeLessThan(520);
+    const sh = avg((v) => v.stats!.sh[0] + v.stats!.sh[1]); expect(sh).toBeGreaterThan(9); expect(sh).toBeLessThan(15);
+    const ot = avg((v) => v.stats!.ot[0] + v.stats!.ot[1]) / sh; expect(ot).toBeGreaterThan(0.28); expect(ot).toBeLessThan(0.45);
+    expect(avg((v) => v.stats!.ck[0] + v.stats!.ck[1])).toBeGreaterThan(3.5);
+    expect(avg((v) => v.stats!.fo[0] + v.stats!.fo[1])).toBeGreaterThan(9);
+    expect(avg((v) => v.stats!.yc[0] + v.stats!.yc[1])).toBeGreaterThan(1);
+  });
+  it('試合のあとに、流れのグラフ・シュートの位置・交代・自分の選手の1対1・キッカーが出る', () => {
+    const v = views[0]; expect(v.flowG!.pts.length).toBe(18); expect(v.shots!.length).toBeGreaterThan(0);
+    expect(views.some((x) => (x.subs ?? []).length > 0)).toBe(true); expect(views.some((x) => (x.duels ?? []).length > 0)).toBe(true); expect(v.kick!.pk).not.toBe('');
+  });
+  it('イエローが4枚たまると、次の1試合に出られない（リーグと天皇杯は別）', () => {
+    const p = cs[0].squad[3]; p.yc = { L: 0, C: 0 }; p.ban = { L: 1, C: 0 };
+    expect(banned(p, 'L')).toBe(true); expect(banned(p, 'C')).toBe(false);
+    simulateMatch(r, ti(cs[0]), ti(cs[1]), { record: true });
+    expect(banned(p, 'L')).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import type { MatchView, ViewItem } from '../core/types';
 import { $, esc, lineHTML, posTag } from './dom';
 import { oppColor, oppVars } from './theme';
 import { sfx } from './sound';
+import { flowSVG, flowLegend, statsHTML, shotMapHTML, bindShotMap, duelMapHTML, subsHTML, cardsHTML } from './matchgfx';
 
 export function openMatch(m: MatchView, myColor: string, after: (() => void) | null, afterLabel = '週の報告へ') {
   const layer = $('#layer');
@@ -12,6 +13,7 @@ export function openMatch(m: MatchView, myColor: string, after: (() => void) | n
   layer.innerHTML = `<div class="sheet" role="dialog" aria-label="試合"><div class="in">
     <div class="bar"><h2>${esc(m.title)}</h2></div>
     <div class="card score"><div class="tn" style="color:${nameColor(m.home)}">${esc(m.home.name)}</div><div class="sc" id="sc">0 - 0</div><div class="tn" style="color:${nameColor(m.away)}">${esc(m.away.name)}</div></div>
+    ${m.flowG ? `<div class="card flowcard" id="flowc">${flowSVG(m, 0)}</div>` : ''}
     <div class="seg" role="group" aria-label="見方"><button id="mHL" aria-pressed="true">見どころ</button><button id="mLog" aria-pressed="false">実況（試合の流れ全部）</button></div>
     <div id="feed" class="wk" aria-live="polite"></div>
     <div class="muted small" style="text-align:center">画面のどこを押しても進みます</div>
@@ -58,8 +60,10 @@ export function openMatch(m: MatchView, myColor: string, after: (() => void) | n
     const res = card.querySelector('.res'); if (res) res.innerHTML = resultHTML(cur);
     cur = null;
   };
+  const flowc = layer.querySelector<HTMLElement>('#flowc');
+  const flowAt = (min: number) => { if (flowc) flowc.innerHTML = flowSVG(m, min) + (min >= 90 ? flowLegend(m) : ''); };
   const openCard = (it: ViewItem) => {
-    cur = it;
+    cur = it; flowAt(it.min);
     if (it.kind === 'talk' && it.who) { feed.insertAdjacentHTML('beforeend', `<div class="mic ${it.who === '解説' ? 'ana' : ''}"><span class="mic-who">${it.who}<small>${it.who === '解説' ? ANALYST : ANNOUNCER}</small></span><span class="mic-txt"><span class="res"></span></span></div>`); card = feed.lastElementChild as HTMLElement; lines = it.lines; k = 0; return; }
     if (it.kind === 'talk') { feed.insertAdjacentHTML('beforeend', `<div class="talk"><b>${it.min}分</b>　<span class="res"></span></div>`); card = feed.lastElementChild as HTMLElement; lines = it.lines; k = 0; return; }
     feed.insertAdjacentHTML('beforeend', `<div class="scene ${it.me ? '' : 'opp'}"><div class="head"><span class="minute">${it.min}分</span><span class="res"></span></div></div>`);
@@ -79,11 +83,18 @@ export function openMatch(m: MatchView, myColor: string, after: (() => void) | n
       const recap = (m.recap ?? []).map((x) => `<div class="mic ${x.who === '解説' ? 'ana' : ''}"><span class="mic-who">${x.who}<small>${x.who === '解説' ? ANALYST : ANNOUNCER}</small></span><span>${lineHTML(x.line)}</span></div>`).join('');
       if (recap) feed.insertAdjacentHTML('beforeend', `<div class="recap">${recap}</div>`);
       feed.insertAdjacentHTML('beforeend', `<div class="card endcard"><h2>試合のまとめ</h2><div class="goal">試合終了 ${m.score.join(' - ')}${m.pk ? `（PK戦 ${m.pk.join(' - ')}）` : ''}</div>
-        <div class="muted">決定機 ${m.chances[0] + m.chances[1]}回（${esc(m.home.name)} ${m.chances[0]}回 ・ ${esc(m.away.name)} ${m.chances[1]}回）</div>
         ${sco ? `<div style="margin-top:6px">得点：${sco}</div>` : ''}
+        ${cardsHTML(m)}
         ${mom}
+        ${m.stats ? `<details class="mdet" open><summary>試合の数字</summary>${statsHTML(m)}</details>` : ''}
+        ${m.flowG ? `<details class="mdet" open><summary>流れのグラフ（5分ごと）</summary>${flowSVG(m, 90)}${flowLegend(m)}</details>` : ''}
+        ${m.shots?.length ? `<details class="mdet" open><summary>シュートの位置</summary>${shotMapHTML(m, 'shmap')}</details>` : ''}
+        ${m.duels?.length ? `<details class="mdet"><summary>1対1の対決（うちの選手）</summary>${duelMapHTML(m)}</details>` : ''}
+        ${m.subs?.length ? `<details class="mdet"><summary>交代（${m.subs.length}人）</summary>${subsHTML(m)}</details>` : ''}
         ${pl ? `<h3>出場した選手（評価点は10点満点）</h3><div class="slist">${pl}</div><div class="muted small" style="margin-top:4px">選手を押すと、その試合のくわしい数字が出る。</div>` : ''}
         <div class="muted small" style="margin-top:8px">その試合での伸びは、このあとの週の報告で見られます。</div></div>`);
+      if (flowc) flowc.hidden = true; bindShotMap(m, feed, 'shmap');
+      feed.querySelectorAll<HTMLElement>('details.mdet summary').forEach((x) => x.addEventListener('click', (e) => e.stopPropagation()));
       feed.querySelectorAll<HTMLElement>('[data-rt]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const d = b.nextElementSibling as HTMLElement | null; if (!d) return; const open = d.hidden; d.hidden = !open; b.setAttribute('aria-expanded', String(open)); }));
     }
     nextBtn.textContent = after ? afterLabel : '閉じる';
@@ -111,7 +122,7 @@ export function openMatch(m: MatchView, myColor: string, after: (() => void) | n
   const restart = (mode: 'hl' | 'log') => {
     items = mode === 'hl' ? m.highlights : m.full;
     $('#mHL').setAttribute('aria-pressed', String(mode === 'hl')); $('#mLog').setAttribute('aria-pressed', String(mode === 'log'));
-    feed.innerHTML = ''; idx = 0; cur = null; sc.textContent = '0 - 0'; nextBtn.textContent = '次へ'; tap();
+    feed.innerHTML = ''; idx = 0; cur = null; sc.textContent = '0 - 0'; nextBtn.textContent = '次へ'; if (flowc) { flowc.hidden = false; flowAt(0); } tap();
   };
   nextBtn.addEventListener('click', (e) => { e.stopPropagation(); tap(); });
   $('#mAll').addEventListener('click', (e) => { e.stopPropagation(); removeCut(); let guard = 0; while (!done() && guard++ < 2000) tap(true); endCard(); follow(true); });
