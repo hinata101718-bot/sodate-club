@@ -4,6 +4,7 @@ import { AT_F, AT_K, ORDER_F, ORDER_K } from '../core/constants';
 import { ovr } from '../core/player';
 import type { Player } from '../core/types';
 import { $, $$, esc, posTag, sheet, val } from './dom';
+import { promoTalk } from '../core/promotalk';
 
 const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 export function youthHTML(G: GameState, sel: Set<number>): string {
@@ -24,19 +25,25 @@ function promoHTML(G: GameState, sel: Set<number>): string {
   const room = 35 - G.squad.length;
   const list = [...G.youth].sort((a, b) => (b.grade || 0) - (a.grade || 0) || ovr(b) - ovr(a));
   const rep = G.youthLog[G.youthLog.length - 1];
+  const T = promoTalk(G); const rec = new Set(G.promo?.rec ?? []); const want = new Set(T.mgr.want);
+  const speak = (face: string, role: string, who: string, lines: string[]) => `<div class="mspeak" style="margin-top:10px"><span class="mface" aria-hidden="true">${face}</span><div class="grow"><div class="mrole">${role}</div><div class="mwho">${esc(who)}</div></div></div><div class="talk-bubble mbubble">${lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>`;
   return `<section class="card"><h2>春の昇格会議</h2><div class="goal">トップに上げる子を選ぶ</div>
-    <div class="muted">ここで初めて、ユースの子の数字が見える。上げなかった3年は卒業してクラブを去る。1・2年はあと1年ユースに残る。コーチのおすすめが、はじめから選ばれている。</div>
+    <div class="muted">ここで初めて、ユースの子の数字が見える。上げなかった3年は卒業してクラブを去る。1・2年はあと1年ユースに残る。コーチの推薦が、はじめから選ばれている。</div>
+    ${speak('ユ', 'ユースコーチ', T.coach.who, T.coach.lines)}${speak('監', '監督', T.mgr.who, T.mgr.lines)}
+    <div class="row wrap" style="gap:6px;margin-top:10px"><button class="btn small ghost" data-pset="rec">コーチの推薦にもどす</button>${T.mgr.want.length ? '<button class="btn small ghost" data-pset="mgr">監督の希望を足す</button>' : ''}</div>
     <div style="margin-top:6px">トップは今 <b>${G.squad.length}人</b>（35人まで）・ 選んだ子 <b>${sel.size}人</b>${sel.size > room ? ' <span class="tag bad">多すぎる</span>' : ''}</div></section>
   ${list.map((p) => { const L = p.pos === 'GK' ? AT_K : AT_F; const O = p.pos === 'GK' ? ORDER_K : ORDER_F; const l = rep?.lines.find((x) => x.pid === p.id); const on = sel.has(p.id);
-    return `<section class="card" style="${on ? 'border:2px solid var(--club)' : ''}"><div class="row">${posTag(p.pos)}<span class="grow pname">${esc(p.name)} <span class="pmeta">${p.grade}年 ・ ${p.age}歳</span></span><span class="ovr">${val(ovr(p))}</span></div>
+    return `<section class="card" style="${on ? 'border:2px solid var(--club)' : ''}"><div class="row">${posTag(p.pos)}<span class="grow pname">${esc(p.name)} <span class="pmeta">${p.grade}年 ・ ${p.age}歳</span>${rec.has(p.id) ? ' <span class="tag gold">コーチ推薦</span>' : ''}${want.has(p.id) ? ' <span class="tag">監督がほしい</span>' : ''}</span><span class="ovr">${val(ovr(p))}</span></div>
       <div class="mini" style="margin-top:8px">${O.map((i) => `<span>${L[i]} ${val(Math.floor(p.a[i]))}</span>`).join('')}</div>
-      ${l ? `<div class="muted small" style="margin-top:6px">コーチ：「${esc(l.comment)}」 <span style="color:var(--gold)">${stars(l.stars)}</span></div>` : ''}
+      ${T.why[p.id] ? `<div class="small" style="margin-top:6px">${esc(T.why[p.id])}</div>` : ''}
+      ${l ? `<div class="muted small" style="margin-top:6px">月の報告：「${esc(l.comment)}」 <span style="color:var(--gold)">${stars(l.stars)}</span></div>` : ''}
       ${p.sp.length ? `<div class="chips" style="margin-top:6px">${p.sp.map((s) => `<span class="chip good">${esc(s)}</span>`).join('')}</div>` : ''}
       <button class="btn ${on ? 'primary' : 'ghost'} wide" style="margin-top:8px" data-psel="${p.id}">${on ? 'トップに上げる（選んだ）' : p.grade === 3 ? '上げない（卒業）' : '上げない（ユースに残る）'}</button></section>`; }).join('')}
   <button class="btn primary wide" data-act="promo" ${sel.size > room ? 'disabled' : ''}>この内容で決める</button>`;
 }
 export function bindYouth(G: GameState, root: HTMLElement, sel: Set<number>, rerender: () => void, done: (msgs: string[]) => void) {
   $$<HTMLElement>('[data-psel]', root).forEach((b) => b.addEventListener('click', () => { const id = +b.dataset.psel!; if (sel.has(id)) sel.delete(id); else sel.add(id); rerender(); }));
+  $$<HTMLElement>('[data-pset]', root).forEach((b) => b.addEventListener('click', () => { const T = promoTalk(G); if (b.dataset.pset === 'rec') { sel.clear(); for (const id of G.promo?.rec ?? []) sel.add(id); } else for (const id of T.mgr.want) sel.add(id); rerender(); }));
   $$<HTMLElement>('[data-act="promo"]', root).forEach((b) => b.addEventListener('click', () => { done(decidePromo(G, [...sel])); }));
   $$<HTMLElement>('[data-act="ylog"]', root).forEach((b) => b.addEventListener('click', () => openYouthLog(G, rerender)));
   $$<HTMLElement>('[data-ygr]', root).forEach((b) => b.addEventListener('click', () => { yGrade = +b.dataset.ygr!; yOpen = ''; rerender(); }));
