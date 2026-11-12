@@ -71,7 +71,7 @@ const S = (who: Who, line: Line) => ({ who, line });
 export interface MicLine { who: Who; line: Line }
 export function preTalk(r: Rng, home: Token, away: Token, info: string, st: Stakes, ace: { name: Token; goals: number } | null): MicLine[] {
   const out: MicLine[] = [];
-  const open = st.kind === '決勝' ? ['勝ち抜きの大会、いよいよ決勝です。{H} 対 {W}。', 'ついに決勝の舞台。{H} と {W} が向かい合います。']
+  const open = st.kind === '決勝' ? ['天皇杯、いよいよ決勝です。{H} 対 {W}。', 'ついに決勝の舞台。{H} と {W} が向かい合います。']
     : st.kind === '優勝' ? ['優勝の行方を左右する一戦。{H} 対 {W}。', '負けられない試合です。{H} 対 {W}、優勝争いの大一番。']
     : st.kind === '昇格' ? ['昇格をかけた大事な一戦。{H} 対 {W}。', '上の段へ。昇格争いの直接対決、{H} 対 {W}。']
     : st.kind === '残留' ? ['残留をかけた、負けられない試合。{H} 対 {W}。', '下の段に落ちるわけにはいかない。{H} 対 {W}。']

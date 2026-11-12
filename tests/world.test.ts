@@ -53,7 +53,7 @@ describe('1年の流れと昇格・降格（企画書 5・6・7）', () => {
     if (G.sched.cup.includes(wk)) cupGames++;
   }
   it('順番は「昇格会議 → キャンプ → 開幕」', () => { expect(ordered).toEqual(['promo', 'camp', 'open']); });
-  it('勝ち抜きの大会は6回戦で、優勝クラブが1つ決まる', () => {
+  it('天皇杯は6回戦で、優勝クラブが1つ決まる', () => {
     expect(cupGames).toBe(6);
     expect(G.history[0].cupChampion).not.toBe('');
   });

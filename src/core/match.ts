@@ -264,7 +264,7 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
   }
   ev.push({ t: 90, kind: 'talk', me: false, text: ['試合終了の笛。', C(sides[0]), ' ', String(sides[0].goals), ' - ', String(sides[1].goals), ' ', C(sides[1]), '。'] });
   log.sort((x, y) => x.min - y.min);
-  /* 勝ち抜きの大会で引き分け：延長はせず、すぐにPK戦 */
+  /* 天皇杯で引き分け：延長はせず、すぐにPK戦 */
   let pk: [number, number] | null = null;
   if (opts.cup && sides[0].goals === sides[1].goals) pk = shootout(r, sides, ev);
   const score: [number, number] = [sides[0].goals, sides[1].goals];

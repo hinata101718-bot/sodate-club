@@ -28,7 +28,7 @@ export function openClub(G: GameState, id: number, back: () => void, save: () =>
       <section class="card"><div class="row" style="gap:12px;align-items:center"><div class="club-crest" aria-hidden="true">${emblemSVG(c.emblem)}</div><div class="grow" style="min-width:0">
         <div><b>${esc(c.pref)}</b> ・ ${c.tier}部 ${played ? `${rk}位（${row.w}勝${row.d}分${row.l}敗・勝ち点${row.p}）` : '開幕前'}</div>
         <div class="muted small">監督 ${esc(m.name)} ・ 戦い方：${esc(m.style)} ・ 並び方 ${esc(m.forms.join('・'))}</div>${finLine(c)}</div></div></section>
-      <section class="card"><h2>うちとの対戦成績</h2><div>${vsText}</div><div class="muted small">リーグ戦と勝ち抜きの大会を合わせた数（大会のPK戦は勝ち・負けで数える）。</div></section>
+      <section class="card"><h2>うちとの対戦成績</h2><div>${vsText}</div><div class="muted small">リーグ戦と天皇杯を合わせた数（大会のPK戦は勝ち・負けで数える）。</div></section>
       <section class="card"><h2>年ごとの成績</h2>${hist.length ? `<div class="list">${hist.map((h) => `<div class="row"><span class="tag">${h.y}年目</span><span class="grow">${h.tier}部 <b>${h.rank}位</b>${h.tier > 1 && h.rank <= 2 ? ' <span class="tag gold">昇格</span>' : h.tier === 1 && h.rank === 1 ? ' <span class="tag gold">優勝</span>' : h.tier < 3 && h.rank >= 11 ? ' <span class="tag bad">降格</span>' : ''}</span></div>`).join('')}</div>` : '<div class="muted">まだ記録がない（1年が終わると残る）。</div>'}</section>
       <section class="card"><h2>選手（${c.squad.length}人・調べた選手 ${nKnown}人）</h2><div class="muted small" style="margin-bottom:8px">総合力は、スカウトが調べた選手だけわかる（調べたときの数字。選手は育つので、いまは変わっているかもしれない）。調べた選手を押すと、選手の画面へ（候補リストに入れられる・調べ直してもらえる）。まだ調べていない選手を押すと、スカウトに調べてもらうよう頼める（次の月のはじめに届く）。</div><div class="plist">${pl}</div></section>`,
       `<div class="in2 one"><button class="btn primary" id="cvBack">もどる</button></div>`, keep);

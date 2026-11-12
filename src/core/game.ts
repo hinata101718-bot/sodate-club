@@ -241,7 +241,7 @@ function contention(G: GameState, tier: number): boolean {
   return me <= 3 || line.p - rows[me].p <= 6;
 }
 
-/** 勝ち抜きの大会（企画書 5）：1回戦は3部と2部の24クラブ、2回戦から1部の下位4つ、3回戦から1部の上位8つが出てくる */
+/** 天皇杯（企画書 5）：1回戦は3部と2部の24クラブ、2回戦から1部の下位4つ、3回戦から1部の上位8つが出てくる */
 function cupEntrants(G: GameState, round: number, winners: number[]): number[] {
   const t1 = G.clubs.filter((c) => c.tier === 1).sort((a, b) => (a.prevRank || 99) - (b.prevRank || 99) || a.id - b.id).map((c) => c.id);
   if (round === 0) return G.clubs.filter((c) => c.tier >= 2).map((c) => c.id);
@@ -259,7 +259,7 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
   const final = round === 5;
   for (const t of ties) {
     const isMine = t.a === ME || t.b === ME;
-    const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, final, pre: isMine ? { info: `勝ち抜きの大会、${CUP_ROUND_NAMES[round]}です。`, stakes: { kind: final ? '決勝' : '' } } : undefined, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `勝ち抜きの大会 ${CUP_ROUND_NAMES[round]}` });
+    const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, final, pre: isMine ? { info: `天皇杯、${CUP_ROUND_NAMES[round]}です。`, stakes: { kind: final ? '決勝' : '' } } : undefined, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `天皇杯 ${CUP_ROUND_NAMES[round]}` });
     t.s = res.score; t.pk = res.pk; t.w = res.winner === 0 ? t.a : t.b;
     const ca = clubById(G, t.a), cb = clubById(G, t.b);
     if (!ca.me) aiM.set(t.a, { home: !final, won: t.w === t.a, oppTier: cb.tier, cup: true, gf: res.score[0], ga: res.score[1] });
@@ -283,7 +283,7 @@ function revealTypes(G: GameState, need: number): string[] {
   }
   return out;
 }
-/** 今週、自分のクラブの試合があるか（勝ち抜きの大会で、まだ出番がない回はない） */
+/** 今週、自分のクラブの試合があるか（天皇杯で、まだ出番がない回はない） */
 export function hasMyMatch(G: GameState): boolean {
   const e = eventOf(G);
   if (e.kind === 'league') return true;
@@ -324,8 +324,8 @@ export function advanceWeek(G: GameState): WeekResult {
     if (ci >= 0) {
       const wasAlive = cupAlive(G);
       match = playCupRound(G, r, ci);
-      if (wasAlive && !cupAlive(G)) news.push(`勝ち抜きの大会は${CUP_ROUND_NAMES[ci]}で負けた。`);
-      if (G.cup.champion === ME) news.push('勝ち抜きの大会で優勝した！');
+      if (wasAlive && !cupAlive(G)) news.push(`天皇杯は${CUP_ROUND_NAMES[ci]}で負けた。`);
+      if (G.cup.champion === ME) news.push('天皇杯で優勝した！');
     }
     if (isOff(w) && w === 0) news.push('オフの休み。ケガと疲れが回復する。');
     if (isCamp(w) && w === 5) news.push('春のキャンプが始まった。この期間は選手が伸びやすい。');
@@ -450,7 +450,7 @@ function yearEnd(G: GameState, r: Rng): string[] {
     const lp = leaguePrize(tier, rank); const won = G.cup.rounds.filter((rd) => rd.some((t) => t.w === ME)).length;
     const cp = CUP_PRIZE[Math.min(6, won)] ?? 0;
     earn(G, 'prize', lp + cp);
-    out.push(`賞金：リーグ ${lp.toLocaleString()}万円${cp ? `、勝ち抜きの大会 ${cp.toLocaleString()}万円` : ''}。`);
+    out.push(`賞金：リーグ ${lp.toLocaleString()}万円${cp ? `、天皇杯 ${cp.toLocaleString()}万円` : ''}。`);
     if (rank <= 2 && tier > 1) G.owner.pop = Math.min(100, G.owner.pop + 10);
     if (rank === 1) G.owner.pop = Math.min(100, G.owner.pop + 8);
     refreshMarket(r, G.ids, G.owner, tier);
@@ -534,7 +534,7 @@ export const GOALS: GoalDef[] = [
   { id: 't3up', text: '3部で2位以内に入って昇格', done: (G) => { const x = lastRec(G); return x.tier === 3 && x.rank <= 2; } },
   { id: 't2up', text: '2部で2位以内に入って昇格', done: (G) => { const x = lastRec(G); return x.tier === 2 && x.rank <= 2; } },
   { id: 't1stay', text: '1部に残る（10位以内）', done: (G) => { const x = lastRec(G); return x.tier === 1 && x.rank <= 10; } },
-  { id: 'cup', text: '勝ち抜きの大会で優勝', done: (G) => G.cup.champion === ME },
+  { id: 'cup', text: '天皇杯で優勝', done: (G) => G.cup.champion === ME },
   { id: 't1win', text: '1部で優勝', done: (G) => { const x = lastRec(G); return x.tier === 1 && x.rank === 1; } },
   { id: 'double', text: '1部と大会を同じ年に優勝', done: (G) => { const x = lastRec(G); return x.tier === 1 && x.rank === 1 && G.cup.champion === ME; } },
 ];

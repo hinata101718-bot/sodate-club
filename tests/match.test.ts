@@ -60,7 +60,7 @@ describe('試合の文と見どころ', () => {
     }
     expect(checked).toBeGreaterThan(10);
   });
-  it('勝ち抜きの大会では、引き分けでもPK戦で勝ち負けが決まる', () => {
+  it('天皇杯では、引き分けでもPK戦で勝ち負けが決まる', () => {
     const r = new Rng(3); const ids = { n: 1 };
     for (let i = 0; i < 100; i++) {
       const res = simulateMatch(r, team(r, ids, 1, 60), team(r, ids, 2, 60), { cup: true });

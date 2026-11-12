@@ -81,7 +81,7 @@ export function boot() {
 }
 /* 下のメニューは4つ（ホーム・チーム・経営・リーグ）。チーム・経営・リーグは、押すと大きなアイコンが並ぶ（問82：サカつくを手本に） */
 const GROUP_OF: Record<string, string> = { home: 'home', team: 'team', squad: 'team', youth: 'team', tr: 'team', biz: 'biz', fac: 'biz', people: 'biz', money: 'biz', league: 'league', table: 'league', cup: 'league', rec: 'league' };
-const PAGE_TITLE: Record<string, string> = { squad: 'トップチーム', youth: 'ユース', tr: '移籍', fac: '施設', people: 'スタッフ', money: 'お金', table: '順位表', cup: '勝ち抜きの大会', rec: 'リーグの歴史' };
+const PAGE_TITLE: Record<string, string> = { squad: 'トップチーム', youth: 'ユース', tr: '移籍', fac: '施設', people: 'スタッフ', money: 'お金', table: '順位表', cup: '天皇杯', rec: 'リーグの歴史' };
 const GROUP_NAME: Record<string, string> = { team: 'チーム', biz: '経営', league: 'リーグ' };
 /* 7：もどる操作。入り口から開いたページは、ブラウザの「もどる」（Safariの左のふちのスワイプ）で入り口にもどる。
    ホーム画面から開いたときはブラウザのもどるがないので、左のふちから右へのスワイプを自分で受けとる */
@@ -148,10 +148,10 @@ function nextHTML(G: GameState): string {
     return `<h2>今週の試合 ・ リーグ第${e.round}節</h2><div class="vs">${e.home ? mine : theirs}<div class="vs-mid"><b>VS</b><span class="tag ${e.home ? '' : 'away'}">${e.home ? 'ホーム' : 'アウェイ'}</span></div>${e.home ? theirs : mine}</div><div class="muted small" style="text-align:center;margin-top:6px">予定：${matchPlan(G).form}</div>`; }
   if (e.kind === 'cup') {
     const nm = CUP_ROUND_NAMES[e.round];
-    if (!cupAlive(G)) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">大会はもう負けている。今週は試合がない。</div>`;
-    if (e.round === 0 && myTier(G) === 1) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">1部のクラブは、2回戦か3回戦から出る。</div>`;
-    if (e.round === 1 && myTier(G) === 1 && (clubById(G, ME).prevRank || 99) <= 8) return `<h2>今週 ・ 勝ち抜きの大会 ${nm}</h2><div class="muted">去年の上位8つは、3回戦から出る。</div>`;
-    return `<h2>今週の試合 ・ 勝ち抜きの大会 ${nm}</h2><div class="goal">相手は今週の抽選で決まる</div><div class="muted">引き分けなら、すぐにPK戦。${e.round === 5 ? '決勝は中立の会場。' : ''}</div>`;
+    if (!cupAlive(G)) return `<h2>今週 ・ 天皇杯 ${nm}</h2><div class="muted">天皇杯はもう負けている。今週は試合がない。</div>`;
+    if (e.round === 0 && myTier(G) === 1) return `<h2>今週 ・ 天皇杯 ${nm}</h2><div class="muted">1部のクラブは、2回戦か3回戦から出る。</div>`;
+    if (e.round === 1 && myTier(G) === 1 && (clubById(G, ME).prevRank || 99) <= 8) return `<h2>今週 ・ 天皇杯 ${nm}</h2><div class="muted">去年の上位8つは、3回戦から出る。</div>`;
+    return `<h2>今週の試合 ・ 天皇杯 ${nm}</h2><div class="goal">相手は今週の抽選で決まる</div><div class="muted">引き分けなら、すぐにPK戦。${e.round === 5 ? '決勝は中立の会場。' : ''}</div>`;
   }
   const txt: Record<string, [string, string]> = {
     off: ['1月 ・ オフの休み', 'ケガと疲れが回復する。練習はお休み。'],
@@ -247,7 +247,7 @@ function hubHTML(g: string): string {
     ],
     league: [
       ['table', '順位表', `${myTier(G)}部${pl ? ` ${myRank(G)}位` : ' ・ 開幕前'}`, ICON.table],
-      ['cup', '勝ち抜きの大会', cupResultText(G), ICON.cup],
+      ['cup', '天皇杯', cupResultText(G), ICON.cup],
       ['rec', 'リーグの歴史', G.history.length ? `${G.history.length}年ぶん` : '1年目が終わるとのる', ICON.rec],
     ],
   };
@@ -298,7 +298,7 @@ function tableHTML(): string {
 function cupHTML(G: GameState): string {
   const rounds = G.cup.rounds;
   const res = cupResultText(G);
-  const head = `<section class="card"><h2>勝ち抜きの大会 ・ ${G.season}年目</h2><div class="muted">全36クラブが出る。1回戦は3部と2部、2回戦から1部の下位4つ、3回戦から1部の上位8つが出てくる。引き分けはすぐにPK戦。</div>
+  const head = `<section class="card"><h2>天皇杯 ・ ${G.season}年目</h2><div class="muted">全36クラブが出る。1回戦は3部と2部、2回戦から1部の下位4つ、3回戦から1部の上位8つが出てくる。引き分けはすぐにPK戦。</div>
     <div style="margin-top:6px">自分のクラブ：<b>${esc(res)}</b>${G.cup.champion != null ? ` ・ 優勝は ${esc(clubName(G, G.cup.champion))}` : ''}</div></section>`;
   if (!rounds.length) return head + `<section class="card muted">まだ始まっていない。1回戦は ${monthOf(G.sched.cup[0] ?? 13)}月。</section>`;
   return head + [...rounds].map((rd, i) => ({ rd, i })).reverse().map(({ rd, i }) => `<section class="card"><h2>${CUP_ROUND_NAMES[i]}</h2><div class="bracket">${rd.map((t) => `<div class="m ${t.a === ME || t.b === ME ? 'me' : ''}"><span class="${t.w === t.a ? 'w' : ''}">${esc(clubName(G, t.a))}</span><span>${t.s ? t.s.join('-') : ''}${t.pk ? `<br><span class="small">PK ${t.pk.join('-')}</span>` : ''}</span><span class="${t.w === t.b ? 'w' : ''}" style="text-align:right">${esc(clubName(G, t.b))}</span></div>`).join('')}</div></section>`).join('');
@@ -309,7 +309,7 @@ function recordHTML(G: GameState): string {
   const fl = G.favLog ?? [];
   const favs = fl.length ? `<section class="card"><h2>お気に入りだった選手</h2><div class="list">${[...fl].reverse().map((f) => `<div class="row"><span class="tag">${f.season}年目</span><span class="grow"><span class="favmark">★</span>${esc(f.name)}（${f.pos}）<span class="muted small">${esc(f.text)}</span></span></div>`).join('')}</div></section>` : '';
   return favs + `${done ? `<section class="card"><h2>達成した目標</h2><ul style="margin:0;padding-left:1.2em">${done}</ul></section>` : ''}` + [...G.history].reverse().map((h) => `<section class="card"><h2>${h.season}年目</h2>
-    <div class="goal">${h.tier}部 ${h.rank}位${h.promoted ? ' ・ 昇格' : h.relegated ? ' ・ 降格' : ''}</div><div class="muted">勝ち抜きの大会：${esc(h.cup)}（優勝 ${esc(h.cupChampion)}）・ 1部の優勝 ${esc(h.champion[1] || '')}</div>
+    <div class="goal">${h.tier}部 ${h.rank}位${h.promoted ? ' ・ 昇格' : h.relegated ? ' ・ 降格' : ''}</div><div class="muted">天皇杯：${esc(h.cup)}（優勝 ${esc(h.cupChampion)}）・ 1部の優勝 ${esc(h.champion[1] || '')}</div>
     <h3>年末の表彰</h3><div class="list">${h.awards.map((a) => `<div class="row"><span class="tag ${a.me ? 'gold' : ''}">${a.tier}部</span><span class="grow">${esc(a.title)}：<b>${esc(a.name)}</b> <span class="muted small">${esc(a.club)} ・ ${esc(a.detail)}</span></span></div>`).join('')}</div></section>`).join('');
 }
 import { GOALS } from '../core/game';
