@@ -51,7 +51,7 @@ export function showChangesOnce(kv: { getItem(k: string): string | null; setItem
   try { seen = +(kv.getItem(KEY) ?? '0'); } catch { /* 読めないときは出す */ }
   const mark = () => { try { kv.setItem(KEY, String(latest)); } catch { /* 書けなくても遊べる */ } };
   if (firstTime) { mark(); done(); return; }
-  const list = CHANGES.filter((c) => c.id > seen).slice(0, 3);
+  const list = CHANGES.filter((c) => c.id > seen).slice(0, 8);
   if (!list.length) { done(); return; }
   sheet(`<div class="bar"><h2>アップデートのお知らせ</h2></div>
     ${list.map((c) => `<section class="card"><h2>${esc(c.date)}</h2><ul class="chlist">${c.items.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></section>`).join('')}
