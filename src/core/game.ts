@@ -350,7 +350,7 @@ export function advanceWeek(G: GameState): WeekResult {
     if (w === 25 || w === AWARD_WEEK + 1) {
       news.push(...aiTransfers(G, r));
       /* 問126：お金に苦しいクラブは、移籍の期間に主力を手放すことがある（ニュースになる） */
-      const sad = G.clubs.filter((c) => !c.me && finWord(c) === '苦しい' && r.next() < 0.35);
+      const sad = G.clubs.filter((c) => !c.me && finWord(c) === '苦しい' && r.next() < (c.fin?.style === '勝負好き' ? 0.6 : 0.35));
       for (const c of sad.slice(0, 2)) { const n = distressSale(G, c, r); if (n) news.push(n); }
     }
     news.push(...weekMoney(G, homeInfo));

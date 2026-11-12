@@ -6,7 +6,7 @@ import { makeSquad, ovr, teamStrength } from './player';
 import { makeManager } from './staff';
 import type { Emblem } from './emblem';
 import type { Manager, Player } from './types';
-import { initFin, type ClubFin } from './clubfin';
+import { initFin, STYLES, type ClubFin } from './clubfin';
 
 export interface Club { id: number; name: string; color: string; pref: string; tier: number; lvl: number; squad: Player[]; mgr: Manager; emblem: Emblem; me: boolean; prevRank: number; fin?: ClubFin;
   /** 問130：年ごとの段と順位・自分のクラブとの対戦成績 */
@@ -49,6 +49,8 @@ export function makeWorld(r: Rng, ids: { n: number }, myPref: string, myTier: nu
   void myTier;
   let id = Math.max(0, ...keep.map((k) => k.id)) + 1;
   for (const t of tiers) clubs.push(makeAiClub(r, ids, id++, others.pop()!, t, used));
+  /* 問132：性格は、どれも同じくらいの数に（段ごとにも散らす） */
+  for (const t of [1, 2, 3]) { const cs = clubs.filter((c) => !c.me && c.tier === t && c.fin); const st = r.shuffle(cs.map((_, i) => STYLES[i % 3])); cs.forEach((c, i) => { c.fin!.style = st[i]; }); }
   return clubs;
 }
 /** 段が変わったときなどに、強さを段の目安へ近づける（顔ぶれはそのまま） */

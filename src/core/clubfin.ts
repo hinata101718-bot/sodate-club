@@ -20,7 +20,7 @@ export type FinWord = '裕福' | 'ふつう' | '苦しい';
 /** 給料に使ってもいいと考えるいちばん上（性格で変わる。リーグの決まりではない） */
 export const PAY_LIMIT: Record<Style, number> = { 堅実: 0.5, ふつう: 0.65, 勝負好き: 0.9 };
 /** 給料に回す割合の目安（性格で変わる） */
-const SPEND: Record<Style, number> = { 堅実: 0.31, ふつう: 0.36, 勝負好き: 0.44 };
+const SPEND: Record<Style, number> = { 堅実: 0.31, ふつう: 0.39, 勝負好き: 0.44 };
 /** 余ったお金のうち、給料に上乗せする割合 */
 const EXTRA: Record<Style, number> = { 堅実: 0.04, ふつう: 0.08, 勝負好き: 0.18 };
 /** 手もとに残しておきたいお金（1年の収入の何倍か） */
@@ -156,7 +156,9 @@ export function aiSeasonFin(G: GameState, c: Club, r: Rng, rank: number, oldTier
   const now = Math.max(1, clubPayroll(c));
   /* 給料が目安の何倍か → 強さをどれだけ動かすか（給料は強さにつれて急に上がるので、対数で見る） */
   const s = teamStrength(c.squad); const d = s - 55; const g = 0.05 + 0.006 * Math.abs(d) * (d > 0 ? 1 : 0.4);
-  const move = clamp(Math.log(target / now) / Math.max(0.08, g), -6, 6);
+  let move = clamp(Math.log(target / now) / Math.max(0.08, g), -6, 6);
+  /* 問132：勝負好きは、苦しくなると一気に崩れる（主力をまとめて手放す） */
+  if (f.style === '勝負好き' && finWord(c) === '苦しい') move = Math.min(move, -5);
   /* 問131：お金は「いい選手を獲る・給料の高い選手を手放す」で効く（チームごとまとめて上げ下げはしない） */
   aiRoster(G, c, r, move, s);
   /* 段の強さがずれないための小さな調整（選手の市場は段ごとにだいたい決まっている） */
@@ -218,7 +220,9 @@ function aiRoster(G: GameState, c: Club, r: Rng, move: number, s: number) {
       np.num = out.num; np.contract = r.int(2, 4); np.salary = salaryFor(ovr(np)); c.squad[c.squad.indexOf(out)] = np; toFree(out);
     } else {
       const gk = c.squad.filter((x) => x.pos === 'GK').length;
-      const out = [...c.squad].filter((p) => p.age >= 24 && !(p.pos === 'GK' && gk <= 2)).sort((a, b) => b.salary - a.salary)[0]; if (!out) return;
+      /* 堅実なクラブは、育てた選手（ユース出身の25歳まで）を手放さない */
+      const keepYouth = c.fin?.style === '堅実';
+      const out = [...c.squad].filter((p) => p.age >= 24 && !(p.pos === 'GK' && gk <= 2) && !(keepYouth && p.origin === 'ユース出身' && p.age <= 25)).sort((a, b) => b.salary - a.salary)[0]; if (!out) return;
       const np = makePlayer(r, G.ids, s - r.int(4, 7), out.pos, { age: r.int(22, 28), prefPool: [c.pref, c.pref, r.pick(['東京都', '大阪府', '愛知県'])] });
       np.num = out.num; np.contract = r.int(2, 3); np.salary = salaryFor(ovr(np)); c.squad[c.squad.indexOf(out)] = np; toFree(out);
     }
@@ -237,8 +241,8 @@ export function aiYouth(G: GameState, c: Club, r: Rng): Player[] {
     /* 入れかわるのは、年をとった控え（いなければ、いちばん弱い選手） */
     const gk = c.squad.filter((x) => x.pos === 'GK').length;
     const out = [...c.squad].filter((p) => !(p.pos === 'GK' && gk <= 2)).sort((a, b) => (b.age >= 29 ? 1 : 0) - (a.age >= 29 ? 1 : 0) || ovr(a) - ovr(b))[0]; if (!out) break;
-    const k = makePlayer(r, G.ids, 40 + c.tier * -2 + 8 + r.int(0, 6), out.pos, { age: r.int(17, 18), nSp: 0, exp: 0, prefPool: [c.pref], origin: 'ユース出身' });
-    k.pot = clamp(ovr(k) + r.int(14, 30) + good * 2 + (r.next() < 0.06 ? r.int(6, 12) : 0), 40, 90); k.gStart = k.age; k.gLen = r.int(4, 7); k.contract = 3; k.salary = salaryFor(ovr(k));
+    const k = makePlayer(r, G.ids, 40 + c.tier * -2 + 8 + r.int(0, 6) + (st === '堅実' ? 2 : 0), out.pos, { age: r.int(17, 18), nSp: 0, exp: 0, prefPool: [c.pref], origin: 'ユース出身' });
+    k.pot = clamp(ovr(k) + r.int(14, 30) + good * 2 + (st === '堅実' ? 3 : 0) + (r.next() < (st === '堅実' ? 0.1 : 0.06) ? r.int(6, 12) : 0), 40, 90); k.gStart = k.age; k.gLen = r.int(4, 7); k.contract = 3; k.salary = salaryFor(ovr(k));
     k.num = out.num; c.squad[c.squad.indexOf(out)] = k; up.push(k);
   }
   return up;
@@ -247,5 +251,7 @@ export function aiYouth(G: GameState, c: Club, r: Rng): Player[] {
 export function aiGrowCtx(c: Club, camp: boolean): GrowCtx {
   const t = ({ 1: 1.1, 2: 0.9, 3: 0.68 } as Record<number, number>)[c.tier] ?? 1;
   const fac = 1 + ((c.fin?.stadium ?? 2) - 2) * 0.04;
-  return { ...DEFAULT_CTX, mgrGrow: c.mgr.grow ?? 1, style: c.mgr.style, camp, coach: Array(8).fill(t), field: t * fac };
+  /* 問132：堅実なクラブは育成が強み（練習の伸びが大きい）。勝負好きは補強にお金を回すので、育成は弱め */
+  const sm = ({ 堅実: 1.1, ふつう: 1.07, 勝負好き: 0.94 } as Record<Style, number>)[c.fin?.style ?? 'ふつう'];
+  return { ...DEFAULT_CTX, mgrGrow: c.mgr.grow ?? 1, style: c.mgr.style, camp, coach: Array(8).fill(t * sm), field: t * fac * sm };
 }
