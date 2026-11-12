@@ -1,5 +1,6 @@
 /* 移籍市場の画面（夜2 段階2）：知っている選手・フリーの選手・スカウトの条件・申し込み */
-import { finWord } from '../core/clubfin';
+import { finWord, acctAdvice } from '../core/clubfin';
+import { staffPay } from '../core/owner';
 import { startNego, negoTurn, isBlocked, FEE_STEPS, SAL_STEPS } from '../core/nego';
 import type { GameState } from '../core/game';
 import { myTier } from '../core/game';
@@ -211,7 +212,11 @@ export function openNego(G: GameState, pid: number, done: (msg?: string | null) 
         <h3>契約の年数</h3><div class="seg" role="group" aria-label="契約の年数">${[1, 2, 3, 4].map((y) => `<button data-ny="${y}" aria-pressed="${n.years === y}">${y}年</button>`).join('')}</div>
         <div class="muted small" style="margin-top:6px">${n.fee ? `移籍金 ${yen(n.fee)} は決まっている。` : ''}若い選手は長めの契約を、上の段の選手は高めの給料をほしがる。</div></section>`;
     }
-    const s = sheet(`<div class="bar"><h2>${esc(p.name)}との交渉</h2>${posTag(p.pos)}</div><section class="card nego">${log}</section>${ctl}`,
+    /* 経理のアドバイス：いま選んでいる移籍金と給料で、クラブのお金がどうなるか */
+    const fee = n.side === 'club' ? (feeI === -1 && n.ask != null ? n.ask : Math.round((value * FEE_STEPS[feeI]) / 100) * 100) : n.fee;
+    const sal = n.side === 'player' ? (salI === -1 && n.sAsk != null ? n.sAsk : Math.round((base * SAL_STEPS[salI]) / 10) * 10) : base;
+    const adv = n.end ? '' : `<section class="card"><div class="mspeak"><span class="mface" aria-hidden="true">¥</span><div class="grow"><div class="mrole">経理</div><div class="mwho">${esc(G.front?.acct ?? '経理')}</div></div></div><div class="talk-bubble mbubble">${acctAdvice(G, w.club ?? null, fee, sal, staffPay(G)).map((l) => `<p>${esc(l)}</p>`).join('')}</div><div class="muted small" style="margin-top:6px">金額を選びなおすと、経理の見立ても変わる。</div></section>`;
+    const s = sheet(`<div class="bar"><h2>${esc(p.name)}との交渉</h2>${posTag(p.pos)}</div><section class="card nego">${log}</section>${ctl}${adv}`,
       n.end ? `<div class="in2 one"><button class="btn primary" id="ngClose">${n.end === 'ok' ? '決まった！ 閉じる' : '閉じる'}</button></div>` : `<div class="in2"><button class="btn ghost" id="ngStop">やめる</button><button class="btn primary" id="ngGo">この条件で話す</button></div>`);
     s.scrollTop = s.scrollHeight;
     $$<HTMLElement>('[data-nf]').forEach((b) => b.addEventListener('click', () => { feeI = b.dataset.nf === 'ask' ? -1 : +b.dataset.nf!; draw(); }));

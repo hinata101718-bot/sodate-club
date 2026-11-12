@@ -166,3 +166,35 @@ export function fitPayCap(c: Club) {
   if (!c.fin) return;
   for (let i = 0; i < 20 && clubPayroll(c) > clubPayCap(c) * 0.95; i++) for (const p of c.squad) { p.a = p.a.map((v) => Math.max(10, v - 1)); p.salary = salaryFor(ovr(p)); }
 }
+
+/* ---------- 交渉のときの経理のアドバイス（感想） ---------- */
+/** 自分のクラブの1年の収入の見こみ（去年の実際の収入のほうが多く、段が同じなら、そちらを使う） */
+export function myRevenue(G: GameState): number {
+  const me = G.clubs.find((c) => c.me)!; const o = G.owner;
+  const est = revenueOf(me.tier, G.club.pref, o.pop, o.fac.stadium);
+  const L = o.lastLedger; const last = L ? L.gate + L.sponsor + L.goods + L.dist + L.prize : 0;
+  const h = G.history.at(-1); const same = !h || (!h.promoted && !h.relegated);
+  return r100(same ? Math.max(est, last) : est);
+}
+/** 経理のひとこと：今のお金・給料の重さ・1年の見こみ・予算・借金・相手の懐ぐあいから。fee は移籍金、salary は年の給料、staff はスタッフの給料（1年） */
+export function acctAdvice(G: GameState, seller: Club | null, fee: number, salary: number, staff: number): string[] {
+  const o = G.owner; const me = G.clubs.find((c) => c.me)!;
+  const rev = Math.max(1, myRevenue(G)); const pay = G.squad.reduce((s, p) => s + p.salary, 0);
+  const ops = 11 * (opsCost(me.tier, true) + opsCost(me.tier, false));
+  const monthOut = (pay + staff + ops) / 12;
+  const out: string[] = [];
+  const left = o.money - o.mk.bids.reduce((s, b) => s + b.fee, 0) - fee;
+  if (fee > 0) {
+    if (left < 0) out.push(`移籍金 ${man(fee)} は、いまのお金では払えません（あと${man(-left)}足りません）。`);
+    else if (left < monthOut * 2) out.push(`移籍金 ${man(fee)} を払うと、手もとのお金は ${man(left)} です。給料などの2か月分を切るので、心細くなります。`);
+    else out.push(`移籍金 ${man(fee)} を払っても、手もとに ${man(left)} 残ります。`);
+  }
+  if (G.budget && fee > 0) { const rest = G.budget.cap - G.budget.spent; out.push(rest - fee >= 0 ? `補強の予算は、この移籍金を払うと残り ${man(rest - fee)} です。` : `補強の予算（残り ${man(Math.max(0, rest))}）をこえてしまいます。`); }
+  const share = Math.round(((pay + salary) / rev) * 100);
+  const net = rev - (pay + salary) - staff - ops;
+  out.push(`給料 年${salary.toLocaleString()}万円を足すと、選手の給料の合計は収入の約${share}%です。${share >= 80 ? 'かなり重く、赤字になりやすい形です。' : share >= 65 ? '少し重めです。' : share < 45 ? 'まだ余裕があります。' : 'ちょうどいいくらいです。'}`);
+  out.push(net >= 0 ? `このまま1年いくと、選手を売らなくても、およそ ${man(net)} の黒字の見こみです。` : `このまま1年いくと、およそ ${man(-net)} の赤字の見こみです。${o.debt >= debtCap(me.tier) * 0.7 ? '借金も上限に近いので、おすすめしません。' : '選手を売るか、借金でうめることになります。'}`);
+  if (o.debt > 0 && o.debt < debtCap(me.tier) * 0.7) out.push(`借金が ${man(o.debt)} 残っていることも、頭に入れておいてください。`);
+  if (seller) { const w = finWord(seller); if (w === '苦しい') out.push(`${seller.name}はお金に苦しいようです。安めの額でも、話に乗ってくるかもしれません。`); else if (w === '裕福') out.push(`${seller.name}はお金に余裕があります。安い額では売ってくれないでしょう。`); }
+  return out;
+}

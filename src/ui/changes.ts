@@ -3,6 +3,9 @@
 import { $, esc, sheet, closeSheet } from './dom';
 
 export const CHANGES: { id: number; date: string; items: string[] }[] = [
+  { id: 7, date: '11月12日', items: [
+    '移籍の交渉で、経理がアドバイスをくれる：払ったあとのお金・補強の予算の残り・給料の重さ（収入の何%か）・1年の黒字か赤字かの見こみ・借金・相手の懐ぐあい。金額を選びなおすと、見立ても変わる',
+  ] },
   { id: 6, date: '11月12日', items: [
     '選手の給料の「収入の7割まで」の決まりをなくした。給料はいくらでも使える（使いすぎると、借金がふくらむ）',
   ] },
