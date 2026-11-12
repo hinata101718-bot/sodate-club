@@ -1,5 +1,6 @@
 /* 移籍市場の画面（夜2 段階2）：知っている選手・フリーの選手・スカウトの条件・申し込み */
 import { finWord, acctAdvice } from '../core/clubfin';
+import { buyValue } from '../core/valuation';
 import { staffPay } from '../core/owner';
 import { startNego, negoTurn, isBlocked, FEE_STEPS, SAL_STEPS } from '../core/nego';
 import type { GameState } from '../core/game';
@@ -215,7 +216,7 @@ export function openNego(G: GameState, pid: number, done: (msg?: string | null) 
     /* 経理のアドバイス：いま選んでいる移籍金と給料で、クラブのお金がどうなるか */
     const fee = n.side === 'club' ? (feeI === -1 && n.ask != null ? n.ask : Math.round((value * FEE_STEPS[feeI]) / 100) * 100) : n.fee;
     const sal = n.side === 'player' ? (salI === -1 && n.sAsk != null ? n.sAsk : Math.round((base * SAL_STEPS[salI]) / 10) * 10) : base;
-    const adv = n.end ? '' : `<section class="card"><div class="mspeak"><span class="mface" aria-hidden="true">¥</span><div class="grow"><div class="mrole">経理</div><div class="mwho">${esc(G.front?.acct ?? '経理')}</div></div></div><div class="talk-bubble mbubble">${acctAdvice(G, w.club ?? null, fee, sal, staffPay(G)).map((l) => `<p>${esc(l)}</p>`).join('')}</div><div class="muted small" style="margin-top:6px">金額を選びなおすと、経理の見立ても変わる。</div></section>`;
+    const adv = n.end ? '' : `<section class="card"><div class="mspeak"><span class="mface" aria-hidden="true">¥</span><div class="grow"><div class="mrole">経理</div><div class="mwho">${esc(G.front?.acct ?? '経理')}</div></div></div><h3>この選手の値打ち</h3><div class="talk-bubble mbubble">${buyValue(G, p, fee, sal, n.years, value).map((l) => `<p>${esc(l)}</p>`).join('')}</div><h3>クラブのお金</h3><div class="talk-bubble mbubble">${acctAdvice(G, w.club ?? null, fee, sal, staffPay(G)).map((l) => `<p>${esc(l)}</p>`).join('')}</div><div class="muted small" style="margin-top:6px">金額を選びなおすと、経理の見立ても変わる。</div></section>`;
     const s = sheet(`<div class="bar"><h2>${esc(p.name)}との交渉</h2>${posTag(p.pos)}</div><section class="card nego">${log}</section>${ctl}${adv}`,
       n.end ? `<div class="in2 one"><button class="btn primary" id="ngClose">${n.end === 'ok' ? '決まった！ 閉じる' : '閉じる'}</button></div>` : `<div class="in2"><button class="btn ghost" id="ngStop">やめる</button><button class="btn primary" id="ngGo">この条件で話す</button></div>`);
     s.scrollTop = s.scrollHeight;

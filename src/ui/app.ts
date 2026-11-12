@@ -1,4 +1,5 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
+import { sellValue } from '../core/valuation';
 import { finTag } from './finview';
 import { showChangesOnce } from './changes';
 import { raiseOffer } from '../core/nego';
@@ -461,6 +462,7 @@ function openOffer(i: number) {
   sheet(`<div class="bar"><h2>オファーが届いた</h2></div>
     <section class="card"><div><b>${esc(e.club)}</b> が ${esc(p.name)}（${p.age}歳 ・ ${p.pos} ・ 総合力 ${ovr(p)}）を <b>${e.price.toLocaleString()}万円</b> でほしいと言っている。</div>
     <div class="muted" style="margin-top:6px">受けると、選手はクラブを去る。値上げを言うこともできる（${3 - (e.rounds ?? 0)}回まで）。強気に言いすぎると、相手が引いてしまう。</div>
+    <div class="mspeak" style="margin-top:10px"><span class="mface" aria-hidden="true">¥</span><div class="grow"><div class="mrole">経理</div><div class="mwho">${esc(G.front?.acct ?? '経理')}</div></div></div><div class="talk-bubble mbubble">${sellValue(G, p, e.price).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
     ${(e.rounds ?? 0) < 3 ? `<h3>値上げを言う</h3><div class="seg" role="group" aria-label="値上げ"><button data-raise="10">+10%</button><button data-raise="25">+25%</button><button data-raise="50">+50%</button></div>` : ''}
     <div class="btns" style="margin-top:12px"><button class="btn primary" id="oYes">${e.price.toLocaleString()}万円で受ける</button><button class="btn ghost" id="oNo">断る</button></div></section>`);
   $$<HTMLElement>('[data-raise]').forEach((b) => b.addEventListener('click', () => { const msg = raiseOffer(G, i, +b.dataset.raise!); autosave(); toast(msg); if (G.pending[i] === e) openOffer(i); else { closeSheet(); render(); } }));
