@@ -1,6 +1,6 @@
 /* 問126〜129：ほかのクラブのお金のやりくりを50シーズン回して、段の強さとお金を見る。N=50 SEED=1 */
 import { newGame, advanceWeek } from '../src/core/game';
-import { teamStrength } from '../src/core/player';
+import { teamStrength, ovr } from '../src/core/player';
 import { finWord, clubPayroll, clubRevenue } from '../src/core/clubfin';
 const N = +(process.env.N || 50); const seed = +(process.env.SEED || 1);
 const G = newGame({ seed });
@@ -16,5 +16,8 @@ for (let s = 0; s < N; s++) {
   }
 }
 console.log('経営難の放出', distress, '大型補強', big);
+const ai = G.clubs.filter((c) => !c.me).flatMap((c) => c.squad.map((p) => ({ p, c })));
+const yth = ai.filter(({ p }) => p.origin === 'ユース出身');
+console.log('ほかのクラブのユース出身', yth.length, '人・いちばん強い', Math.max(...yth.map(({ p }) => ovr(p))).toFixed(0), '・23歳以下で段の目安+6以上', ai.filter(({ p, c }) => p.age <= 23 && ovr(p) >= ({ 1: 76, 2: 69, 3: 57 } as any)[c.tier] + 6).length, '人');
 const styles = ['堅実', 'ふつう', '勝負好き'].map((x) => `${x}: 平均の段 ${avg(G.clubs.filter((c) => c.fin?.style === x).map((c) => c.tier)).toFixed(2)}`);
 console.log(styles.join(' / '));

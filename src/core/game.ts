@@ -7,7 +7,7 @@ import { makeManager } from './staff';
 import { prefByName } from './data/prefs';
 import { defaultEmblem, type Emblem } from './emblem';
 import { makeWorld, nudgeTo, TIER_LVL, type Club } from './world';
-import { ensureFin, aiWeekMoney, aiSeasonFin, canPay, payRoomOK, clubPay, finWord, distressSale, fitPayCap, type AiMatch } from './clubfin';
+import { ensureFin, aiWeekMoney, aiSeasonFin, canPay, payRoomOK, clubPay, finWord, distressSale, fitPayCap, aiGrowCtx, aiYouth, type AiMatch } from './clubfin';
 import { AWARD_WEEK, CUP_ROUND_NAMES, WEEKS, isCamp, isOff, isWindow, monthOf, seasonSchedule, weekOfMonth } from './calendar';
 import { makeFixtures } from './fixtures';
 import type { Manager, MatchView, Player, ReportEntry } from './types';
@@ -360,6 +360,8 @@ export function advanceWeek(G: GameState): WeekResult {
       G.youthLog.push(rep); if (G.youthLog.length > 4) G.youthLog.shift();
       news.push(`${monthOf(w)}月のユースの報告会議があった。`);
     }
+    /* 問131：ほかのクラブの選手も育つ（試合に出たかどうかを使うので、疲れなどをもどす前に） */
+    if (!isOff(w)) for (const c of G.clubs) if (!c.me) { const cx = aiGrowCtx(c, isCamp(w)); for (const p of c.squad) growPlayer(r, p, cx); }
     for (const c of G.clubs) if (!c.me) for (const p of c.squad) { p.fat = clamp(p.fat - (isOff(w) ? 100 : 28), 0, 100); if (p.inj && !p.injNew) p.inj--; p.injNew = false; p.played = false; }
     if (w === AWARD_WEEK) news.push(...yearEnd(G, r));
     if (isWindow(w)) { maybeOffer(G, r); listedOffers(G, r); }
@@ -635,9 +637,10 @@ function newSeason(G: GameState, r: Rng): string[] {
     if (c.me) continue;
     for (const p of c.squad) { p.age++; p.seasonApps = 0; p.seasonGoals = 0; p.seasonPerf = 0; p.seasonAst = 0; p.seasonRt = 0; p.seasonRtN = 0; p.inj = 0; p.fat = 0; }
     /* 年をとった選手が何人か去り、新しい選手が入る */
+    aiYouth(G, c, r);
     const leave = c.squad.filter((p) => p.age >= 33 || (p.age >= 30 && r.next() < 0.25)).slice(0, 5);
     for (const p of leave) {
-      const np = makePlayer(r, G.ids, TIER_LVL[c.tier] + r.int(-6, 3), p.pos, { age: r.int(18, 26), prefPool: [c.pref, c.pref, '東京都', '大阪府'] });
+      const np = makePlayer(r, G.ids, TIER_LVL[c.tier] + r.int(-6, 3), p.pos, { age: r.int(21, 29), prefPool: [c.pref, c.pref, '東京都', '大阪府'] });
       np.num = p.num; c.squad[c.squad.indexOf(p)] = np;
     }
     /* 問126：強さは、お金（来年の給料の目安）で決まる。段の目安へ無理に寄せない */

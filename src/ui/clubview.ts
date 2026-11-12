@@ -20,7 +20,7 @@ export function openClub(G: GameState, id: number, back: () => void, save: () =>
     const list = [...c.squad].sort((a, b) => ORDER[a.pos] - ORDER[b.pos] || (known[b.id]?.ovr ?? 0) - (known[a.id]?.ovr ?? 0));
     const nKnown = list.filter((p) => known[p.id]).length;
     const pl = list.map((p) => { const k = known[p.id];
-      return `<button class="pl" data-cp="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname">${esc(p.name)}${ask.has(p.id) ? ' <span class="tag away">調査を頼んだ</span>' : ''}</span><br><span class="pmeta">${p.age}歳${k ? ` ・ ${k.season}年目に調べた${isStale(G, k) ? '（古い）' : ''}` : ' ・ まだ調べていない'}</span></span><span class="ovr">${k ? val(k.ovr) : '？'}</span></button>`; }).join('');
+      return `<button class="pl" data-cp="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname">${esc(p.name)}${ask.has(p.id) ? ' <span class="tag away">調査を頼んだ</span>' : ''}</span><br><span class="pmeta">${p.age}歳${k ? ` ・ ${k.season}年目に調べた${isStale(G, k) ? '（古い）' : ''}${k.prev != null ? ` ・ <b>前に調べたときより${Math.round(k.ovr) - Math.round(k.prev) > 0 ? '+' : ''}${Math.round(k.ovr) - Math.round(k.prev)}</b>` : ''}` : ' ・ まだ調べていない'}</span></span><span class="ovr">${k ? val(k.ovr) : '？'}</span></button>`; }).join('');
     const v = c.vs; const vsText = v && v.w + v.d + v.l ? `${v.w}勝${v.d}分${v.l}敗（取った点 ${v.gf} − 取られた点 ${v.ga}）` : 'まだ対戦していない';
     const hist = [...(c.hist ?? [])].reverse().slice(0, 12);
     const m = c.mgr;
@@ -30,7 +30,7 @@ export function openClub(G: GameState, id: number, back: () => void, save: () =>
         <div class="muted small">監督 ${esc(m.name)} ・ 戦い方：${esc(m.style)} ・ 並び方 ${esc(m.forms.join('・'))}</div>${finLine(c)}</div></div></section>
       <section class="card"><h2>うちとの対戦成績</h2><div>${vsText}</div><div class="muted small">リーグ戦と勝ち抜きの大会を合わせた数（大会のPK戦は勝ち・負けで数える）。</div></section>
       <section class="card"><h2>年ごとの成績</h2>${hist.length ? `<div class="list">${hist.map((h) => `<div class="row"><span class="tag">${h.y}年目</span><span class="grow">${h.tier}部 <b>${h.rank}位</b>${h.tier > 1 && h.rank <= 2 ? ' <span class="tag gold">昇格</span>' : h.tier === 1 && h.rank === 1 ? ' <span class="tag gold">優勝</span>' : h.tier < 3 && h.rank >= 11 ? ' <span class="tag bad">降格</span>' : ''}</span></div>`).join('')}</div>` : '<div class="muted">まだ記録がない（1年が終わると残る）。</div>'}</section>
-      <section class="card"><h2>選手（${c.squad.length}人・調べた選手 ${nKnown}人）</h2><div class="muted small" style="margin-bottom:8px">総合力は、スカウトが調べた選手だけわかる。調べた選手を押すと、選手の画面へ（候補リストに入れられる）。まだ調べていない選手を押すと、スカウトに調べてもらうよう頼める（次の月のはじめに届く）。</div><div class="plist">${pl}</div></section>`,
+      <section class="card"><h2>選手（${c.squad.length}人・調べた選手 ${nKnown}人）</h2><div class="muted small" style="margin-bottom:8px">総合力は、スカウトが調べた選手だけわかる（調べたときの数字。選手は育つので、いまは変わっているかもしれない）。調べた選手を押すと、選手の画面へ（候補リストに入れられる・調べ直してもらえる）。まだ調べていない選手を押すと、スカウトに調べてもらうよう頼める（次の月のはじめに届く）。</div><div class="plist">${pl}</div></section>`,
       `<div class="in2 one"><button class="btn primary" id="cvBack">もどる</button></div>`, keep);
     $('#cvBack').addEventListener('click', back);
     $$<HTMLElement>('[data-cp]').forEach((b) => b.addEventListener('click', () => {

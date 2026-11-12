@@ -7,6 +7,8 @@ import { Rng, clamp } from './rng';
 import { ovr, salaryFor, teamStrength, makePlayer } from './player';
 import { debtCap, distYear, emptyLedger, gate, goodsSales, INTEREST, leaguePrize, opsCost, sponsorYear, type Ledger, type MoneyKey } from './finance';
 import { TIER_LVL, type Club } from './world';
+import { DEFAULT_CTX, type GrowCtx } from './growth';
+import type { Player } from './types';
 import type { GameState } from './game';
 
 export type Style = '堅実' | 'ふつう' | '勝負好き';
@@ -23,6 +25,8 @@ const SPEND: Record<Style, number> = { 堅実: 0.31, ふつう: 0.36, 勝負好�
 const EXTRA: Record<Style, number> = { 堅実: 0.04, ふつう: 0.08, 勝負好き: 0.18 };
 /** 手もとに残しておきたいお金（1年の収入の何倍か） */
 const RESERVE: Record<Style, number> = { 堅実: 0.8, ふつう: 0.4, 勝負好き: 0.1 };
+/** 段の強さの目安への寄せ先（選手が育つぶん、下の段ほど低めに置く） */
+const ANCHOR: Record<number, number> = { 1: -0.8, 2: -1.8, 3: -3.5 };
 const STAFF_YEAR: Record<number, number> = { 3: 2500, 2: 5000, 1: 10000 };
 const r100 = (v: number) => Math.round(v / 100) * 100;
 
@@ -112,7 +116,7 @@ export function distressSale(G: GameState, c: Club, r: Rng): string | null {
   const fee = r100(Math.max(300, salaryFor(ovr(p)) * 1.5 * 0.75));
   const buyer = G.clubs.filter((b) => !b.me && b !== c && b.fin && b.tier <= c.tier && canPay(b, fee) && payRoomOK(b, p.salary)).sort((a, b) => a.tier - b.tier || (b.fin!.money - a.fin!.money))[0];
   const i = c.squad.indexOf(p);
-  const np = makePlayer(r, G.ids, Math.max(40, ovr(p) - 14), p.pos, { age: r.int(18, 22), prefPool: [c.pref] }); np.num = p.num; np.salary = salaryFor(ovr(np)); c.squad[i] = np;
+  const np = makePlayer(r, G.ids, Math.max(40, ovr(p) - 14), p.pos, { age: r.int(20, 26), prefPool: [c.pref] }); np.num = p.num; np.salary = salaryFor(ovr(np)); c.squad[i] = np;
   earnC(c, 'sales', fee); c.fin!.sold = G.season * 48 + G.week;
   if (buyer) {
     const weak = buyer.squad.filter((x) => x.pos === p.pos).sort((a, b) => ovr(a) - ovr(b))[0] ?? [...buyer.squad].sort((a, b) => ovr(a) - ovr(b))[0];
@@ -153,8 +157,10 @@ export function aiSeasonFin(G: GameState, c: Club, r: Rng, rank: number, oldTier
   /* 給料が目安の何倍か → 強さをどれだけ動かすか（給料は強さにつれて急に上がるので、対数で見る） */
   const s = teamStrength(c.squad); const d = s - 55; const g = 0.05 + 0.006 * Math.abs(d) * (d > 0 ? 1 : 0.4);
   const move = clamp(Math.log(target / now) / Math.max(0.08, g), -6, 6);
-  /* 選手の市場は段ごとにだいたい決まっているので、段の目安にも少し寄る（何十年たっても段の強さがずれないように） */
-  shift(c, (s + move) * 0.75 + (TIER_LVL[c.tier] - 1.5 + (r.next() - 0.5) * 4) * 0.25);
+  /* 問131：お金は「いい選手を獲る・給料の高い選手を手放す」で効く（チームごとまとめて上げ下げはしない） */
+  aiRoster(G, c, r, move, s);
+  /* 段の強さがずれないための小さな調整（選手の市場は段ごとにだいたい決まっている） */
+  shift(c, teamStrength(c.squad) + clamp((TIER_LVL[c.tier] + ANCHOR[c.tier] - teamStrength(c.squad)) * 0.35, -2.5, 2.5));
   for (const p of c.squad) p.salary = salaryFor(ovr(p));
   /* 大きな動きはニュースに */
   if (move >= 4 && f.style === '勝負好き') out.push(`補強のニュース：${c.name}（${c.tier}部）が、お金をかけて大型補強に動いた。`);
@@ -197,4 +203,49 @@ export function acctAdvice(G: GameState, seller: Club | null, fee: number, salar
   if (o.debt > 0 && o.debt < debtCap(me.tier) * 0.7) out.push(`借金が ${man(o.debt)} 残っていることも、頭に入れておいてください。`);
   if (seller) { const w = finWord(seller); if (w === '苦しい') out.push(`${seller.name}はお金に苦しいようです。安めの額でも、話に乗ってくるかもしれません。`); else if (w === '裕福') out.push(`${seller.name}はお金に余裕があります。安い額では売ってくれないでしょう。`); }
   return out;
+}
+
+/** 問131：お金に合わせた選手の入れかえ。move＞0なら強い選手を獲り、move＜0なら給料の高い選手を手放す */
+function aiRoster(G: GameState, c: Club, r: Rng, move: number, s: number) {
+  const n = Math.min(5, Math.round(Math.abs(move) / 1.5)); if (!n) return;
+  const free = G.owner?.mk.free;
+  const toFree = (p: Player) => { if (free && p.age <= 32 && free.length < 24) { p.contract = 0; p.num = 0; p.listed = false; free.push(p); } };
+  const prospect = (p: Player) => p.age <= 21 && p.pot - ovr(p) >= 8;
+  for (let k = 0; k < n; k++) {
+    if (move > 0) {
+      const out = [...c.squad].filter((p) => !prospect(p)).sort((a, b) => ovr(a) - ovr(b))[0]; if (!out) return;
+      const np = makePlayer(r, G.ids, s + move + r.int(1, 4), out.pos, { age: r.int(23, 29), prefPool: [c.pref, '東京都', '大阪府'] });
+      np.num = out.num; np.contract = r.int(2, 4); np.salary = salaryFor(ovr(np)); c.squad[c.squad.indexOf(out)] = np; toFree(out);
+    } else {
+      const gk = c.squad.filter((x) => x.pos === 'GK').length;
+      const out = [...c.squad].filter((p) => p.age >= 24 && !(p.pos === 'GK' && gk <= 2)).sort((a, b) => b.salary - a.salary)[0]; if (!out) return;
+      const np = makePlayer(r, G.ids, s - r.int(4, 7), out.pos, { age: r.int(22, 28), prefPool: [c.pref, c.pref, r.pick(['東京都', '大阪府', '愛知県'])] });
+      np.num = out.num; np.contract = r.int(2, 3); np.salary = salaryFor(ovr(np)); c.squad[c.squad.indexOf(out)] = np; toFree(out);
+    }
+  }
+}
+/** 問131：ほかのクラブにも、ユースから毎年1〜2人、伸びしろのある子が上がる（堅実なクラブ・施設にお金をかけたクラブほど多く、いい子） */
+export function aiYouth(G: GameState, c: Club, r: Rng): Player[] {
+  const f = c.fin; const st = f?.style ?? 'ふつう';
+  const good = (f?.stadium ?? 2) + (st === '堅実' ? 1 : 0);
+  const n = (r.next() < 0.6 + (st === '堅実' ? 0.25 : 0) ? 1 : 0) + (r.next() < good * 0.05 + (st === '堅実' ? 0.1 : 0) ? 1 : 0);
+  /* 伸びなかったユース出身（21歳をこえても、チームの力より8以上低い子）は去り、即戦力が入る */
+  const s0 = teamStrength(c.squad);
+  for (const p of c.squad.filter((x) => x.origin === 'ユース出身' && x.age >= 21 && ovr(x) < s0 - 8)) { const np = makePlayer(r, G.ids, s0 - r.int(2, 5), p.pos, { age: r.int(24, 29), prefPool: [c.pref, '東京都', '大阪府'] }); np.num = p.num; np.salary = salaryFor(ovr(np)); c.squad[c.squad.indexOf(p)] = np; }
+  const up: Player[] = [];
+  for (let i = 0; i < n; i++) {
+    /* 入れかわるのは、年をとった控え（いなければ、いちばん弱い選手） */
+    const gk = c.squad.filter((x) => x.pos === 'GK').length;
+    const out = [...c.squad].filter((p) => !(p.pos === 'GK' && gk <= 2)).sort((a, b) => (b.age >= 29 ? 1 : 0) - (a.age >= 29 ? 1 : 0) || ovr(a) - ovr(b))[0]; if (!out) break;
+    const k = makePlayer(r, G.ids, 40 + c.tier * -2 + 8 + r.int(0, 6), out.pos, { age: r.int(17, 18), nSp: 0, exp: 0, prefPool: [c.pref], origin: 'ユース出身' });
+    k.pot = clamp(ovr(k) + r.int(14, 30) + good * 2 + (r.next() < 0.06 ? r.int(6, 12) : 0), 40, 90); k.gStart = k.age; k.gLen = r.int(4, 7); k.contract = 3; k.salary = salaryFor(ovr(k));
+    k.num = out.num; c.squad[c.squad.indexOf(out)] = k; up.push(k);
+  }
+  return up;
+}
+/** 問131：ほかのクラブの選手も、自分の選手と同じしくみで育つ。練習の伸びは段と施設で変わる */
+export function aiGrowCtx(c: Club, camp: boolean): GrowCtx {
+  const t = ({ 1: 1.1, 2: 0.9, 3: 0.68 } as Record<number, number>)[c.tier] ?? 1;
+  const fac = 1 + ((c.fin?.stadium ?? 2) - 2) * 0.04;
+  return { ...DEFAULT_CTX, mgrGrow: c.mgr.grow ?? 1, style: c.mgr.style, camp, coach: Array(8).fill(t), field: t * fac };
 }

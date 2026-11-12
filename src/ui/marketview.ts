@@ -10,7 +10,7 @@ import { POS, type Pos } from '../core/constants';
 import { ovr } from '../core/player';
 import { Rng } from '../core/rng';
 import {
-  BUMPS, SCOUT_REGIONS, VALUE_STEPS, bid, cancelBid, chanceWord, condText, fromTierOf, isStale, joinChance, marketOpen, offerSalary, ovrRange,
+  askScout, BUMPS, SCOUT_REGIONS, VALUE_STEPS, bid, cancelBid, chanceWord, condText, fromTierOf, isStale, joinChance, marketOpen, offerSalary, ovrRange,
   playerIndex, regionLabel, scoutCond, sellChance, valueOf, inShort, shortList, toggleShort, forgetKnown, forgetUnlisted, type Known, type Where,
 } from '../core/market';
 import type { Player } from '../core/types';
@@ -124,10 +124,11 @@ export function openKnown(G: GameState, pid: number, done: (msg?: string | null)
       <div class="muted small" style="margin-top:6px">${w.club ? `まず${esc(w.club.name)}と移籍金を、そのあと本人と給料と年数を話す。` : 'フリーなので、本人と給料と年数を話す。'}それぞれ3回まで。まとまらないと、この移籍の期間はもう申し込めない。上の段の選手ほど、下の段のクラブには高い給料でないと来ない。</div>
       ${inBid ? '<div class="tag" style="margin-top:8px">申し込み中</div>' : blocked ? '<div class="tag bad" style="margin-top:8px">この期間は申し込めない</div>' : `<button class="btn primary wide" id="mNego" style="margin-top:8px" ${open ? '' : 'disabled'}>${open ? '交渉を始める' : '移籍の期間になったら交渉できる'}</button>`}${inBid ? '' : outBtn}</section>`;
   };
-  const info = `<section class="card"><h2>この選手のこと</h2><div class="list small"><div>いるところ：<b>${esc(whereTextW(w, k))}</b>${w.club ? ` <button class="linkbtn" id="mClub">クラブを見る ›</button>` : ''}</div><div>市場の値段：<b>${value ? yen(value) : '0円'}</b></div><div>情報：${srcText[k.src]}（${k.season}年目 ${Math.floor(k.week / 4) + 1}月）${isStale(G, k) ? ' ・ <b>去年の情報</b>' : ''}</div></div>${inShort(G, pid) || G.owner.mk.bids.some((b) => b.pid === pid) ? '' : '<button class="btn small ghost" id="mForget" style="margin-top:8px">リストから消す</button>'}</section>`;
+  const info = `<section class="card"><h2>この選手のこと</h2><div class="list small"><div>いるところ：<b>${esc(whereTextW(w, k))}</b>${w.club ? ` <button class="linkbtn" id="mClub">クラブを見る ›</button>` : ''}</div>${k.prev != null ? `<div>前に調べたとき（${k.prevSeason}年目）より総合力が <b>${Math.round(k.ovr) - Math.round(k.prev) > 0 ? '+' : ''}${Math.round(k.ovr) - Math.round(k.prev)}</b></div>` : ''}${w.kind === 'pro' && G.owner.scouts.length ? `<button class="btn small ghost" id="mAsk" style="margin-top:8px">${(G.owner.mk.ask ?? []).includes(pid) ? '調べ直しの頼みを取り消す' : 'スカウトに調べ直してもらう（次の月）'}</button>` : ''}<div>市場の値段：<b>${value ? yen(value) : '0円'}</b></div><div>情報：${srcText[k.src]}（${k.season}年目 ${Math.floor(k.week / 4) + 1}月）${isStale(G, k) ? ' ・ <b>去年の情報</b>' : ''}</div></div>${inShort(G, pid) || G.owner.mk.bids.some((b) => b.pid === pid) ? '' : '<button class="btn small ghost" id="mForget" style="margin-top:8px">リストから消す</button>'}</section>`;
   const bindOffer = (root: HTMLElement, again: () => void) => {
     $$<HTMLElement>('[data-bump]', root).forEach((b) => b.addEventListener('click', () => { bump = +b.dataset.bump!; again(); }));
     root.querySelector('#mNego')?.addEventListener('click', () => openNego(G, pid, done));
+    root.querySelector('#mAsk')?.addEventListener('click', () => { const on = askScout(G, pid); closeSheet(); done(on ? `${p.name} を、スカウトに調べ直してもらう（次の月のはじめに届く）` : '調べ直しの頼みを取り消した'); });
     root.querySelector('#mClub')?.addEventListener('click', () => { if (w.club) openClub(G, w.club.id, () => openKnown(G, pid, done), () => {}); });
     root.querySelector('#mForget')?.addEventListener('click', () => { forgetKnown(G, pid); closeSheet(); done(`${p.name} をリストから消した`); });
     root.querySelector('#mShort')?.addEventListener('click', () => { const on = toggleShort(G, pid); closeSheet(); done(on ? `${p.name} を候補リストに入れた` : `${p.name} を候補リストから外した`); });

@@ -60,6 +60,8 @@ export interface Known {
   /** 調べたときの総合力・能力・年齢・いたところ */
   ovr: number; a?: number[]; age: number; club: string;
   note?: string; scout?: string;
+  /** 問131：前に調べたときの総合力と、その年（調べ直したときに、どれだけ動いたかを見せる） */
+  prev?: number; prevSeason?: number;
   /** 高校生・大学生（どこにも所属していないので、ここに選手そのものを持つ） */
   p?: Player; from?: string; fee?: number;
 }
@@ -110,7 +112,8 @@ function learn(G: GameState, p: Player, club: string, src: KnownSrc, full: boole
   const mk = G.owner.mk; const old = mk.known[p.id];
   /* くわしい情報を、対戦で見ただけの情報で上書きしない（同じシーズンなら） */
   if (old && old.full && !full && old.season === G.season) return;
-  mk.known[p.id] = { pid: p.id, full, season: G.season, week: G.week, src, ovr: ovr(p), a: full ? [...p.a] : undefined, age: p.age, club, ...extra };
+  const prev = old && old.full && full && Math.round(old.ovr) !== Math.round(ovr(p)) ? { prev: old.ovr, prevSeason: old.season } : old?.prev != null && Math.round(old.ovr) === Math.round(ovr(p)) ? { prev: old.prev, prevSeason: old.prevSeason } : {};
+  mk.known[p.id] = { pid: p.id, full, season: G.season, week: G.week, src, ovr: ovr(p), a: full ? [...p.a] : undefined, age: p.age, club, ...prev, ...extra };
 }
 /** 対戦したクラブの先発（強い順の11人）は、名前・ポジション・だいたいの強さだけわかる */
 /** 問100：対戦で見ただけの選手は、もう覚えない（残しているのは古いセーブのためだけ） */
