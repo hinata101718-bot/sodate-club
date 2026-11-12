@@ -2,7 +2,7 @@
    - ほかのクラブも、自分と同じくらい細かくやりくりする：スポンサー・分配金・入場料・グッズ・賞金・選手を売ったお金／給料・スタッフ・運営費・選手を獲ったお金・施設・利息
    - クラブごとに性格がある（堅実・ふつう・勝負好き）
    - 借金が限度まで来ても、助けも罰もない（問127 D）。お金が足りないと主力を売る。立ち直る道は自然なものだけ（問128）
-   - リーグの決まり：選手の給料の合計は、1年の収入の7割まで（自分のクラブも同じ。問128・129） */
+   - 給料の上限の決まりはない（問128・129の「収入の7割まで」は、あとでなくした）。ほかのクラブは、性格ごとに自分で決めた割合までしか給料に使わない */
 import { Rng, clamp } from './rng';
 import { ovr, salaryFor, teamStrength, makePlayer } from './player';
 import { debtCap, distYear, emptyLedger, gate, goodsSales, INTEREST, leaguePrize, opsCost, sponsorYear, type Ledger, type MoneyKey } from './finance';
@@ -15,8 +15,8 @@ export const STYLE_NOTE: Record<Style, string> = { 堅実: 'お金をためて�
 export interface ClubFin { money: number; debt: number; pop: number; stadium: number; style: Style; ledger: Ledger; last: Ledger | null; sold?: number; fac?: number }
 export type FinWord = '裕福' | 'ふつう' | '苦しい';
 
-/** リーグの決まり：給料の合計は1年の収入の7割まで */
-export const PAY_SHARE = 0.7;
+/** 給料に使ってもいいと考えるいちばん上（性格で変わる。リーグの決まりではない） */
+export const PAY_LIMIT: Record<Style, number> = { 堅実: 0.5, ふつう: 0.65, 勝負好き: 0.9 };
 /** 給料に回す割合の目安（性格で変わる） */
 const SPEND: Record<Style, number> = { 堅実: 0.31, ふつう: 0.36, 勝負好き: 0.44 };
 /** 余ったお金のうち、給料に上乗せする割合 */
@@ -33,28 +33,9 @@ export function revenueOf(tier: number, pref: string, pop: number, stadium: numb
 }
 export const clubRevenue = (c: Club) => (c.fin ? revenueOf(c.tier, c.pref, c.fin.pop, c.fin.stadium) : 0);
 export const clubPayroll = (c: Club) => c.squad.reduce((s, p) => s + p.salary, 0);
-export const clubPayCap = (c: Club) => r100(clubRevenue(c) * PAY_SHARE);
+export const clubPayCap = (c: Club) => r100(clubRevenue(c) * PAY_LIMIT[c.fin?.style ?? 'ふつう']);
 
-/* ---------- 自分のクラブの給料の上限 ---------- */
-export function myRevenue(G: GameState): number {
-  const me = G.clubs.find((c) => c.me)!; const o = G.owner;
-  const est = revenueOf(me.tier, G.club.pref, o.pop, o.fac.stadium);
-  /* 去年の実際の収入（選手を売ったお金をのぞく）のほうが多ければ、そちらを使う。ただし段が変わった年は見こみだけ */
-  const L = o.lastLedger; const last = L ? L.gate + L.sponsor + L.goods + L.dist + L.prize : 0;
-  const sameTier = (G.history.at(-1)?.tier ?? me.tier) === me.tier && !G.history.at(-1)?.promoted && !G.history.at(-1)?.relegated;
-  return r100(sameTier ? Math.max(est, last) : est);
-}
-export const myPayCap = (G: GameState) => r100(myRevenue(G) * PAY_SHARE);
-export const myPayroll = (G: GameState) => G.squad.reduce((s, p) => s + p.salary, 0);
 const man = (v: number) => (v >= 10000 ? `${(v / 10000).toFixed(1)}億円` : `${v.toLocaleString()}万円`);
-/** 給料が add 増えるとき、決まりをこえるなら経理が止める（問129 A）。こえなければ null */
-export function payCapCheck(G: GameState, add: number): string | null {
-  if (!G.owner || add <= 0) return null;
-  const cap = myPayCap(G); const now = myPayroll(G);
-  if (now + add <= cap) return null;
-  const need = r100(now + add - cap + 99);
-  return `経理：「これ以上は、リーグの決まりで給料を払えません（選手の給料の合計は、1年の収入の7割＝${man(cap)}まで。いまは${man(now)}）。あと${man(need)}分、給料を空けてください」`;
-}
 
 /* ---------- ほかのクラブ ---------- */
 export function initFin(c: Club, r: Rng): ClubFin {
@@ -95,7 +76,7 @@ export function canPay(c: Club, fee: number): boolean {
   const keep = clubRevenue(c) * RESERVE[f.style] * 0.5;
   return f.style === '勝負好き' ? f.money + room * 0.7 >= fee : f.money - keep >= fee;
 }
-/** 給料の決まりの中で、この選手を足せるか（out の選手が出ていくなら、その分を引く） */
+/** 性格で決めた給料の使い方の中で、この選手を足せるか（out の選手が出ていくなら、その分を引く） */
 export const payRoomOK = (c: Club, add: number, out = 0) => clubPayroll(c) - out + add <= clubPayCap(c);
 
 export type AiMatch = { home: boolean; won: boolean; oppTier: number; cup: boolean; gf: number; ga: number };
@@ -163,11 +144,11 @@ export function aiSeasonFin(G: GameState, c: Club, r: Rng, rank: number, oldTier
     const b = r100(loan * 0.6); payC(c, 'build', b); f.fac = (f.fac ?? 0) + b; const need = 27000 * (f.stadium + 1) * (f.stadium + 2) / 6;
     if (f.stadium < 5 && f.fac >= need) { f.fac -= need; f.stadium++; }
   }
-  /* 来年の給料の目安：収入×性格の割合。余ったお金が多ければ上乗せ、借金が重ければ削る。上限は7割 */
+  /* 来年の給料の目安：収入×性格の割合。余ったお金が多ければ上乗せ、借金が重ければ削る。上限は性格ごと（勝負好きは収入の9割まで使う） */
   const extra = f.money - rev * RESERVE[f.style];
   let target = rev * SPEND[f.style] + (extra > 0 ? extra * EXTRA[f.style] : extra * 0.2);
   if (f.debt >= debtCap(c.tier) * 0.8) target -= rev * 0.08;
-  target = clamp(target, rev * 0.2, rev * PAY_SHARE);
+  target = clamp(target, rev * 0.2, rev * PAY_LIMIT[f.style]);
   const now = Math.max(1, clubPayroll(c));
   /* 給料が目安の何倍か → 強さをどれだけ動かすか（給料は強さにつれて急に上がるので、対数で見る） */
   const s = teamStrength(c.squad); const d = s - 55; const g = 0.05 + 0.006 * Math.abs(d) * (d > 0 ? 1 : 0.4);
@@ -180,7 +161,7 @@ export function aiSeasonFin(G: GameState, c: Club, r: Rng, rank: number, oldTier
   if (move <= -4) out.push(`経営のニュース：${c.name}（${c.tier}部）が、収入に合わせて給料の高い選手を手放した。`);
   return out;
 }
-/** 給料の合計が決まりをこえているクラブ（ゲームの始まり）は、少し弱めて給料を合わせる */
+/** ゲームの始まりで、給料が性格の上限をこえているクラブは、少し弱めて給料を合わせる */
 export function fitPayCap(c: Club) {
   if (!c.fin) return;
   for (let i = 0; i < 20 && clubPayroll(c) > clubPayCap(c) * 0.95; i++) for (const p of c.squad) { p.a = p.a.map((v) => Math.max(10, v - 1)); p.salary = salaryFor(ovr(p)); }

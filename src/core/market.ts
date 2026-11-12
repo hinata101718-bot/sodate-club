@@ -2,7 +2,7 @@
    - 申し込めるのは「知っている選手」だけ（全員を検索できる形にはしない）
    - スカウトは1つのしくみ：ポジション・ざっくりの地域・市場の値段・年齢の4つの条件で、所属を問わず探す
    - 移籍金は「相場」。値段の交渉はしない。相手のクラブが売るか、選手本人が来るかを決める（段と給料だけ） */
-import { canPay, clubEarn, clubPay, finWord, payRoomOK, payCapCheck } from './clubfin';
+import { canPay, clubEarn, clubPay, finWord, payRoomOK } from './clubfin';
 import { MAX_SQUAD, autoReg } from './squad';
 import { Rng, clamp } from './rng';
 import { POS, type Pos } from './constants';
@@ -255,7 +255,6 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
   if (!marketOpen(G)) return 'プロとフリーの選手は、移籍の期間（7〜8月・12月）にしか申し込めない。';
   const fee = valueOf(w);
   if (G.owner.money - reserved(G) < fee) return 'お金が足りない。';
-  const capMsg = payCapCheck(G, offerSalary(w, bump) + G.owner.mk.bids.reduce((s, b) => s + b.salary, 0)); if (capMsg) return capMsg;
   if (G.budget && G.budget.spent + reserved(G) + fee > G.budget.cap) return `補強の予算（${manText(G.budget.cap)}）をこえてしまう。年に1回の経営会議で決めた上限です。`;
   mk.bids.push({ pid, bump: BUMPS.includes(bump) ? bump : 0, fee, salary: offerSalary(w, bump), at: absWeek(G) });
   return null;
@@ -277,7 +276,6 @@ export function resolveBids(G: GameState, r: Rng): string[] {
     if (r.next() >= joinChance(fromTierOf(w), tierOf(G), b.bump)) { out.push(`移籍の結果：${w.club ? `${w.club.name}は売ってくれたが、` : ''}${who}本人が来るのを断った。`); continue; }
     if (G.owner.money < b.fee) { out.push(`移籍の結果：お金が足りなくなっていて、${who}を獲れなかった。`); continue; }
     if (G.squad.length >= MAX_SQUAD) { out.push(`移籍の結果：トップが${MAX_SQUAD}人いて、${who}を入れられなかった。`); continue; }
-    if (payCapCheck(G, b.salary)) { out.push(`移籍の結果：給料の決まり（収入の7割まで）をこえるので、${who}と契約できなかった。`); continue; }
     completeSign(G, w, b.fee, b.salary, 3, r);
     out.push(`移籍の結果：${w.club ? `${w.club.name}から` : 'フリーの'} ${who} が来てくれた！${b.fee ? `（移籍金 ${manText(b.fee)}、` : '（'}給料 年${b.salary.toLocaleString()}万円）`);
   }
@@ -341,7 +339,7 @@ export function aiTransfers(G: GameState, r: Rng): string[] {
     const { p, c } = r.pick(pool);
     const out1 = weak.find((x) => x.pos === p.pos) ?? weak[0];
     const fee = Math.round(marketValue(p, c.tier) * (finWord(c) === '苦しい' ? 0.75 : 1) / 100) * 100;
-    /* 払えるか・給料の決まり（収入の7割まで）に入るか */
+    /* 払えるか・性格に合った給料の使い方に入るか */
     if (!canPay(buyer, fee) || !payRoomOK(buyer, p.salary, out1.salary)) continue;
     clubPay(buyer, 'buy', fee); clubEarn(c, 'sales', fee);
     if (buyer.fin && buyer.fin.money < 0) { const need = Math.ceil(-buyer.fin.money / 1000) * 1000; buyer.fin.debt += need; buyer.fin.money += need; }

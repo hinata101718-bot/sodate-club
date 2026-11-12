@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newGame, advanceWeek } from '../src/core/game';
-import { finWord, myPayCap, myPayroll, payCapCheck, clubPayroll, clubPayCap, STYLES } from '../src/core/clubfin';
+import * as clubfin from '../src/core/clubfin';
+import { finWord, clubPayroll, clubPayCap, STYLES } from '../src/core/clubfin';
 import { clubMin } from '../src/core/nego';
 import { playerIndex } from '../src/core/market';
 
@@ -15,13 +16,10 @@ describe('ほかのクラブのお金（問126〜129）', () => {
     expect(ai.every((c) => c.fin!.ledger.sponsor > 0 && c.fin!.ledger.salary > 0)).toBe(true);
     expect(ai.every((c) => ['裕福', 'ふつう', '苦しい'].includes(finWord(c)))).toBe(true);
   });
-  it('給料の合計が収入の7割をこえる契約は、経理が止める', () => {
-    const G = newGame({ seed: 6 });
-    expect(payCapCheck(G, 1)).toBeNull();
-    const room = myPayCap(G) - myPayroll(G);
-    expect(payCapCheck(G, room + 1000)).toMatch(/リーグの決まり/);
+  it('給料の上限の決まりはない：収入をこえる給料でも契約できる（経理は止めない）', () => {
+    expect(typeof (clubfin as Record<string, unknown>).payCapCheck).toBe('undefined');
   });
-  it('ほかのクラブの給料も、7割の決まりの中にある', () => {
+  it('ほかのクラブは、性格で決めた割合までしか給料に使わない', () => {
     const G = newGame({ seed: 7 });
     for (const c of G.clubs.filter((x) => !x.me)) expect(clubPayroll(c)).toBeLessThanOrEqual(clubPayCap(c) * 1.05);
   });
