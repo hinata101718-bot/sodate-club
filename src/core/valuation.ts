@@ -1,7 +1,8 @@
 /* 経理の目で見た、選手の値打ちと値段（感想64）
    - 買うとき：移籍金が相場より安いか高いか、契約の年数ぶんの給料と合わせた総額、契約が終わるころに売るといくらになりそうか
    - 売るとき：オファーが相場より高いか安いか、浮く給料、1年後・2年後にはいくらになりそうか（年齢で上がる・下がる） */
-import { ovr } from './player';
+import { ovr, salaryFor } from './player';
+const salaryForOvr = salaryFor;
 import { marketValue } from './market';
 import type { Player } from './types';
 import type { GameState } from './game';
@@ -59,5 +60,23 @@ export function sellValue(G: GameState, p: Player, price: number): string[] {
   const line = starterLine(G, p);
   if (line != null && ovr(p) > line) out.push(`ただ、${p.pos}の先発です。売るなら、かわりの選手を考えておいてください。`);
   else if (line == null) out.push(`売ると、${p.pos}が足りなくなります。かわりの選手が必要です。`);
+  return out;
+}
+
+/** 契約更新のとき（感想65）。newSalary＝更新後の給料、years＝選んでいる年数 */
+export function renewValue(G: GameState, p: Player, newSalary: number, years: number): string[] {
+  const out: string[] = []; const tier = myTier(G);
+  const up = newSalary - p.salary;
+  const fairSal = Math.round(salaryForOvr(ovr(p)));
+  out.push(up > 0 ? `更新すると、給料は年${up.toLocaleString()}万円上がって、年${newSalary.toLocaleString()}万円です。` : `更新しても、給料は年${newSalary.toLocaleString()}万円のままです。`);
+  const r = newSalary / Math.max(1, fairSal);
+  out.push(`いまの力（総合力${ovr(p)}）の相場の給料は年${fairSal.toLocaleString()}万円。${r >= 1.25 ? 'それよりかなり高い給料です。' : r >= 1.08 ? 'それより少し高めです。' : r <= 0.9 ? 'それより安く、お得な契約です。' : 'ほぼ相場どおりです。'}`);
+  const later = ovrIn(p, years); const now = ovr(p);
+  out.push(`${years}年で給料は合わせて ${man(newSalary * years)}。${later <= now - 4 ? `${p.age}歳なので、契約の終わりごろには力が落ちて、給料が重くなりそうです。短めの契約がおすすめです。` : later >= now + 3 ? `${p.age}歳なので、まだ伸びそうです。長めの契約にすると、あとでお得になります。` : `この${years}年は、力は大きく変わらないでしょう。`}`);
+  const v = valueIn(p, years - 1, tier, 1);
+  out.push(`契約の最後の年に売るなら、およそ ${man(v)}。いま売るなら、およそ ${man(marketValue(p, tier))}です。`);
+  const line = starterLine(G, p);
+  if (line != null && now < line - 2) out.push(`いまは控えの選手です。${r >= 1.08 ? 'この給料なら、更新しないのも手です。' : '控えとしては、無理のない給料です。'}`);
+  else if (line == null || now >= line) out.push(`${p.pos}の先発なので、いなくなると戦力が落ちます。`);
   return out;
 }

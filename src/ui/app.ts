@@ -1,5 +1,5 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
-import { sellValue } from '../core/valuation';
+import { sellValue, renewValue } from '../core/valuation';
 import { finTag } from './finview';
 import { showChangesOnce } from './changes';
 import { raiseOffer } from '../core/nego';
@@ -393,7 +393,8 @@ function bondHTML(p: Player): string {
 function contractHTML(p: Player): string {
   const G = app.G; const d = G.owner.renew[p.id]; const off = renewalOffer(p);
   const renew = p.contract <= 1 && G.week >= 44 ? `<h3>契約更新（今年で切れる）</h3><div class="muted small">更新すると給料は 年${off.salary.toLocaleString()}万円 になる。決めないときは、${off.years}年で更新する。</div>
-    <div class="seg" role="group" aria-label="契約の年数" style="margin-top:6px">${[1, 2, 3, 4].map((y) => `<button data-renew="${y}" aria-pressed="${!!d && !d.no && d.years === y}">${y}年</button>`).join('')}<button data-renew="no" aria-pressed="${!!d?.no}">更新しない</button></div>` : p.contract <= 1 ? '<div class="muted small">契約は今年で切れる。12月の契約更新の時期に、更新するかを決める。</div>' : '';
+    <div class="seg" role="group" aria-label="契約の年数" style="margin-top:6px">${[1, 2, 3, 4].map((y) => `<button data-renew="${y}" aria-pressed="${!!d && !d.no && d.years === y}">${y}年</button>`).join('')}<button data-renew="no" aria-pressed="${!!d?.no}">更新しない</button></div>
+    <div class="mspeak" style="margin-top:10px"><span class="mface" aria-hidden="true">¥</span><div class="grow"><div class="mrole">経理</div><div class="mwho">${esc(G.front?.acct ?? '経理')}</div></div></div><div class="talk-bubble mbubble">${renewValue(G, p, off.salary, d && !d.no ? d.years : off.years).map((l) => `<p>${esc(l)}</p>`).join('')}</div><div class="muted small" style="margin-top:6px">年数を選びなおすと、経理の見立ても変わる。</div>` : p.contract <= 1 ? '<div class="muted small">契約は今年で切れる。12月の契約更新の時期に、更新するかを決める。</div>' : '';
   return `<section class="card"><h2>契約と移籍</h2><div>あと${p.contract}年 ・ 年${p.salary.toLocaleString()}万円</div><div>市場の値段（いま売るとだいたい）：<b>${yen(marketValue(p, myTier(G)))}</b></div>${renew}
     <button class="btn ${p.listed ? 'primary' : 'ghost'} wide" id="pSell" style="margin-top:10px">${p.listed ? '売りに出すのをやめる' : '売りに出す'}</button><div class="muted small" style="margin-top:6px">売りに出すと、移籍の期間に買い手を探す。買い手が見つかると、オファーとして届く。</div></section>`;
 }
