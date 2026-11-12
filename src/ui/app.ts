@@ -1,6 +1,7 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
 import { sellValue, renewValue } from '../core/valuation';
 import { finTag } from './finview';
+import { openClub } from './clubview';
 import { showChangesOnce } from './changes';
 import { raiseOffer } from '../core/nego';
 import { openRegMeet, openSwap } from './regview';
@@ -289,7 +290,7 @@ function tableHTML(): string {
     const rows = standings(G, t); const played = rows[0] ? rows[0].w + rows[0].d + rows[0].l : 0;
     body = `<section class="card"><h2>${t}部 ・ ${played}試合まで</h2><div style="overflow-x:auto"><table>
     <thead><tr><th class="l">#</th><th class="l">クラブ</th><th>試</th><th>勝</th><th>分</th><th>敗</th><th>差</th><th>点</th></tr></thead><tbody>
-    ${rows.map((r, i) => `<tr class="${r.id === ME ? 'me' : ''} ${i < 2 && t > 1 ? 'up' : ''} ${i >= 10 && t < 3 ? 'down' : ''}"><td class="l">${i + 1}</td><td class="l club">${esc(clubName(G, r.id))}${finTag(r.c)}</td><td>${r.w + r.d + r.l}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga > 0 ? '+' : ''}${r.gf - r.ga}</td><td><b>${r.p}</b></td></tr>`).join('')}
+    ${rows.map((r, i) => `<tr class="${r.id === ME ? 'me' : ''} ${i < 2 && t > 1 ? 'up' : ''} ${i >= 10 && t < 3 ? 'down' : ''}"><td class="l">${i + 1}</td><td class="l club">${r.id === ME ? esc(clubName(G, r.id)) : `<button class="linkbtn" data-club="${r.id}">${esc(clubName(G, r.id))}</button>`}${finTag(r.c)}</td><td>${r.w + r.d + r.l}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga > 0 ? '+' : ''}${r.gf - r.ga}</td><td><b>${r.p}</b></td></tr>`).join('')}
     </tbody></table></div><div class="muted small" style="margin-top:8px">${t > 1 ? '緑の線は昇格（上位2つ）。' : '1位が優勝。'}${t < 3 ? '赤の線は降格（下位2つ）。' : ''}勝ち3点・引き分け1点。並んだら得失点差（取った点−取られた点）で決める。</div></section>`;
   }
   return seg + body;
@@ -331,6 +332,7 @@ function bindView(v: HTMLElement) {
   $$<HTMLElement>('[data-go-tr]', v).forEach((b) => b.addEventListener('click', () => { mv.sub = 'known'; setTrView('scout'); setTab('tr'); }));
   $$<HTMLElement>('[data-go]', v).forEach((b) => b.addEventListener('click', () => setTab(b.dataset.go!)));
   $$<HTMLElement>('[data-tv]', v).forEach((b) => b.addEventListener('click', () => { tableView = b.dataset.tv!; render(); }));
+  $$<HTMLElement>('[data-club]', v).forEach((b) => b.addEventListener('click', () => openClub(app.G, +b.dataset.club!, () => { closeSheet(); render(); }, autosave)));
   $$<HTMLElement>('[data-pol]', v).forEach((b) => b.addEventListener('click', () => { G.policy = b.dataset.pol as Policy; autosave(); render(); }));
   $$<HTMLElement>('[data-pid]', v).forEach((b) => b.addEventListener('click', () => showPlayer(+b.dataset.pid!, render)));
   $$<HTMLElement>('[data-offer]', v).forEach((b) => b.addEventListener('click', () => openOffer(+b.dataset.offer!)));

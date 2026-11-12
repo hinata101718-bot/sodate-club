@@ -65,6 +65,8 @@ export interface Known {
 }
 export interface Bid { pid: number; bump: number; fee: number; salary: number; at: number; }
 export interface MarketState { known: Record<number, Known>; free: Player[]; bids: Bid[]; result: number;
+  /** 問130：相手のクラブの画面から「調べてもらう」と頼んだ選手 */
+  ask?: number[];
   /** 候補リスト（感想24：スカウトの報告から気になった選手を入れておき、あとで誰に申し込むか決める）。古いセーブにはないので、なければ空 */
   short?: number[];
   /** 問118：交渉がまとまらなかった選手（同じ移籍の期間は申し込めない） */
@@ -142,6 +144,10 @@ export function scoutMonth(G: GameState, r: Rng): string[] {
   const pool = [...idx.values()].filter((w) => w.kind !== 'ama');
   const tier = tierOf(G);
   let found = 0; const none: string[] = [];
+  /* 問130：頼まれた選手を先に調べる（スカウト1人につき、月に2人まで） */
+  const asks = (mk.ask ?? []).splice(0, o.scouts.length * 2); const asked: string[] = [];
+  for (const pid of asks) { const w = idx.get(pid); if (!w || w.kind === 'ama') continue; const s = o.scouts[asked.length % o.scouts.length]; learn(G, w.p, w.club ? w.club.name : 'フリー', w.kind === 'free' ? 'free' : 'scout', true, { note: proNote(w, s.skill, r), scout: s.name }); asked.push(w.p.name); }
+  if (asked.length) out.push(`頼まれていた ${asked.join('、')} を、スカウトが調べてきた。`);
   for (const s of o.scouts) {
     const cond = scoutCond(s);
     /* 腕がいいほど、1回に調べる人数が多い（問30） */
@@ -259,6 +265,8 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
   mk.bids.push({ pid, bump: BUMPS.includes(bump) ? bump : 0, fee, salary: offerSalary(w, bump), at: absWeek(G) });
   return null;
 }
+/** 問130：スカウトに、この選手を調べてもらう（もう一度押すと取り消す）。調べるのは次の月のはじめ */
+export function askScout(G: GameState, pid: number): boolean { const a = (G.owner.mk.ask ??= []); const i = a.indexOf(pid); if (i >= 0) { a.splice(i, 1); return false; } a.push(pid); return true; }
 /** 問101：スカウトのリストから消す（候補リストからも外れる）。またスカウトが調べてきたら、新しい情報として出る */
 export function forgetKnown(G: GameState, pid: number) { delete G.owner.mk.known[pid]; dropShort(G, pid); }
 export function forgetUnlisted(G: GameState): number { const keep = new Set(shortList(G)); const bid = new Set(G.owner.mk.bids.map((b) => b.pid)); let n = 0; for (const k of Object.values(G.owner.mk.known)) if (!keep.has(k.pid) && !bid.has(k.pid)) { delete G.owner.mk.known[k.pid]; n++; } return n; }

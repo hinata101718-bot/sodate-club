@@ -8,7 +8,9 @@ import type { Emblem } from './emblem';
 import type { Manager, Player } from './types';
 import { initFin, type ClubFin } from './clubfin';
 
-export interface Club { id: number; name: string; color: string; pref: string; tier: number; lvl: number; squad: Player[]; mgr: Manager; emblem: Emblem; me: boolean; prevRank: number; fin?: ClubFin; }
+export interface Club { id: number; name: string; color: string; pref: string; tier: number; lvl: number; squad: Player[]; mgr: Manager; emblem: Emblem; me: boolean; prevRank: number; fin?: ClubFin;
+  /** 問130：年ごとの段と順位・自分のクラブとの対戦成績 */
+  hist?: { y: number; tier: number; rank: number }[]; vs?: { w: number; d: number; l: number; gf: number; ga: number }; }
 /** 段ごとの強さの目安（先発の総合力：3部50〜60、2部65〜70、1部72〜75。感想 4） */
 export const TIER_LVL: Record<number, number> = { 3: 57, 2: 69, 1: 76 };
 

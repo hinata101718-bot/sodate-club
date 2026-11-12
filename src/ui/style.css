@@ -520,3 +520,8 @@ nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
 /* 問126：ほかのクラブのお金の目安 */
 .fin{display:inline-block;font-size:12px;line-height:1.4;padding:0 6px;border-radius:999px;border:1px solid currentColor;font-weight:700;white-space:nowrap;vertical-align:1px}
 .fin-rich{color:var(--gold)} .fin-poor{color:var(--danger)} .fin-mid{color:var(--gray)}
+/* 問130：相手のクラブの画面へのリンク */
+.linkbtn{display:inline-flex;align-items:center;gap:4px;min-height:44px;background:none;border:0;padding:0;margin:0;color:inherit;font:inherit;font-weight:inherit;text-align:left;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
+.linkbtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+td .linkbtn{min-height:36px}
+.club-crest{flex:none}.club-crest svg{width:56px;height:62px;display:block}

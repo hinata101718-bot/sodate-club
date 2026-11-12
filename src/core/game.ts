@@ -200,12 +200,15 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
       if (sh > sa) { th.w++; th.p += 3; ta.l++; } else if (sh < sa) { ta.w++; ta.p += 3; th.l++; } else { th.d++; ta.d++; th.p++; ta.p++; }
       if (!hc.me) aiM.set(h, { home: true, won: sh > sa, oppTier: t, cup: false, gf: sh, ga: sa });
       if (!ac.me) aiM.set(a, { home: false, won: sa > sh, oppTier: t, cup: false, gf: sa, ga: sh });
+      if (isMine) vsAdd(h === ME ? ac : hc, h === ME ? sh : sa, h === ME ? sa : sh);
       if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { popResult(G, h === ME ? sh : sa, h === ME ? sa : sh); homeInfo = { oppTier: t, cup: false, home: h === ME, won: (h === ME ? sh - sa : sa - sh) > 0 }; } }
     }
   }
   void tier;
   return mine;
 }
+/** 問130：自分のクラブとの対戦成績（大会はPKでも勝ち負けで数える） */
+function vsAdd(c: Club, gf: number, ga: number) { const v = (c.vs ??= { w: 0, d: 0, l: 0, gf: 0, ga: 0 }); v.gf += gf; v.ga += ga; if (gf > ga) v.w++; else if (gf < ga) v.l++; else v.d++; }
 /** 実況の前ふり（問122・123）：順位と、大事な試合か（優勝・昇格・残留・同じ地方どうし） */
 function preInfo(G: GameState, t: number, li: number, hc: Club, ac: Club, big: boolean): { info: string; stakes: { kind: '' | '優勝' | '昇格' | '残留' | '地元' } } {
   const rows = standings(G, t); const played = rows[0] ? rows[0].w + rows[0].d + rows[0].l : 0;
@@ -261,6 +264,7 @@ function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
     const ca = clubById(G, t.a), cb = clubById(G, t.b);
     if (!ca.me) aiM.set(t.a, { home: !final, won: t.w === t.a, oppTier: cb.tier, cup: true, gf: res.score[0], ga: res.score[1] });
     if (!cb.me) aiM.set(t.b, { home: false, won: t.w === t.b, oppTier: ca.tier, cup: true, gf: res.score[1], ga: res.score[0] });
+    if (isMine) { const meA0 = t.a === ME; const sc = res.score; const won = t.w === ME; const o = meA0 ? cb : ca; const v = (o.vs ??= { w: 0, d: 0, l: 0, gf: 0, ga: 0 }); v.gf += meA0 ? sc[0] : sc[1]; v.ga += meA0 ? sc[1] : sc[0]; if (won) v.w++; else v.l++; }
     if (isMine) { mine = res.view; myAfter(G, res.view); if (G.owner) { const meA = t.a === ME; popResult(G, meA ? res.score[0] : res.score[1], meA ? res.score[1] : res.score[0]); homeInfo = { oppTier: clubById(G, meA ? t.b : t.a).tier, cup: true, home: meA && !final, won: t.w === ME }; } }
   }
   G.cup.rounds[round] = ties; G.cup.round = round + 1;
@@ -620,7 +624,7 @@ function newSeason(G: GameState, r: Rng): string[] {
   const done = new Map<number, { rank: number; tier: number }>(); const finNews: string[] = [];
   for (const t of [1, 2, 3]) {
     const rows = standings(G, t);
-    rows.forEach((x, i) => { x.c.prevRank = i + 1; done.set(x.id, { rank: i + 1, tier: t }); });
+    rows.forEach((x, i) => { x.c.prevRank = i + 1; done.set(x.id, { rank: i + 1, tier: t }); if (!x.c.me) { (x.c.hist ??= []).push({ y: G.season, tier: t, rank: i + 1 }); if (x.c.hist.length > 60) x.c.hist.shift(); } });
     if (t < 3) rows.slice(10).forEach((x) => moves.push({ id: x.id, to: t + 1 }));
     if (t > 1) rows.slice(0, 2).forEach((x) => moves.push({ id: x.id, to: t - 1 }));
   }

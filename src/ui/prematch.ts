@@ -1,6 +1,7 @@
 /* 試合前の画面（問109）：「試合へ ▶」を押すと開く。監督が予定している並び方・先発・ベンチと相手を見て、
    選手を押すとその場で監督への頼みを出せる（頼むと予定がすぐ組み直される。聞いてくれるかは当日わかる） */
 import { finLine } from './finview';
+import { openClub } from './clubview';
 import { matchPlan, standings, type GameState } from '../core/game';
 import { ORDER_LIMIT, ORDER_SHORT, orderCount, setOrder, obeyChance, tacticFit, COMPAT_MARK, type OrderKind } from '../core/bond';
 import { mgrShort } from '../core/match';
@@ -21,7 +22,7 @@ export function openPrematch(G: GameState, start: () => void, back: () => void, 
     const benchRows = plan.bench.slice(0, 12).map((p) => `<button class="pl" data-pm="${p.id}">${posTag(p.pos)}<span style="min-width:0"><span class="pname">${p.fav ? '<span class="favmark">★</span>' : ''}${esc(p.name)}${p.ord ? ` <span class="tag">${ordTag(p)}</span>` : ''}</span><br><span class="pmeta">${p.age}歳${p.cond >= 1 ? ' ・ 好調' : p.cond <= -1 ? ' ・ 不調' : ''}${p.fat >= 40 ? ' ・ 疲れ' : ''}</span></span><span class="ovr">${val(ovr(p))}</span></button>`).join('');
     const inj = G.squad.filter((p) => p.inj);
     sheet(`<div class="bar"><h2>試合前</h2><span class="tag">予定：${plan.form}</span></div>
-      <section class="card band"><h2>相手</h2>${opp ? `<div class="row"><b class="grow">${esc(opp.name)}</b><span class="tag ${plan.home ? '' : 'away'}">${plan.home ? 'ホーム' : 'アウェイ'}</span></div><div class="muted small">${opp.tier}部 ${oppRank} ・ 戦い方：${esc(opp.mgr.style)} ・ 並び方 ${opp.mgr.forms[0]} など</div>${finLine(opp)}` : '<div class="muted">勝ち抜きの大会。相手は当日の抽選で決まる。</div>'}
+      <section class="card band"><h2>相手</h2>${opp ? `<div class="row"><button class="linkbtn grow" id="pmClub">${esc(opp.name)} <span aria-hidden="true">›</span></button><span class="tag ${plan.home ? '' : 'away'}">${plan.home ? 'ホーム' : 'アウェイ'}</span></div><div class="muted small">${opp.tier}部 ${oppRank} ・ 戦い方：${esc(opp.mgr.style)} ・ 並び方 ${opp.mgr.forms[0]} など</div>${finLine(opp)}` : '<div class="muted">勝ち抜きの大会。相手は当日の抽選で決まる。</div>'}
         <div class="muted small" style="margin-top:4px">自分のクラブ：${esc(mgrShort(G.mgr))} ・ ${esc(G.mgr.style)}</div></section>
       <section class="card"><h2>予定の先発（${plan.form}）</h2>${pitchHTML(spots, true)}
         <div class="muted small" style="margin-top:6px">選手を押すと、監督に頼みを出せる（${n}/${ORDER_LIMIT}人）。頼みが聞いてもらえるかは当日わかる。いまの見こみ：${Math.round(obeyChance(G.mgr.obey, Math.max(1, n)) * 100)}%</div></section>
@@ -30,6 +31,7 @@ export function openPrematch(G: GameState, start: () => void, back: () => void, 
       `<div class="in2"><button class="btn ghost" id="pmBack">もどる</button><button class="btn primary" id="pmGo">試合開始 <span aria-hidden="true">▶</span></button></div>`);
     $('#pmBack').addEventListener('click', back);
     $('#pmGo').addEventListener('click', start);
+    $('#pmClub')?.addEventListener('click', () => { if (opp) openClub(G, opp.id, draw, save); });
     $$<HTMLElement>('[data-pp],[data-pm]').forEach((b) => b.addEventListener('click', () => ask(+(b.dataset.pp ?? b.dataset.pm)!)));
   };
   /** 頼みを選ぶ小さな画面 */

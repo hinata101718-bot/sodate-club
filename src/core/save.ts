@@ -1,4 +1,5 @@
 /* セーブ（企画書 15：自動セーブ1つ＋手動3枠）。版の番号つき。どの読み書きも、失敗しても落ちない */
+import { ensureFin } from './clubfin';
 import { SAVE_VERSION, myTier, type GameState } from './game';
 import { MIGRATIONS } from './migrate';
 
@@ -58,6 +59,7 @@ export function loadFrom(kv: KV, key: string): GameState | null {
     const f = readFile(kv, key); if (!f) return null;
     const G = migrate(f.state);
     if (!G || !Array.isArray(G.squad) || !G.club) return null;
+    if (G.owner) ensureFin(G);
     return G;
   } catch { return null; }
 }

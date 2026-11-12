@@ -3,6 +3,7 @@
    - 12月（表彰式のあと）：年に1回の経営会議。去年のふり返り・営業の報告・目標（監督が3つ出してオーナーが選ぶ）・
      補強の予算・チームの強化方針・いまの不足・コーチの伸びしろの報告（問120）
    - 目標に届いたか：監督の評価・人気・スポンサーが上下する（大きく外れると監督の解任の話） */
+import { ensureFin } from './clubfin';
 import { ensureReg } from './squad';
 import { BREAK_WEEKS, SEASON_END } from './calendar';
 import { clamp, Rng } from './rng';
@@ -36,7 +37,7 @@ export const unread = (G: GameState) => (G.inbox ?? []).filter((m) => !m.read).l
 /* ---------- 報告する人 ---------- */
 function staffName(seed: number) { return `${STAFF_SUR[seed % STAFF_SUR.length]} ${STAFF_GIV[(seed * 7 + 3) % STAFF_GIV.length]}`; }
 export function ensureMeta(G: GameState) {
-  ensureReg(G); fixBreak(G);
+  ensureReg(G); fixBreak(G); ensureFin(G);
   /* 表彰歴をつける前のセーブ：自分の選手の分だけ、リーグの歴史から埋めておく */
   if (!G.honorFix) { G.honorFix = true; for (const p of G.squad) if (!p.honors) { const h = G.history.flatMap((r) => [...r.awards, ...(r.xi ?? [])].filter((a) => a.me && a.name === p.name).map((a) => ({ y: r.season, title: a.title, tier: a.tier, club: a.club }))); if (h.length) p.honors = h; } }
   G.front ??= { acct: staffName(G.club.name.length * 13 + 5), sales: staffName(G.club.name.length * 29 + 11) };
