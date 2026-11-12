@@ -1,4 +1,5 @@
 /* 移籍市場の画面（夜2 段階2）：知っている選手・フリーの選手・スカウトの条件・申し込み */
+import { finWord } from '../core/clubfin';
 import { startNego, negoTurn, isBlocked, FEE_STEPS, SAL_STEPS } from '../core/nego';
 import type { GameState } from '../core/game';
 import { myTier } from '../core/game';
@@ -155,7 +156,7 @@ export function openKnown(G: GameState, pid: number, done: (msg?: string | null)
   });
   draw();
 }
-const whereTextW = (w: Where, k: Known) => (w.kind === 'ama' ? `${k.from ?? '高校・大学'}（${w.p.pref}）` : w.kind === 'free' ? 'フリー（どこにもいない）' : `${w.club!.tier}部 ${w.club!.name}（${w.club!.pref}）`);
+const whereTextW = (w: Where, k: Known) => (w.kind === 'ama' ? `${k.from ?? '高校・大学'}（${w.p.pref}）` : w.kind === 'free' ? 'フリー（どこにもいない）' : `${w.club!.tier}部 ${w.club!.name}（${w.club!.pref}・お金：${finWord(w.club!)}）`);
 
 export function bindMarket(G: GameState, root: HTMLElement, done: (msg?: string | null) => void) {
   const on = (sel: string, f: (v: string) => string | null | void) => $$<HTMLElement>(`[${sel}]`, root).forEach((b) => b.addEventListener('click', () => done(f(b.getAttribute(sel)!) || null)));

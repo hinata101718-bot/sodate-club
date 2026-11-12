@@ -12,6 +12,7 @@ import type { Manager, Player } from './types';
 import type { GameState } from './game';
 import { newManagerBond, loveSalaryMul } from './bond';
 import { initMarket, newMarketSeason, type MarketState } from './market';
+import { payCapCheck, myPayCap } from './clubfin';
 
 export interface Cand { id: number; p: Player; src: 'scout' | 'club' | 'trial'; fee: number; note: string; from: string; clubId?: number; scout?: string; until: number; }
 export interface OwnerState {
@@ -163,7 +164,7 @@ export function takeTrial(G: GameState, id: number, months: number): string | nu
 }
 export function decideTrial(G: GameState, id: number, sign: boolean): string | null {
   const o = G.owner; const p = o.trials.find((x) => x.id === id); if (!p) return '見つからない。';
-  if (sign) { if (G.squad.length >= 35) return 'トップは35人まで。'; p.trialMonths = undefined; p.snap = undefined; p.origin = '練習生'; p.contract = 2; p.salary = salaryFor(ovr(p)); p.num = 0; G.squad.push(p); assignNumbers(G.squad); }
+  if (sign) { if (G.squad.length >= 35) return 'トップは35人まで。'; { const e = payCapCheck(G, salaryFor(ovr(p))); if (e) return e; } p.trialMonths = undefined; p.snap = undefined; p.origin = '練習生'; p.contract = 2; p.salary = salaryFor(ovr(p)); p.num = 0; G.squad.push(p); assignNumbers(G.squad); }
   o.trials = o.trials.filter((x) => x !== p); return null;
 }
 export function trialWeek(G: GameState, r: Rng, ctx: GrowCtx): string[] {
@@ -188,21 +189,29 @@ export function renewalOffer(p: Player): { years: number; salary: number } {
   const want = Math.round(salaryFor(ovr(p)) * loveSalaryMul(p));
   return { years: p.age >= 31 ? 1 : p.age <= 23 ? 3 : 2, salary: Math.max(p.salary, Math.round((want * (want > p.salary ? 1.05 : 1)) / 10) * 10) };
 }
-export function setRenew(G: GameState, id: number, years: number, no: boolean) {
-  const p = G.squad.find((x) => x.id === id); if (!p) return;
-  const off = renewalOffer(p); G.owner.renew[id] = { years: clamp(years, 1, 4), salary: off.salary, no };
+export function setRenew(G: GameState, id: number, years: number, no: boolean): string | null {
+  const p = G.squad.find((x) => x.id === id); if (!p) return null;
+  const off = renewalOffer(p);
+  /* 問129：更新で給料が上がって決まりをこえるなら、経理が止める */
+  if (!no) { const e = payCapCheck(G, off.salary - p.salary); if (e) return e; }
+  G.owner.renew[id] = { years: clamp(years, 1, 4), salary: off.salary, no }; return null;
 }
 /** 新しいシーズン：契約を1年進め、更新しなかった選手は去る */
 export function rollContracts(G: GameState): string[] {
-  const out: string[] = []; const leave: Player[] = [];
+  const out: string[] = []; const leave: Player[] = []; const capOut: Player[] = [];
+  const cap = myPayCap(G); let pay = G.squad.reduce((s, p) => s + p.salary, 0);
   for (const p of G.squad) {
     p.contract--;
     if (p.contract <= 0) {
       const d = G.owner.renew[p.id] ?? { ...renewalOffer(p), no: false };
-      if (d.no) leave.push(p); else { p.contract = d.years; p.salary = d.salary; }
+      if (d.no) { leave.push(p); pay -= p.salary; }
+      else if (d.salary > p.salary && pay + d.salary - p.salary > cap) { capOut.push(p); pay -= p.salary; }
+      else { pay += d.salary - p.salary; p.contract = d.years; p.salary = d.salary; }
     }
   }
-  if (leave.length) { G.squad = G.squad.filter((p) => !leave.includes(p)); out.push(`契約が切れて、${leave.map((p) => p.name).join('、')} がクラブを去った。`); }
+  if (leave.length) out.push(`契約が切れて、${leave.map((p) => p.name).join('、')} がクラブを去った。`);
+  if (capOut.length) out.push(`給料の決まり（収入の7割まで）をこえるので、${capOut.map((p) => p.name).join('、')} と契約を更新できず、クラブを去った。`);
+  if (leave.length || capOut.length) G.squad = G.squad.filter((p) => !leave.includes(p) && !capOut.includes(p));
   G.owner.renew = {};
   return out;
 }

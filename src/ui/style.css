@@ -517,3 +517,6 @@ nav.bottom{background:var(--plate);border-top:3px solid var(--gold)}
 .recap{display:flex;flex-direction:column;gap:8px}
 @media (prefers-reduced-motion:reduce){.mic{animation:none}}
 .mic-txt{flex:1;min-width:0}
+/* 問126：ほかのクラブのお金の目安 */
+.fin{display:inline-block;font-size:12px;line-height:1.4;padding:0 6px;border-radius:999px;border:1px solid currentColor;font-weight:700;white-space:nowrap;vertical-align:1px}
+.fin-rich{color:var(--gold)} .fin-poor{color:var(--danger)} .fin-mid{color:var(--gray)}

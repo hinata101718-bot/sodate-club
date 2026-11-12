@@ -6,8 +6,9 @@ import { makeSquad, ovr, teamStrength } from './player';
 import { makeManager } from './staff';
 import type { Emblem } from './emblem';
 import type { Manager, Player } from './types';
+import { initFin, type ClubFin } from './clubfin';
 
-export interface Club { id: number; name: string; color: string; pref: string; tier: number; lvl: number; squad: Player[]; mgr: Manager; emblem: Emblem; me: boolean; prevRank: number; }
+export interface Club { id: number; name: string; color: string; pref: string; tier: number; lvl: number; squad: Player[]; mgr: Manager; emblem: Emblem; me: boolean; prevRank: number; fin?: ClubFin; }
 /** 段ごとの強さの目安（先発の総合力：3部50〜60、2部65〜70、1部72〜75。感想 4） */
 export const TIER_LVL: Record<number, number> = { 3: 57, 2: 69, 1: 76 };
 
@@ -24,11 +25,13 @@ export function clubName(r: Rng, pref: string, used: Set<string>): string {
 export function makeAiClub(r: Rng, ids: { n: number }, id: number, pref: string, tier: number, used: Set<string>): Club {
   const lvl = TIER_LVL[tier] + r.int(-4, 5);
   const color = r.pick(CLUB_COLORS);
-  return {
+  const c: Club = {
     id, name: clubName(r, pref, used), color, pref, tier, lvl, squad: makeSquad(r, ids, lvl, { prefPool: [pref, pref, pref, r.pick(PREFS).name] }),
     mgr: makeManager(r, ids, tier === 1 ? 0.6 + r.next() * 0.4 : tier === 2 ? 0.3 + r.next() * 0.5 : r.next() * 0.6),
     emblem: { shape: r.int(0, 4), pattern: r.int(0, 3), c1: color, c2: '#ffffff', symbol: r.int(0, 5) }, me: false, prevRank: 0,
   };
+  c.fin = initFin(c, r);
+  return c;
 }
 /** 自分の県以外の46県から35県を選んで、1つずつクラブを置く */
 export function makeWorld(r: Rng, ids: { n: number }, myPref: string, myTier: number, keep: Club[] = []): Club[] {
@@ -53,5 +56,11 @@ export function nudgeToTier(c: Club, r: Rng, rate = 0.7) {
   const shift = (target - 1.5 - now) * rate;
   for (const p of c.squad) p.a = p.a.map((v) => Math.max(10, Math.min(95, v + shift * (0.8 + r.next() * 0.4))));
   c.lvl = target;
+}
+/** 問126：お金で決まった強さ（先発の総合力の目安）へ近づける */
+export function nudgeTo(c: Club, r: Rng, target: number) {
+  const shift = target - teamStrength(c.squad);
+  for (const p of c.squad) p.a = p.a.map((v) => Math.max(10, Math.min(95, v + shift * (0.8 + r.next() * 0.4))));
+  c.lvl = Math.round(target);
 }
 export const bestPlayers = (sq: Player[], n: number) => [...sq].sort((a, b) => ovr(b) - ovr(a)).slice(0, n);

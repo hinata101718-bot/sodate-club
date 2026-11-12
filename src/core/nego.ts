@@ -3,6 +3,7 @@
    - 断られたら、同じ移籍の期間は、その選手にもう申し込めない
    - 売るとき：オファーに値上げを言える（強気だと相手が引く）。3往復まで */
 import { Rng } from './rng';
+import { sellMul, finWord, payCapCheck } from './clubfin';
 import { ovr } from './player';
 import { MAX_SQUAD } from './squad';
 import { marketOpen, playerIndex, valueOf, fromTierOf, offerSalary, completeSign, type Where } from './market';
@@ -26,6 +27,7 @@ export function clubMin(G: GameState, w: Where): number {
   const c = w.club; const rank = [...c.squad].sort((a, b) => ovr(b) - ovr(a)).indexOf(w.p);
   let m = rank < 3 ? 1.6 : rank < 11 ? 1.25 : rank < 16 ? 1.0 : 0.85;
   if (w.p.contract <= 1) m *= 0.75;
+  m *= sellMul(c); /* 問126：苦しいクラブは安く売る、裕福なクラブは高くないと売らない */
   return r100(valueOf(w) * m * (0.94 + jit(w.p.id, G.season, 1) * 0.12));
 }
 /** 選手本人が来てもいい給料（段の差・フリーかどうか・年数の希望で変わる） */
@@ -45,7 +47,8 @@ export function startNego(G: GameState, pid: number): Nego | string {
   if (G.squad.length >= MAX_SQUAD) return `トップは${MAX_SQUAD}人まで。誰かを売りに出してから獲ろう。`;
   const v = valueOf(w);
   const n: Nego = { pid, side: w.club ? 'club' : 'player', round: 0, fee: v, ask: null, salary: offerSalary(w, 0), years: 3, sAsk: null, log: [], end: null };
-  n.log.push({ me: false, t: w.club ? `${w.club.name}との交渉。相場は ${man(v)}。移籍金を決めて申し込もう。` : `${w.p.name}本人との交渉（フリーなので移籍金はいらない）。給料と年数を決めよう。` });
+  const fw = w.club ? finWord(w.club) : null;
+  n.log.push({ me: false, t: w.club ? `${w.club.name}との交渉。相場は ${man(v)}。${fw === '苦しい' ? 'このクラブはお金に苦しい。安くても売ってくれるかもしれない。' : fw === '裕福' ? 'このクラブはお金に余裕がある。高めでないと売ってくれないかもしれない。' : ''}移籍金を決めて申し込もう。` : `${w.p.name}本人との交渉（フリーなので移籍金はいらない）。給料と年数を決めよう。` });
   return n;
 }
 /** 1往復すすめる。fee・salary・years は、こちらが出す条件 */
@@ -67,6 +70,7 @@ export function negoTurn(G: GameState, n: Nego, r: Rng): string | null {
   n.round++;
   const need = playerNeed(G, w, n.years);
   n.log.push({ me: true, t: `給料 年${n.salary.toLocaleString()}万円・${n.years}年契約でどうですか。` });
+  const capMsg = payCapCheck(G, n.salary); if (capMsg) { n.round--; n.log.pop(); return capMsg; }
   if (n.salary >= need) {
     if (G.squad.length >= MAX_SQUAD) { n.end = 'fail'; return `トップが${MAX_SQUAD}人いて、入れられない。`; }
     if (n.fee > G.owner.money) { n.end = 'fail'; return 'お金が足りなくなっていた。'; }
@@ -81,7 +85,8 @@ export function negoTurn(G: GameState, n: Nego, r: Rng): string | null {
 
 /* ---------- 売るとき：値上げを言う ---------- */
 /** 相手が出してもいい上限（強い選手・若い選手ほど上乗せしてくれる） */
-const buyerMax = (G: GameState, e: Offer, p: { id: number; age: number }, o: number) => r100(e.base! * (1.05 + jit(p.id, G.season, 3) * 0.25 + (o >= 70 ? 0.08 : 0) + (p.age <= 23 ? 0.06 : 0)));
+const buyerMax = (G: GameState, e: Offer, p: { id: number; age: number }, o: number) => { const c = e.clubId != null ? G.clubs.find((x) => x.id === e.clubId) : undefined; const fw = c ? finWord(c) : 'ふつう';
+  return r100(e.base! * (1.05 + jit(p.id, G.season, 3) * 0.25 + (o >= 70 ? 0.08 : 0) + (p.age <= 23 ? 0.06 : 0) + (fw === '裕福' ? 0.12 : fw === '苦しい' ? -0.08 : 0))); };
 export function raiseOffer(G: GameState, i: number, pct: number): string {
   const e = G.pending[i]; if (!e) return '';
   const p = G.squad.find((x) => x.id === e.pid); if (!p) return '';

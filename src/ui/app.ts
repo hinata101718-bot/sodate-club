@@ -1,4 +1,5 @@
 /* 画面のまとめ役：タブ・ホーム・選手の一覧・順位・設定とセーブ */
+import { finTag } from './finview';
 import { showChangesOnce } from './changes';
 import { raiseOffer } from '../core/nego';
 import { openRegMeet, openSwap } from './regview';
@@ -136,7 +137,7 @@ const STADIUM_SVG = `<svg class="hero-bg" viewBox="0 0 400 160" preserveAspectRa
 void STADIUM_SVG;
 function nextHTML(G: GameState): string {
   const e = eventOf(G);
-  const oppLine = (opp: number, home: boolean | null, extra = '') => { const c = clubById(G, opp); return `<div class="next-match">${home == null ? '<span class="tag">中立</span>' : `<span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span>`}<span class="grow">${esc(c.name)}</span><span class="muted small">${c.tier}部${oppRank(c.id, c.tier)} ・ ${esc(c.mgr.style)}</span></div>${extra}`; };
+  const oppLine = (opp: number, home: boolean | null, extra = '') => { const c = clubById(G, opp); return `<div class="next-match">${home == null ? '<span class="tag">中立</span>' : `<span class="tag ${home ? '' : 'away'}">${home ? 'ホーム' : 'アウェイ'}</span>`}<span class="grow">${esc(c.name)}</span><span class="muted small">${c.tier}部${oppRank(c.id, c.tier)} ・ ${esc(c.mgr.style)}</span>${finTag(c)}</div>${extra}`; };
   /* 問85：順位表のボタンのかわりに、相手の順位を出す */
   const oppRank = (id: number, tier: number) => { const rows = standings(G, tier); const r = rows[0] && rows[0].w + rows[0].d + rows[0].l ? rows.findIndex((x) => x.id === id) + 1 : 0; return r ? ` ${r}位` : ''; };
   if (e.kind === 'league') { const c = clubById(G, e.opp); const me = clubById(G, ME);
@@ -287,7 +288,7 @@ function tableHTML(): string {
     const rows = standings(G, t); const played = rows[0] ? rows[0].w + rows[0].d + rows[0].l : 0;
     body = `<section class="card"><h2>${t}部 ・ ${played}試合まで</h2><div style="overflow-x:auto"><table>
     <thead><tr><th class="l">#</th><th class="l">クラブ</th><th>試</th><th>勝</th><th>分</th><th>敗</th><th>差</th><th>点</th></tr></thead><tbody>
-    ${rows.map((r, i) => `<tr class="${r.id === ME ? 'me' : ''} ${i < 2 && t > 1 ? 'up' : ''} ${i >= 10 && t < 3 ? 'down' : ''}"><td class="l">${i + 1}</td><td class="l club">${esc(clubName(G, r.id))}</td><td>${r.w + r.d + r.l}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga > 0 ? '+' : ''}${r.gf - r.ga}</td><td><b>${r.p}</b></td></tr>`).join('')}
+    ${rows.map((r, i) => `<tr class="${r.id === ME ? 'me' : ''} ${i < 2 && t > 1 ? 'up' : ''} ${i >= 10 && t < 3 ? 'down' : ''}"><td class="l">${i + 1}</td><td class="l club">${esc(clubName(G, r.id))}${finTag(r.c)}</td><td>${r.w + r.d + r.l}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga > 0 ? '+' : ''}${r.gf - r.ga}</td><td><b>${r.p}</b></td></tr>`).join('')}
     </tbody></table></div><div class="muted small" style="margin-top:8px">${t > 1 ? '緑の線は昇格（上位2つ）。' : '1位が優勝。'}${t < 3 ? '赤の線は降格（下位2つ）。' : ''}勝ち3点・引き分け1点。並んだら得失点差（取った点−取られた点）で決める。</div></section>`;
   }
   return seg + body;
@@ -363,7 +364,7 @@ export function showPlayer(id: number, back: () => void) {
       root.querySelector('#pSwap')?.addEventListener('click', () => openSwap(app.G, p.id, () => showPlayer(id, back), autosave));
       root.querySelector('#pFav')?.addEventListener('click', () => { p.fav = !p.fav; autosave(); showPlayer(id, back); });
       root.querySelector('#pSell')?.addEventListener('click', () => { listPlayer(app.G, p.id, !p.listed); autosave(); showPlayer(id, back); });
-      root.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => { const v = b.dataset.renew!; setRenew(app.G, p.id, v === 'no' ? 1 : +v, v === 'no'); autosave(); showPlayer(id, back); }));
+      root.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => { const v = b.dataset.renew!; { const e = setRenew(app.G, p.id, v === 'no' ? 1 : +v, v === 'no'); if (e) toast(e); } autosave(); showPlayer(id, back); }));
     },
   });
 }

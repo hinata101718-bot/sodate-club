@@ -2,6 +2,7 @@
    - 申し込めるのは「知っている選手」だけ（全員を検索できる形にはしない）
    - スカウトは1つのしくみ：ポジション・ざっくりの地域・市場の値段・年齢の4つの条件で、所属を問わず探す
    - 移籍金は「相場」。値段の交渉はしない。相手のクラブが売るか、選手本人が来るかを決める（段と給料だけ） */
+import { canPay, clubEarn, clubPay, finWord, payRoomOK, payCapCheck } from './clubfin';
 import { MAX_SQUAD, autoReg } from './squad';
 import { Rng, clamp } from './rng';
 import { POS, type Pos } from './constants';
@@ -222,6 +223,8 @@ export function sellChance(c: Club, p: Player): number {
   const rank = [...c.squad].sort((a, b) => ovr(b) - ovr(a)).indexOf(p);
   let x = rank < 3 ? 0.05 : isStarter(c, p) ? 0.3 : rank < 16 ? 0.7 : 0.85;
   if (p.contract <= 1) x += 0.3;
+  /* 問126：お金に苦しいクラブは売りやすく、裕福なクラブは売りにくい */
+  const fw = finWord(c); if (fw === '苦しい') x += 0.25; else if (fw === '裕福') x -= 0.1;
   return clamp(x, 0.02, 0.95);
 }
 /** 選手本人が来てくれる見こみ：段の差と、給料の上乗せだけで決まる（気持ちのしくみは入れない：問52） */
@@ -252,6 +255,7 @@ export function bid(G: GameState, pid: number, bump: number, r: Rng): string | n
   if (!marketOpen(G)) return 'プロとフリーの選手は、移籍の期間（7〜8月・12月）にしか申し込めない。';
   const fee = valueOf(w);
   if (G.owner.money - reserved(G) < fee) return 'お金が足りない。';
+  const capMsg = payCapCheck(G, offerSalary(w, bump) + G.owner.mk.bids.reduce((s, b) => s + b.salary, 0)); if (capMsg) return capMsg;
   if (G.budget && G.budget.spent + reserved(G) + fee > G.budget.cap) return `補強の予算（${manText(G.budget.cap)}）をこえてしまう。年に1回の経営会議で決めた上限です。`;
   mk.bids.push({ pid, bump: BUMPS.includes(bump) ? bump : 0, fee, salary: offerSalary(w, bump), at: absWeek(G) });
   return null;
@@ -273,6 +277,7 @@ export function resolveBids(G: GameState, r: Rng): string[] {
     if (r.next() >= joinChance(fromTierOf(w), tierOf(G), b.bump)) { out.push(`移籍の結果：${w.club ? `${w.club.name}は売ってくれたが、` : ''}${who}本人が来るのを断った。`); continue; }
     if (G.owner.money < b.fee) { out.push(`移籍の結果：お金が足りなくなっていて、${who}を獲れなかった。`); continue; }
     if (G.squad.length >= MAX_SQUAD) { out.push(`移籍の結果：トップが${MAX_SQUAD}人いて、${who}を入れられなかった。`); continue; }
+    if (payCapCheck(G, b.salary)) { out.push(`移籍の結果：給料の決まり（収入の7割まで）をこえるので、${who}と契約できなかった。`); continue; }
     completeSign(G, w, b.fee, b.salary, 3, r);
     out.push(`移籍の結果：${w.club ? `${w.club.name}から` : 'フリーの'} ${who} が来てくれた！${b.fee ? `（移籍金 ${manText(b.fee)}、` : '（'}給料 年${b.salary.toLocaleString()}万円）`);
   }
@@ -282,7 +287,7 @@ export function resolveBids(G: GameState, r: Rng): string[] {
 /** 獲得が決まった：お金を払い、トップに入れる（登録に空きがあれば登録もする） */
 export function completeSign(G: GameState, w: Where, fee: number, salary: number, years: number, r: Rng) {
   const mk = G.owner.mk; const p = w.p;
-  if (fee) { G.owner.money -= fee; G.owner.ledger.buy += fee; if (G.budget) G.budget.spent += fee; }
+  if (fee) { G.owner.money -= fee; G.owner.ledger.buy += fee; if (G.budget) G.budget.spent += fee; if (w.club) clubEarn(w.club, 'sales', fee); }
   if (w.club) replaceInClub(G, w.club, p, r);
   else mk.free = mk.free.filter((x) => x !== p);
   joinBond(p, false); p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = years; p.salary = salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];
@@ -291,7 +296,9 @@ export function completeSign(G: GameState, w: Where, fee: number, salary: number
 /** 選手が抜けたクラブには、段の目安くらいの選手が入る（段ごとの強さがくずれないように） */
 function replaceInClub(G: GameState, c: Club, p: Player, r: Rng, lvl = TIER_LVL[c.tier] - 2) {
   const i = c.squad.indexOf(p); if (i < 0) return;
-  const np = makePlayer(r, G.ids, lvl, p.pos, { age: r.int(19, 28), prefPool: [c.pref] }); np.num = p.num; c.squad[i] = np;
+  /* 問126：お金に苦しいクラブは、安い若手で埋める */
+  const lv = finWord(c) === '苦しい' ? lvl - 5 : lvl;
+  const np = makePlayer(r, G.ids, lv, p.pos, { age: r.int(19, 28), prefPool: [c.pref] }); np.num = p.num; c.squad[i] = np;
 }
 
 /* ---------- フリーの選手と、他のクラブ同士の移籍 ---------- */
@@ -321,20 +328,30 @@ export function aiTransfers(G: GameState, r: Rng): string[] {
   const out: { fee: number; t: string }[] = [];
   const clubs = G.clubs.filter((c) => !c.me);
   for (const buyer of clubs) {
-    if (buyer.tier === 3 || r.next() > (buyer.tier === 1 ? 0.45 : 0.3)) continue;
+    /* 問129：性格で動き方が変わる。勝負好きはよく動き、堅実はあまり動かない。苦しいクラブは買わない */
+    const st = buyer.fin?.style ?? 'ふつう'; const fw = finWord(buyer);
+    if (fw === '苦しい') continue;
+    const go = (buyer.tier === 1 ? 0.45 : buyer.tier === 2 ? 0.3 : 0.15) * (st === '勝負好き' ? 1.6 : st === '堅実' ? 0.5 : 1) * (fw === '裕福' ? 1.3 : 1);
+    if (r.next() > go) continue;
     const weak = [...buyer.squad].sort((a, b) => ovr(a) - ovr(b));
     const sellers = clubs.filter((c) => c.tier > buyer.tier || (c.tier === buyer.tier && r.next() < 0.3));
-    const pool = sellers.flatMap((c) => c.squad.map((p) => ({ p, c }))).filter(({ p, c }) => p.age <= 29 && ovr(p) <= TIER_LVL[buyer.tier] + 6 && ovr(p) >= TIER_LVL[buyer.tier] - 2 && r.next() < sellChance(c, p));
+    const top = st === '勝負好き' ? 9 : 6; const lo = st === '堅実' ? -5 : -2;
+    const pool = sellers.flatMap((c) => c.squad.map((p) => ({ p, c }))).filter(({ p, c }) => p.age <= (st === '堅実' ? 25 : 29) && ovr(p) <= TIER_LVL[buyer.tier] + top && ovr(p) >= TIER_LVL[buyer.tier] + lo && r.next() < sellChance(c, p));
     if (!pool.length) continue;
     const { p, c } = r.pick(pool);
     const out1 = weak.find((x) => x.pos === p.pos) ?? weak[0];
-    const fee = marketValue(p, c.tier);
+    const fee = Math.round(marketValue(p, c.tier) * (finWord(c) === '苦しい' ? 0.75 : 1) / 100) * 100;
+    /* 払えるか・給料の決まり（収入の7割まで）に入るか */
+    if (!canPay(buyer, fee) || !payRoomOK(buyer, p.salary, out1.salary)) continue;
+    clubPay(buyer, 'buy', fee); clubEarn(c, 'sales', fee);
+    if (buyer.fin && buyer.fin.money < 0) { const need = Math.ceil(-buyer.fin.money / 1000) * 1000; buyer.fin.debt += need; buyer.fin.money += need; }
     replaceInClub(G, c, p, r);
     /* 獲ったクラブからは、同じポジションのいちばん弱い選手が出ていく */
     const i = buyer.squad.indexOf(out1); p.num = out1.num; p.contract = 3; buyer.squad[i] = p;
     if (out1.age <= 32 && G.owner.mk.free.length < 24) { out1.contract = 0; out1.num = 0; G.owner.mk.free.push(out1); }
     G.owner.mk.bids = G.owner.mk.bids.filter((b) => b.pid !== p.id);
-    out.push({ fee, t: `${buyer.name}（${buyer.tier}部）が、${c.name}（${c.tier}部）の${p.name}（${p.pos}・${p.age}歳）を獲った（移籍金 ${manText(fee)}）` });
+    const big = fee >= (({ 1: 40000, 2: 15000, 3: 5000 } as Record<number, number>)[buyer.tier] ?? 15000);
+    out.push({ fee, t: `${big ? '大型補強！ ' : ''}${buyer.name}（${buyer.tier}部${st === '勝負好き' ? '・勝負好き' : ''}）が、${c.name}（${c.tier}部${finWord(c) === '苦しい' ? '・経営難' : ''}）の${p.name}（${p.pos}・${p.age}歳）を獲った（移籍金 ${manText(fee)}）` });
   }
   out.sort((a, b) => b.fee - a.fee);
   return out.slice(0, 3).map((x) => `移籍のニュース：${x.t}。`);

@@ -28,6 +28,9 @@ function checkState(G: GameState, tag: string) {
       if (p.a.some((v) => !Number.isFinite(v))) bad(`${tag} 能力が数字でない ${p.name}`);
       if (p.age > 41) bad(`${tag} ${p.age}歳の選手がいる ${p.name}`);
       if (!Number.isFinite(p.salary) || p.salary <= 0) bad(`${tag} 給料がおかしい ${p.name} ${p.salary}`); } }
+  for (const c of G.clubs) if (!c.me) { const f = c.fin; if (!f) { bad(`${tag} ${c.name}にお金の情報がない`); continue; }
+    if (!Number.isFinite(f.money) || !Number.isFinite(f.debt)) bad(`${tag} ${c.name}のお金が数字でない`);
+    if (f.debt > debtCap(c.tier) * 1.01 && G.week % 48 > 4) bad(`${tag} ${c.name}の借金が上限をこえた ${f.debt}`); }
   for (const t of [1, 2, 3]) if (G.clubs.filter((c) => c.tier === t).length !== 12) bad(`${tag} ${t}部のクラブ数 ${G.clubs.filter((c) => c.tier === t).length}`);
   if ((G.inbox ?? []).length > 60) bad(`${tag} メッセージが多すぎる`);
 }

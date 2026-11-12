@@ -3,6 +3,7 @@
    - 12月（表彰式のあと）：年に1回の経営会議。去年のふり返り・営業の報告・目標（監督が3つ出してオーナーが選ぶ）・
      補強の予算・チームの強化方針・いまの不足・コーチの伸びしろの報告（問120）
    - 目標に届いたか：監督の評価・人気・スポンサーが上下する（大きく外れると監督の解任の話） */
+import { myPayroll, myPayCap } from './clubfin';
 import { ensureReg } from './squad';
 import { BREAK_WEEKS, SEASON_END } from './calendar';
 import { clamp, Rng } from './rng';
@@ -127,7 +128,7 @@ function gaps(G: GameState): string[] {
 
 /** お金の書き方（画面の yen と同じ：1億2,000万円） */
 export const yenText = (v: number) => { const neg = v < 0; const m = Math.abs(Math.round(v)); const t = m >= 10000 ? `${Math.floor(m / 10000)}億${m % 10000 ? (m % 10000).toLocaleString() + '万' : ''}円` : `${m.toLocaleString()}万円`; return (neg ? '−' : '') + t; };
-function statement(title: string, now: Ledger, base: Ledger | null, money: number, debt: number, prev?: number): Doc {
+function statement(title: string, now: Ledger, base: Ledger | null, money: number, debt: number, prev?: number, pay?: [number, number]): Doc {
   const d = (k: keyof Ledger) => now[k] - (base ? base[k] : 0);
   const inc = INCOME_KEYS.reduce((t, k) => t + d(k), 0), exp = EXPENSE_KEYS.reduce((t, k) => t + d(k), 0), net = inc - exp;
   const r = (k: keyof Ledger): DocRow => ({ k: MONEY_NAME[k], v: d(k) ? yenText(d(k)) : '—' });
@@ -135,6 +136,7 @@ function statement(title: string, now: Ledger, base: Ledger | null, money: numbe
     { h: '入ってきたお金', rows: [...INCOME_KEYS.map(r), { k: '合計', v: yenText(inc), cls: 'sum' }] },
     { h: '出ていったお金', rows: [...EXPENSE_KEYS.map(r), { k: '合計', v: yenText(exp), cls: 'sum' }] },
     { rows: [{ k: '差し引き', v: `${net >= 0 ? '+' : ''}${yenText(net)}`, cls: net >= 0 ? 'net' : 'netbad' }, ...(prev != null ? [{ k: '前の月のお金', v: yenText(prev) }] : []), { k: 'いまのお金', v: yenText(money), cls: 'sum' as const }, ...(debt ? [{ k: '借金', v: yenText(debt), cls: 'bad' as const }] : [])] },
+    ...(pay ? [{ h: '給料の決まり（収入の7割まで）', rows: [{ k: '選手の給料の合計（1年）', v: yenText(pay[0]) }, { k: '上限', v: yenText(pay[1]) }, { k: 'あと使える分', v: pay[1] - pay[0] >= 0 ? yenText(pay[1] - pay[0]) : `こえている（${yenText(pay[0] - pay[1])}）`, cls: pay[1] - pay[0] >= 0 ? 'good' as const : 'bad' as const }] }] : []),
   ] };
 }
 /* ---------- 月の経営会議（問113・114） ---------- */
@@ -144,7 +146,7 @@ export function monthMeeting(G: GameState): Meeting {
   const mon = monthOf(G.week);
   const items: MeetItem[] = [];
   const net = inc - exp;
-  items.push({ role: '経理', who: G.front!.acct, lines: [`${mon}月の収支報告書です。差し引きは ${net >= 0 ? `${man(net)}の黒字` : `${man(-net)}の赤字`}でした。`, net < 0 && o.money < 3000 ? '少し苦しくなってきました。選手の給料と施設づくりには気をつけてください。' : o.debt ? '借金の返済も、少しずつ進めましょう。' : 'お金のまわりは、いまのところ順調です。'], doc: statement(`${mon}月の収支報告書`, o.ledger, s.led, o.money, o.debt, s.money) });
+  items.push({ role: '経理', who: G.front!.acct, lines: [`${mon}月の収支報告書です。差し引きは ${net >= 0 ? `${man(net)}の黒字` : `${man(-net)}の赤字`}でした。`, net < 0 && o.money < 3000 ? '少し苦しくなってきました。選手の給料と施設づくりには気をつけてください。' : o.debt ? '借金の返済も、少しずつ進めましょう。' : 'お金のまわりは、いまのところ順調です。'], doc: statement(`${mon}月の収支報告書`, o.ledger, s.led, o.money, o.debt, s.money, [myPayroll(G), myPayCap(G)]) });
   const row = G.leagues[myTierOf(G)].table[0]; const w = row.w - s.w, d = row.d - s.d, l = row.l - s.l; const rk = rankOf(G);
   const gf = row.gf - (s.gf ?? row.gf), ga = row.ga - (s.ga ?? row.ga);
   const nextMatches = G.sched.league.filter((x) => x >= G.week + 1 && x < G.week + 5).length;
@@ -219,7 +221,7 @@ export function yearMeeting(G: GameState, judged: string[]): Meeting {
   const o = G.owner; const items: MeetItem[] = [];
   const inc = ledSum(o.ledger, INCOME_KEYS), exp = ledSum(o.ledger, EXPENSE_KEYS);
   const t = myTierOf(G), rk = rankOf(G);
-  items.push({ role: '経理', who: G.front!.acct, lines: [`${G.season}年目の1年分の収支報告書です。1年で ${inc - exp >= 0 ? `${man(inc - exp)}の黒字` : `${man(exp - inc)}の赤字`}でした。`], doc: statement(`${G.season}年目の収支報告書`, o.ledger, null, o.money, o.debt) });
+  items.push({ role: '経理', who: G.front!.acct, lines: [`${G.season}年目の1年分の収支報告書です。1年で ${inc - exp >= 0 ? `${man(inc - exp)}の黒字` : `${man(exp - inc)}の赤字`}でした。`], doc: statement(`${G.season}年目の収支報告書`, o.ledger, null, o.money, o.debt, undefined, [myPayroll(G), myPayCap(G)]) });
   const s0 = G.yearStart ?? { pop: o.pop, fans: [0, 0] as [number, number] };
   const avgFans = s0.fans[1] ? Math.round(s0.fans[0] / s0.fans[1]) : 0;
   const nt = nextTier(G);
