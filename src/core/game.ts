@@ -350,7 +350,7 @@ export function advanceWeek(G: GameState): WeekResult {
     G.week++;
     let seasonEnd = false;
     if (G.week >= WEEKS) { news.push(...newSeason(G, r)); seasonEnd = true; news.push(`${G.season}年目が始まった。`); }
-    if (G.owner && G.week === 28) { const f = revealTypes(G, 24); if (f.length) mail(G, 'コーチ', (G.owner.coaches.phys ?? G.owner.coaches.off)?.name ?? G.mgr.name, '成長タイプがわかった選手', `半年見てきて、成長のしかたがわかってきた選手がいます。${f.join('、')}。選手の画面に書いておきました。`); }
+    if (G.owner && G.week === 28) { const f = revealTypes(G, 24); if (f.length) mail(G, 'コーチ', (G.owner.coaches.phys ?? G.owner.coaches.off)?.name ?? G.mgr.name, '成長タイプがわかった選手', `半年見てきて、成長のしかたがわかってきた選手がいます。${f.join('、')}。記録にも残しておきます。`); }
     if (G.owner && REG_WEEKS.includes(G.week)) { openReg(G); news.push(`選手登録の会議（${G.regm!.kind}）が開かれる。試合に出られる23人を決めよう。`); }
     if (G.week === 4) { G.promo = { open: true, rec: recommend(G.youth, G.squad.length) }; news.push('春の昇格会議が開かれる。トップに上げる子を決めよう。'); }
     news.push(...bondNews); bondNews = [];

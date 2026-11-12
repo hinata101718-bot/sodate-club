@@ -173,7 +173,7 @@ export function monthMeeting(G: GameState): Meeting {
   const yl = G.youthLog[G.youthLog.length - 1];
   if (yl && yl.season === G.season && yl.month === mon) {
     const lines = [...yl.lines].sort((a, b) => b.stars - a.stars).slice(0, 5).map((x) => ({ x, p: G.youth.find((y) => y.id === x.pid) })).filter((z) => z.p);
-    items.push({ role: 'ユースコーチ', who: G.owner.coaches.youth?.name ?? '（いない）', lines: [yl.coach, 'くわしい報告は、ユースの画面（チーム → ユース）に置いてあります。'].filter(Boolean), doc: { title: `${mon}月のユース報告書`, stamp: 'ユース', secs: [
+    items.push({ role: 'ユースコーチ', who: G.owner.coaches.youth?.name ?? '（いない）', lines: [yl.coach, '一人ひとりの様子は、ユースの報告書にまとめてあります。'].filter(Boolean), doc: { title: `${mon}月のユース報告書`, stamp: 'ユース', secs: [
       { h: '目立っている子', rows: lines.map(({ x, p }) => ({ k: `${p!.name}（${p!.grade}年・${p!.pos}）${'★'.repeat(x.stars)}`, v: `${x.words} ${x.arrow}` })) },
     ] } });
   }
@@ -181,7 +181,7 @@ export function monthMeeting(G: GameState): Meeting {
   if (sc) {
     const now = G.season * 48 + G.week;
     const fresh = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.p && k.season * 48 + k.week >= now - 4).sort((a, b) => ((b.p!.pot ?? 0) - ovr(b.p!)) - ((a.p!.pot ?? 0) - ovr(a.p!))).slice(0, 3);
-    items.push({ role: 'スカウト', who: sc.name, lines: fresh.length ? [`今月のいちばんのおすすめは ${fresh[0].p!.name} です。`, fresh[0].note ? `「${fresh[0].note}」` : '', '調べた中身は、スカウトの画面（チーム → 移籍 → スカウト）に送っておきました。'].filter(Boolean) : ['今月は、強くおすすめできる選手は見つかりませんでした。'],
+    items.push({ role: 'スカウト', who: sc.name, lines: fresh.length ? [`今月のいちばんのおすすめは ${fresh[0].p!.name} です。`, fresh[0].note ? `「${fresh[0].note}」` : '', 'ほかにも何人か、気になる選手の報告を上げてあります。'].filter(Boolean) : ['今月は、強くおすすめできる選手は見つかりませんでした。'],
       doc: fresh.length ? { title: `${mon}月のスカウト報告書`, stamp: 'スカウト', secs: [{ h: 'おすすめの選手', rows: fresh.map((k) => ({ k: `${k.p!.name}（${k.p!.age}歳・${k.p!.pos}）`, v: k.club ?? '' })) }] } : undefined });
   }
   /* 感想：それぞれが「今月の不足」と「来月からの動き」を話す。監督の方針とコーチの練習の強さは、来月の試合に本当に効く */
@@ -194,7 +194,7 @@ export function monthMeeting(G: GameState): Meeting {
   };
   { const sh: string[] = []; const big = EXPENSE_KEYS.map((k) => [k, o.ledger[k] - s.led[k]] as const).sort((x, y) => y[1] - x[1])[0];
     if (net < 0) sh.push(`支出が収入を上回ったこと（いちばん大きい支出は${MONEY_NAME[big[0]]}）`); if (o.money < 3000) sh.push('手元のお金が少ないこと'); if (o.debt) sh.push('借金が残っていること');
-    add('経理', sh, net < 0 ? '来月は、選手の給料と施設づくりの支払いを毎週たしかめて、ふくらみそうならすぐ知らせます。' : o.debt && o.money > o.debt * 2 ? '余裕があるので、借金を少しずつ返すことをおすすめします（経営 → お金）。' : 'いまの使い方のまま、毎週の出入りを見ていきます。'); }
+    add('経理', sh, net < 0 ? '来月は、選手の給料と施設づくりの支払いを毎週たしかめて、ふくらみそうならすぐ知らせます。' : o.debt && o.money > o.debt * 2 ? 'お金に余裕があるうちに、借金を少しずつ返していきませんか。' : 'いまの使い方のまま、毎週の出入りを見ていきます。'); }
   { const sh: string[] = []; const gaPer = games ? ga / games : 0, gfPer = games ? gf / games : 0;
     if (games && gaPer >= 1.8) sh.push(`失点が多いこと（1試合 ${gaPer.toFixed(1)}点）`); if (games && gfPer < 1) sh.push(`点が取れていないこと（1試合 ${gfPer.toFixed(1)}点）`); if (gp.length) sh.push(`${gp.slice(0, 2).join('・')}`);
     tilt = games && gaPer >= 1.8 && gfPer >= 1 ? 'def' : games && gfPer < 1 && gaPer < 1.8 ? 'atk' : null;
@@ -209,7 +209,7 @@ export function monthMeeting(G: GameState): Meeting {
   { const now2 = G.season * 48 + G.week; const fr = Object.values(G.owner.mk.known).filter((k) => k.src === 'scout' && k.p && k.season * 48 + k.week >= now2 - 4);
     const need = gp.length ? gp[0].split('（')[0] : ''; const sh: string[] = [];
     if (!fr.length) sh.push('条件に合う選手が見つからなかったこと'); if (need) sh.push(`足りない${need}の候補が少ないこと`);
-    add('スカウト', sh, need ? `${need}を探すなら、探す条件のポジションを合わせてください。合わせてもらえれば、来月はそこを重点的に回ります。` : !fr.length ? '探す条件（地域・年齢・値段）を少しゆるめてもらえると、来月は見つけやすくなります。' : '来月も、いまの条件で探し続けます。'); }
+    add('スカウト', sh, need ? `${need}が足りていません。探すポジションを${need}にしてもらえれば、来月はそこを重点的に見て回ります。` : !fr.length ? '地域や年齢の条件を少し広げてもらえれば、来月は見つけやすくなると思います。' : '来月も、いまの条件で探し続けます。'); }
   G.plan = { until: G.season * 48 + G.week + 5, tilt, care };
   return { kind: 'month', title: `${mon}月の経営会議`, items, pick: { goal: 1, budget: 1, policy: G.policy } };
 }
@@ -231,7 +231,7 @@ export function yearMeeting(G: GameState, judged: string[]): Meeting {
     ] } });
   const opts = goalOptions(G, nt, G.season + 1, 2);
   const ml = [`今年は ${t}部 ${rk}位でした。`, ...judged, `監督の評価：${evalWord(G.mgrEval ?? 60)}`];
-  if ((G.mgrEval ?? 60) < 25) ml.push('今年は結果を出せず、申し訳ありません。監督を代えるという判断も、受け入れます（入れかえは 経営 → スタッフ）。');
+  if ((G.mgrEval ?? 60) < 25) ml.push('今年は結果を出せず、申し訳ありません。監督を代えるという判断も、受け入れます。');
   ml.push(`来年（${nt}部）の目標を、3つ用意しました。どれで行くか、オーナーが決めてください。`);
   const gl0 = G.goal; const row = G.leagues[t].table[0];
   items.push({ role: '監督', who: G.mgr.name, lines: ml, ask: 'goal', doc: { title: `${G.season}年目の試合報告書`, stamp: '監督', secs: [
