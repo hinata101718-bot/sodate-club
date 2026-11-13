@@ -1,6 +1,6 @@
 /* PC版のまとめ役：画面の枠・メニュー・週の進め方・セーブ */
 import { S, G, ACT, CHANGE, $, esc, yen, fmt, moneyCls, toast, modal, closeModal, modalOpen, bindEvents } from './util';
-import { playWeek, myTier, myRank, hasMyMatch, eventOf, ME, standings, type GameState, type PlayResult } from '../core/game';
+import { playWeek, startMyMatch, myTier, myRank, hasMyMatch, eventOf, ME, standings, type GameState, type PlayResult } from '../core/game';
 import { monthOf, weekOfMonth, isWindow, CUP_ROUND_NAMES, AWARD_WEEK } from '../core/calendar';
 import { unread } from '../core/meeting';
 import { DIFFS } from '../core/gm';
@@ -9,7 +9,7 @@ import { emblemSVG } from '../ui/emblem';
 import { mergeReports } from '../core/growth';
 import { VIEWS } from './views';
 import { showBlocker, blockerOf, showReport } from './modals';
-import { playMatch } from './matchplay';
+import { playLive } from './matchplay';
 import { titleHTML } from './newgame';
 import type { MatchView, ReportEntry } from '../core/types';
 
@@ -68,10 +68,16 @@ const BLOCK_LABEL: Record<string, string> = { sponsor: 'スポンサーを選ぶ
 export function nextWeek() {
   const g = G();
   const b = blockerOf(g); if (b) { showBlocker(b); return; }
-  const res = playWeek(g); save();
-  S.ui.lastRes = { report: res.report, news: res.news, season: g.season };
-  const done = () => { afterWeek(res); };
-  if (res.match) playMatch(res.match, res, done); else done();
+  /* 自分の試合がある週は、試合をその場で動かして見る（終わってから週の残りを進める） */
+  const live = startMyMatch(g);
+  const finishWeek = () => { const res = playWeek(g, live); save(); S.ui.lastRes = { report: res.report, news: res.news, season: g.season }; return res; };
+  if (live) { playLive(live, finishWeek, (res) => afterWeek(res)); return; }
+  busy('週を進めています…', () => afterWeek(finishWeek()));
+}
+/** 重い処理の前に「進めています」を出してから動かす（画面が止まって見えないように） */
+function busy(text: string, f: () => void) {
+  const el = document.createElement('div'); el.className = 'busy'; el.textContent = text; document.body.appendChild(el);
+  setTimeout(() => { try { f(); } finally { el.remove(); } }, 30);
 }
 function afterWeek(res: PlayResult) {
   render();
@@ -86,12 +92,18 @@ export function chain() { const b = blockerOf(G()); if (b && !modalOpen()) showB
 export function skipWeeks() {
   const g = G(); if (blockerOf(g)) { showBlocker(blockerOf(g)!); return; }
   const results: { m: MatchView; title: string }[] = []; const reps: ReportEntry[] = []; let toasts: PlayResult['toasts'] = []; let n = 0;
-  while (n < 8) {
+  /* 1週ずつ、画面に進み具合を出しながら進める（どの試合も試合のエンジンで動かすので、少し時間がかかる） */
+  const el = document.createElement('div'); el.className = 'busy'; document.body.appendChild(el);
+  const one = () => {
+    el.textContent = `まとめて進めています… ${n + 1}週目`;
     const res = playWeek(g); n++;
     if (res.match) results.push({ m: res.match, title: res.match.title });
     reps.push(...res.report); toasts = toasts.concat(res.toasts);
-    if (blockerOf(g) || res.report.some((e) => e.awake) || res.seasonEnd || g.pending.length || g.week === AWARD_WEEK) break;
-  }
+    if (n < 8 && !(blockerOf(g) || res.report.some((e) => e.awake) || res.seasonEnd || g.pending.length || g.week === AWARD_WEEK)) { setTimeout(one, 0); return; }
+    el.remove(); doneSkip();
+  };
+  setTimeout(one, 30);
+  const doneSkip = () => {
   save(); render();
   for (const t of toasts.slice(-6)) toast(t.title, t.text, t.kind);
   const lines = results.map(({ m }) => { const my = m.home.me ? m.score[0] : m.score[1], op = m.home.me ? m.score[1] : m.score[0]; const opp = m.home.me ? m.away.name : m.home.name; const r = m.pk ? (m.home.me ? m.pk[0] > m.pk[1] : m.pk[1] > m.pk[0]) ? 'W' : 'L' : my > op ? 'W' : my < op ? 'L' : 'D';
@@ -100,6 +112,7 @@ export function skipWeeks() {
   S.ui.lastRes = { report: merged, news: [], season: g.season };
   modal(`<h2>${n}週すすめた</h2>${lines ? `<div class="stack">${lines}</div>` : '<div class="muted">この間、自分のクラブの試合はなかった。</div>'}
     <div class="foot"><button class="btn" data-act="weekReport">成長の報告を見る</button><button class="btn primary" data-act="closeChain">閉じる</button></div>`);
+  };
 }
 ACT.next = () => { if (G().gm.over) { showBlocker('over'); return; } nextWeek(); };
 ACT.skip = () => { if (G().gm.over) { showBlocker('over'); return; } skipWeeks(); };

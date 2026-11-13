@@ -1,7 +1,7 @@
 /* ゲームの状態と、1週ずつ進めるしくみ */
 import { Rng, clamp } from './rng';
 import { makePlayer, makeSquad, ovr, assignNumbers, teamStrength, growthType, salaryFor } from './player';
-import { simulateMatch, banned, kickersFor, featuredDuels, type Comp, pickLineup, fixedLineup, chooseForm, type Policy, type TeamIn } from './match';
+import { simulateMatch, MatchSim, banned, kickersFor, featuredDuels, type Comp, pickLineup, fixedLineup, chooseForm, type Policy, type TeamIn } from './match';
 import { DIFFS, initGm, applyTac, afterWeek, rememberSquad, noteSell, type Diff, type GmState, type Toast } from './gm';
 import { growPlayer, mergeReports, DEFAULT_CTX } from './growth';
 import { makeManager } from './staff';
@@ -189,6 +189,57 @@ let homeInfo: { oppTier: number; cup: boolean; home: boolean; won: boolean } | n
 let aiM = new Map<number, AiMatch>();
 /** バランスの確かめ用（ふだんは使わない） */
 export const STATS = { on: false, matches: [] as { tier: number; hs: number; as: number; sh: number; sa: number }[] };
+function leagueOpts(G: GameState, t: number, li: number, hc: Club, ac: Club, isMine: boolean) {
+  const big = isMine && li >= 17 && contention(G, t);
+  return { record: true, label: `${G.season}年目 リーグ第${li + 1}節`, big, title: `${t}部 第${li + 1}節`, pre: isMine ? preInfo(G, t, li, hc, ac, big) : undefined };
+}
+function cupOpts(G: GameState, round: number, isMine: boolean) {
+  const final = round === 5;
+  return { record: true, cup: true, neutral: final, final, pre: isMine ? { info: `天皇杯、${CUP_ROUND_NAMES[round]}です。`, stakes: { kind: final ? '決勝' as const : '' as const } } : undefined, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `天皇杯 ${CUP_ROUND_NAMES[round]}` };
+}
+/** 天皇杯の組み合わせ（その週のはじめに決める） */
+function cupTies(G: GameState, r: Rng, round: number): CupTie[] {
+  const prev = G.cup.rounds[round - 1];
+  const winners = prev ? prev.map((t) => t.w!) : [];
+  const ent = cupEntrants(G, round, winners); r.shuffle(ent);
+  const ties: CupTie[] = [];
+  for (let i = 0; i + 1 < ent.length; i += 2) ties.push({ a: ent[i], b: ent[i + 1] });
+  return ties;
+}
+/** PC版：自分の試合を画面で見ながら進める（試合の途中で指示を出せる） */
+export interface LiveMatch { sim: MatchSim; season: number; week: number; homeId: number; awayId: number }
+let liveNow: LiveMatch | null = null;
+let prepped: { G: GameState; season: number; week: number; r: Rng; news: string[]; ties: CupTie[] | null } | null = null;
+/** 週のはじめの処理（会議を閉じる・昇格・登録・移籍の結果・天皇杯の組み合わせ）。1週に1回だけ */
+function preWeek(G: GameState): { r: Rng; news: string[]; ties: CupTie[] | null } {
+  if (prepped && prepped.G === G && prepped.season === G.season && prepped.week === G.week) return prepped;
+  const r = new Rng(G.rng); const news: string[] = [];
+  ensureMeta(G);
+  if (G.meet) closeMeeting(G);
+  G.cere = null;
+  if (G.promo?.open) news.push(...applyPromo(G, r, G.promo.rec));
+  if (G.regm?.open) news.push(...applyReg(G, G.regm.sel));
+  bondNews = [];
+  if (G.owner) news.push(...resolveBids(G, r));
+  ensureFin(G);
+  const ci = G.sched.cup.indexOf(G.week);
+  const ties = ci >= 0 ? cupTies(G, r, ci) : null;
+  prepped = { G, season: G.season, week: G.week, r, news, ties };
+  return prepped;
+}
+/** 今週の自分の試合を、画面で見る用に始める（なければ null）。このあと playWeek(G, live) で週を進める */
+export function startMyMatch(G: GameState): LiveMatch | null {
+  if (!hasMyMatch(G)) return null;
+  const pre = preWeek(G);
+  const w = G.week; const li = G.sched.league.indexOf(w); const ci = G.sched.cup.indexOf(w);
+  let h = -1, a = -1, opts: ReturnType<typeof leagueOpts> | ReturnType<typeof cupOpts> | null = null;
+  if (li >= 0) { const t = myTier(G); const pair = G.leagues[t].fixtures[li].find(([x, y]) => x === ME || y === ME); if (pair) { [h, a] = pair; opts = leagueOpts(G, t, li, clubById(G, h), clubById(G, a), true); } }
+  else if (ci >= 0 && pre.ties) { const tie = pre.ties.find((x) => x.a === ME || x.b === ME); if (tie) { h = tie.a; a = tie.b; opts = cupOpts(G, ci, true); } }
+  if (!opts) return null;
+  const mr = new Rng((G.rng ^ 0x5bd1e995) >>> 0);
+  const sim = new MatchSim(mr, teamIn(G, clubById(G, h)), teamIn(G, clubById(G, a)), opts, true);
+  return (liveNow = { sim, season: G.season, week: w, homeId: h, awayId: a });
+}
 function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
   let mine: MatchView | null = null;
   const tier = myTier(G);
@@ -197,8 +248,7 @@ function playLeagueRound(G: GameState, r: Rng, li: number): MatchView | null {
     for (const [h, a] of L.fixtures[li]) {
       const hc = clubById(G, h), ac = clubById(G, a);
       const isMine = h === ME || a === ME;
-      const big = isMine && li >= 17 && contention(G, t);
-      const res = simulateMatch(r, teamIn(G, hc), teamIn(G, ac), { record: true, label: `${G.season}年目 リーグ第${li + 1}節`, big, title: `${t}部 第${li + 1}節`, pre: isMine ? preInfo(G, t, li, hc, ac, big) : undefined });
+      const res = isMine && liveNow ? liveNow.sim.finish() : simulateMatch(r, teamIn(G, hc), teamIn(G, ac), leagueOpts(G, t, li, hc, ac, isMine));
       const [sh, sa] = res.score; const th = L.table[h], ta = L.table[a];
       ((L.res ??= [])[li] ??= [])[L.fixtures[li].findIndex((f) => f[0] === h && f[1] === a)] = [sh, sa];
       if (STATS.on) STATS.matches.push({ tier: t, hs: teamStrength(hc.me ? G.squad : hc.squad), as: teamStrength(ac.me ? G.squad : ac.squad), sh, sa });
@@ -257,17 +307,13 @@ function cupEntrants(G: GameState, round: number, winners: number[]): number[] {
   if (round === 2) return [...winners, ...t1.slice(0, 8)];
   return winners;
 }
-function playCupRound(G: GameState, r: Rng, round: number): MatchView | null {
-  const prev = G.cup.rounds[round - 1];
-  const winners = prev ? prev.map((t) => t.w!) : [];
-  const ent = cupEntrants(G, round, winners); r.shuffle(ent);
-  const ties: CupTie[] = [];
-  for (let i = 0; i + 1 < ent.length; i += 2) ties.push({ a: ent[i], b: ent[i + 1] });
+function playCupRound(G: GameState, r: Rng, round: number, pre: CupTie[] | null): MatchView | null {
+  const ties: CupTie[] = pre ?? cupTies(G, r, round);
   let mine: MatchView | null = null;
   const final = round === 5;
   for (const t of ties) {
     const isMine = t.a === ME || t.b === ME;
-    const res = simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), { record: true, cup: true, neutral: final, final, pre: isMine ? { info: `天皇杯、${CUP_ROUND_NAMES[round]}です。`, stakes: { kind: final ? '決勝' : '' } } : undefined, big: isMine && round >= 3, label: `${G.season}年目 大会${CUP_ROUND_NAMES[round]}`, title: `天皇杯 ${CUP_ROUND_NAMES[round]}` });
+    const res = isMine && liveNow ? liveNow.sim.finish() : simulateMatch(r, teamIn(G, clubById(G, t.a)), teamIn(G, clubById(G, t.b)), cupOpts(G, round, isMine));
     t.s = res.score; t.pk = res.pk; t.w = res.winner === 0 ? t.a : t.b;
     const ca = clubById(G, t.a), cb = clubById(G, t.b);
     if (!ca.me) aiM.set(t.a, { home: !final, won: t.w === t.a, oppTier: cb.tier, cup: true, gf: res.score[0], ga: res.score[1] });
@@ -318,28 +364,22 @@ export function matchPlan(G: GameState): { form: string; lineup: { p: Player; po
     comp, kick, banned: sq.filter((p) => banned(p, comp)), warn: sq.filter((p) => (p.yc?.[comp] ?? 0) === 3 && !banned(p, comp)), duels };
 }
 /** 1週進める */
-export function advanceWeek(G: GameState): WeekResult {
-  const r = new Rng(G.rng);
-  const news: string[] = [];
+export function advanceWeek(G: GameState, live: LiveMatch | null = null): WeekResult {
+  const pre = preWeek(G); prepped = null;
+  const r = pre.r;
+  const news: string[] = [...pre.news];
+  liveNow = live && live.season === G.season && live.week === G.week ? live : null;
   const favBefore = [...G.squad, ...G.youth].filter((p) => p.fav).map((p) => ({ id: p.id, name: p.name, pos: p.pos, age: p.age, retiring: !!p.retiring }));
   try {
     const w = G.week;
-    ensureMeta(G);
-    /* 開いたままの会議・表彰式は、決めずに進んだらおすすめどおりで閉じる */
-    if (G.meet) closeMeeting(G);
-    G.cere = null;
-    if (G.promo?.open) news.push(...applyPromo(G, r, G.promo.rec));
-    if (G.regm?.open) news.push(...applyReg(G, G.regm.sel));
-    bondNews = [];
-    if (G.owner) news.push(...resolveBids(G, r));
+    /* 開いたままの会議・表彰式は、決めずに進んだらおすすめどおりで閉じる（preWeek でした） */
     homeInfo = null; aiM = new Map();
-    ensureFin(G);
     let match: MatchView | null = null;
     const li = G.sched.league.indexOf(w); const ci = G.sched.cup.indexOf(w);
     if (li >= 0) match = playLeagueRound(G, r, li);
     if (ci >= 0) {
       const wasAlive = cupAlive(G);
-      match = playCupRound(G, r, ci);
+      match = playCupRound(G, r, ci, pre.ties);
       if (wasAlive && !cupAlive(G)) news.push(`天皇杯は${CUP_ROUND_NAMES[ci]}で負けた。`);
       if (G.cup.champion === ME) news.push('天皇杯で優勝した！');
     }
@@ -401,7 +441,7 @@ export function advanceWeek(G: GameState): WeekResult {
     }
     G.news = news;
     return { match, report: G.lastReport, seasonEnd, news };
-  } finally { G.rng = r.s; }
+  } finally { G.rng = r.s; liveNow = null; }
 }
 
 function maybeOffer(G: GameState, r: Rng) {
@@ -689,9 +729,9 @@ export function advanceToDecision(G: GameState, maxWeeks = 8): SkipResult {
 
 /** PC版の1週：advanceWeek のあと、ミッション・実績・出来事・殿堂・解任を進める */
 export interface PlayResult extends WeekResult { toasts: Toast[]; att: number }
-export function playWeek(G: GameState): PlayResult {
+export function playWeek(G: GameState, live: LiveMatch | null = null): PlayResult {
   const f0 = G.yearStart?.fans[0] ?? 0; const s0 = G.season;
-  const res = advanceWeek(G);
+  const res = advanceWeek(G, live);
   const att = G.season === s0 ? Math.max(0, (G.yearStart?.fans[0] ?? 0) - f0) : 0;
   const toasts = afterWeek(G, res, att);
   return { ...res, toasts, att };

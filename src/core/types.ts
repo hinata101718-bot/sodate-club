@@ -113,6 +113,8 @@ export interface ViewItem {
   who?: '実況' | '解説';
   /** 並べる順（同じ分の中で） */
   ord?: number;
+  /** 試合の時計の秒（場面の始まり）と、行ごとの秒・見どころの大きさ */
+  sec?: number; secs?: number[]; hv?: number;
 }
 
 export interface MatchView {
