@@ -73,7 +73,7 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     <text id="mp-banner" x="52.5" y="8" text-anchor="middle" font-size="3.6" font-weight="700" fill="#fff" stroke="rgba(24,35,30,.6)" stroke-width=".25" opacity="0" style="transition:opacity .3s"></text></svg>`;
   const spBtns = SPEEDS.map((v) => `<button class="btn small" data-act="mSpd" data-arg="${v}">${v === 1 ? 'ふつう（90分）' : v + '倍'}</button>`).join('');
   $('#overlay').innerHTML = `<div class="match-ov"><div class="match-box mp-box">
-    <div class="row between"><span class="eyebrow">${esc(m.title)}</span><span class="speed"><button class="btn small" data-act="mFeed" data-arg="hl" id="mp-hl">見どころだけ</button><button class="btn small" data-act="mFeed" data-arg="full" id="mp-full">試合をすべて</button><span class="muted small">速さ</span>${spBtns}<button class="btn small primary" data-act="mSkip">結果へ</button></span></div>
+    <div class="row between"><span class="eyebrow">${esc(m.title)}</span><span class="speed"><button class="btn small" data-act="mFeed" data-arg="hl" id="mp-hl" title="ゴールと、大きなチャンス（枠内シュート・ポストやバー・PK・退場など）だけ">見どころだけ</button><button class="btn small" data-act="mFeed" data-arg="full" id="mp-full">試合をすべて</button><span class="muted small">速さ</span>${spBtns}<button class="btn small primary" data-act="mSkip">結果へ</button></span></div>
     <div class="scoreboard"><div class="side"><span class="kit" style="background:${hCol}"></span>${hc ? `<span class="emb">${emblemSVG(hc.me ? g.club.emblem : hc.emblem)}</span>` : ''}<span class="tn" style="color:var(${m.home.me ? '--nm-me' : '--nm-op'})">${esc(m.home.name)}</span><span class="muted small">→ 右へ攻める</span></div><div><div class="sc"><span id="sc0">0</span><span class="dash">-</span><span id="sc1">0</span></div><div class="clock" id="clock">0:00</div><div class="muted small" id="mp-left" style="text-align:center"></div></div><div class="side away"><span class="muted small">左へ攻める ←</span><span class="tn" style="color:var(${m.away.me ? '--nm-me' : '--nm-op'})">${esc(m.away.name)}</span>${ac ? `<span class="emb">${emblemSVG(ac.me ? g.club.emblem : ac.emblem)}</span>` : ''}<span class="kit" style="background:${aCol}"></span></div></div>
     <div class="mp-main"><div class="grid" style="gap:12px">${pitch}<div class="panel" id="flowbox">${flowSVG(m, 0)}${flowLegend(m)}</div></div>
     <div class="panel mp-feedbox"><div class="mp-now" id="mp-now">キックオフを待っている……</div><div class="feed mp-feed" id="feed" aria-live="polite"></div></div></div>
@@ -110,6 +110,18 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     const k = team(side).find((d) => d.pos === 'ST') ?? team(side).find((d) => d.pos !== 'GK')!;
     k.x = 52.5 + (side === 0 ? -1 : 1); k.y = 34; give(k); nextAt = st.gs + 1.5;
   };
+  /** 選手がボールのところまで走って、取ったらプレーを続ける（瞬間移動しない） */
+  const fetch = (d: Dot, x: number, y: number, label = '') => {
+    ovr.set(d, { x, y, until: st.gs + 8 }); if (label) flash(label);
+    const wait = () => { if (Math.hypot(d.x - x, d.y - y) < 1.6 || (ovr.get(d)?.until ?? 0) <= st.gs) { ovr.delete(d); give(d); nextAt = st.gs + 1.8; } else later(0.3, wait); };
+    later(0.3, wait);
+  };
+  /** ゴールキック：ボールをゴールエリアの角へ転がしてもどし、キーパーが取りにいって蹴る */
+  const goalKick = (side: 0 | 1) => {
+    const gk = team(side).find((d) => d.pos === 'GK'); if (!gk) return;
+    const [sx, sy] = tf(side, 5.5, 34 + (Math.random() < 0.5 ? -9 : 9));
+    kick(sx, sy, 7, () => fetch(gk, sx, sy, 'ゴールキック')); passEl.setAttribute('opacity', '0');
+  };
   /* ---- ボール回し（場面のない時間）：実データのイベントから学んだ確率で、次のプレーを決める ---- */
   const idleAct = () => {
     if (!holder) { const d = nearest(possSide, B.x, B.y, false); if (d) give(d); else return; }
@@ -124,21 +136,37 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
       return;
     }
     if (a.result === 'out') {
-      kick(wx, wy, a.speed, () => {
+      /* 外に出るパスは、いちばん近いタッチラインかゴールラインの外まで転がる */
+      const toSide = Math.min(wy, 68 - wy) < Math.min(wx, 105 - wx) * 0.6;
+      const ex = toSide ? wx : (wx < 52.5 ? -1 : 106), ey = toSide ? (wy < 34 ? -0.8 : 68.8) : wy;
+      kick(ex, ey, a.speed, () => {
         const ox = B.x, oy = B.y; const opp = (1 - h.side) as 0 | 1; const overLine = ox < 1 || ox > 104;
         later(4, () => {
           if (scene) return;
-          if (overLine) { const gk = team(opp).find((d) => d.pos === 'GK'); if (gk) { B.x = gk.x; B.y = gk.y; give(gk); flash('ゴールキック'); } }
-          else { const t = nearest(opp, ox, oy); if (t) { B.x = clamp(ox, 1, 104); B.y = oy < 34 ? 0.8 : 67.2; ovr.set(t, { x: B.x, y: B.y, until: st.gs + 2 }); give(t); flash('スローイン'); } }
-          nextAt = st.gs + 2.5;
+          if (overLine) goalKick(opp);
+          else { const t = nearest(opp, ox, oy); if (t) { const bx0 = clamp(ox, 1, 104), by0 = oy < 34 ? 0.6 : 67.4; B.x = bx0; B.y = by0; fetch(t, bx0, by0, 'スローイン'); } }
         });
       });
       nextAt = st.gs + 99; deadUntil = st.gs + 6; return;
     }
-    const mates = team(h.side).filter((d) => d !== h);
-    if (a.result === 'ok') { const to = mates.sort((p, q) => Math.hypot(p.x - wx, p.y - wy) - Math.hypot(q.x - wx, q.y - wy))[0]; if (to) passTo(to, a.speed, wx, wy); }
-    else { const o = nearest((1 - h.side) as 0 | 1, wx, wy, false); if (o) { ovr.set(o, { x: wx, y: wy, until: st.gs + Math.hypot(wx - B.x, wy - B.y) / a.speed + 0.3 }); kick(wx, wy, a.speed, () => { give(o); tag(o, `${o.name} がカット`, 2.5); }); } }
-    nextAt = st.gs + Math.hypot(wx - B.x, wy - B.y) / a.speed + a.gap * (0.6 + Math.random() * 0.8);
+    const mates = team(h.side).filter((d) => d !== h && d.pos !== 'GK');
+    const to = mates.sort((p, q) => Math.hypot(p.x - wx, p.y - wy) - Math.hypot(q.x - wx, q.y - wy))[0]; if (!to) return;
+    /* 受け手の足もとへ（少しだけ、行き先の方向へ動いて受ける） */
+    const lead = Math.min(4, Math.hypot(wx - to.x, wy - to.y)); const ang = Math.atan2(wy - to.y, wx - to.x);
+    const px = to.x + Math.cos(ang) * lead, py = to.y + Math.sin(ang) * lead;
+    let flight = Math.hypot(px - B.x, py - B.y) / a.speed;
+    if (a.result === 'ok') passTo(to, a.speed, px, py);
+    else {
+      /* パスの線にいちばん近い相手が、途中でカットする */
+      const opp = team((1 - h.side) as 0 | 1).filter((d) => d.pos !== 'GK');
+      let best: Dot | null = null, bt = 0.5, bd = 1e9;
+      for (const o of opp) { const vx = px - B.x, vy = py - B.y; const L = vx * vx + vy * vy || 1; const t = clamp(((o.x - B.x) * vx + (o.y - B.y) * vy) / L, 0.25, 1); const d = Math.hypot(B.x + vx * t - o.x, B.y + vy * t - o.y); if (d < bd) { bd = d; best = o; bt = t; } }
+      if (!best) return;
+      const ix = B.x + (px - B.x) * bt, iy = B.y + (py - B.y) * bt; const o = best;
+      ovr.set(o, { x: ix, y: iy, until: st.gs + Math.hypot(ix - B.x, iy - B.y) / a.speed + 0.5 }); flight = Math.hypot(ix - B.x, iy - B.y) / a.speed;
+      kick(ix, iy, a.speed, () => { give(o); tag(o, `${o.name} がカット`, 2.5); });
+    }
+    nextAt = st.gs + flight + a.gap * (0.6 + Math.random() * 0.8);
   };
   /* ---- 選手の行き先 ---- */
   const targetOf = (d: Dot): [number, number] => {
@@ -163,6 +191,21 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     }
     return out;
   };
+  /** 見どころ：ゴールは全部。ほかは場面の大きさ（枠内シュート・ポストやバー・PK・退場・1対1）で点数をつけて、上位だけ */
+  const hlItems = (): ViewItem[] => {
+    const shotOf = (it: ViewItem) => (m.shots ?? []).find((x) => x.min === it.min && x.side === sideOfMe(it.me));
+    const scored = m.full.map((it) => {
+      const txt = it.lines.map(textOf).join('');
+      let v = 0;
+      if (it.kind === 'goal') v = 100;
+      else if (it.kind === 'chance') { const sh = shotOf(it); if (sh || SHOT.test(txt)) { v = 2; if (sh?.ot || RES_SAVE.test(txt)) v += 3; if (/ポスト|バー/.test(txt)) v += 4; if (/1対1|一対一|冷静|抜け出/.test(txt)) v += 1; if (/PK/.test(txt)) v += 4; if (it.me) v += 0.5; } }
+      else if (it.kind === 'flow' && /レッド|退場/.test(txt)) v = 6;
+      return { it, v };
+    }).filter((x) => x.v > 0);
+    const goals = scored.filter((x) => x.v >= 100);
+    const rest = scored.filter((x) => x.v < 100).sort((a, b) => b.v - a.v).slice(0, Math.max(4, 9 - goals.length));
+    return [...goals, ...rest].map((x) => x.it).sort((a, b) => a.min - b.min || (a.ord ?? 0) - (b.ord ?? 0));
+  };
   let scenes: Sc[] = []; let si = 0; let scene: Sc | null = null;
   const lastMin = Math.max(90, ...m.full.map((x) => x.min));
   const endAt = () => Math.max(90 * 60 + 30, (lastMin - 1) * 60 + 40, scenes.length ? scenes[scenes.length - 1].start + 20 : 0);
@@ -179,7 +222,7 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     if (atk !== null) possSide = atk;
     if (last && atk !== null && it.kind === 'goal' && RES_GOAL.test(txt)) { kick(goalX(atk), 34 + (Math.random() - 0.5) * 5, 24); tag(null); return; }
     if (atk !== null && RES_SAVE.test(txt)) { const gk = team((1 - atk) as 0 | 1).find((d) => d.pos === 'GK'); if (gk) { kick(gk.x, gk.y, 22, () => give(gk)); tag(gk); } return; }
-    if (atk !== null && RES_MISS.test(txt)) { kick(atk === 0 ? 106.5 : -1.5, 34 + (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 8), 22, () => { later(2.5, () => { const gk = team((1 - atk) as 0 | 1).find((d) => d.pos === 'GK'); if (gk) { B.x = gk.x; B.y = gk.y; give(gk); } }); }); tag(null); return; }
+    if (atk !== null && RES_MISS.test(txt)) { kick(atk === 0 ? 106.5 : -1.5, 34 + (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 8), 22, () => later(2, () => goalKick((1 - atk) as 0 | 1))); tag(null); return; }
     const who = names.length ? dotOf(names[0].t, names[0].me) : null; if (!who) return;
     if (atk === null || /奪|カット|インターセプト|クリア|かっさら|拾/.test(txt)) possSide = who.side;
     if (holder !== who) { if (Math.hypot(B.x - who.x, B.y - who.y) > 3) passTo(who, 16); else give(who); }
@@ -240,9 +283,9 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
       if (scene && st.gs >= scene.next) { if (scene.li < scene.it.lines.length) stepScene(scene); else { scene = null; si++; nextAt = Math.max(nextAt, st.gs + 1.5); } }
       /* ボール */
       if (B.flying) { const u = Math.min(1, (st.gs - B.t0) / B.dur); const e = 1 - (1 - u) ** 2; B.x = B.fx + (B.tx - B.fx) * e; B.y = B.fy + (B.ty - B.fy) * e; if (u >= 1) { B.flying = false; passEl.setAttribute('opacity', '0'); const f = B.after; B.after = null; f?.(); } }
-      else if (holder) { const dir = holder.side === 0 ? 1 : -1; B.x = holder.x + dir * 1.1; B.y = holder.y + 0.3; }
-      if (!scene && !B.flying && holder && st.gs >= nextAt && st.gs >= deadUntil) idleAct();
-      if (!scene && !B.flying && !holder && st.gs >= deadUntil && !pending.length) { const d = nearest(possSide, B.x, B.y, false); if (d) { ovr.set(d, { x: B.x, y: B.y, until: st.gs + 2 }); later(1.5, () => { if (!holder && !B.flying) give(d); }); deadUntil = st.gs + 1.6; } }
+      else if (holder) { const dir = holder.side === 0 ? 1 : -1; const fx = holder.x + dir * 1.1, fy = holder.y + 0.3; const dd = Math.hypot(fx - B.x, fy - B.y); const step = 16 * dt; if (dd <= step || dd < 0.05) { B.x = fx; B.y = fy; } else { B.x += ((fx - B.x) / dd) * step; B.y += ((fy - B.y) / dd) * step; } }
+      if (!scene && !B.flying && holder && st.gs >= nextAt && st.gs >= deadUntil && Math.hypot(holder.x - B.x, holder.y - B.y) < 2.2) idleAct();
+      if (!scene && !B.flying && !holder && st.gs >= deadUntil && !pending.length) { const d = nearest(possSide, B.x, B.y, false); if (d) { fetch(d, B.x, B.y); deadUntil = st.gs + 1; } }
       /* 選手（ばね：行き先へなめらかに。速さは実データの上限まで） */
       for (const d of dots) {
         const [tx, ty] = targetOf(d);
@@ -276,12 +319,13 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     if (st.done) return; S.ui.mMode = md; st.mode = md;
     if (scene) { while (scene.li < scene.it.lines.length) stepScene(scene, true); scene = null; si++; }
     const done = new Set(scenes.slice(0, si).map((s) => s.it));
-    const fresh = plan(md === 'hl' ? m.highlights : m.full).filter((s) => !done.has(s.it) && s.it.min * 60 > st.gs - 5);
+    const fresh = plan(md === 'hl' ? hlItems() : m.full).filter((s) => !done.has(s.it) && s.it.min * 60 > st.gs - 5);
     scenes = [...scenes.slice(0, si), ...fresh];
     document.getElementById('mp-hl')?.classList.toggle('sel', md === 'hl'); document.getElementById('mp-full')?.classList.toggle('sel', md === 'full');
   };
   const markSpeed = () => document.querySelectorAll<HTMLElement>('[data-act=mSpd]').forEach((b) => b.classList.toggle('sel', +b.dataset.arg! === st.speed));
-  S.ui.match = { st, finish, after, setMode, markSpeed };
+  S.ui.match = { st, finish, after, setMode, markSpeed, probe: () => ({ x: B.x, y: B.y, flying: B.flying, holder: !!holder, near: Math.min(...dots.map((d) => Math.hypot(d.x - B.x, d.y - B.y))), gs: st.gs }) };
+  (window as unknown as { __mp?: unknown }).__mp = S.ui.match;
   markSpeed(); setMode(st.mode);
   kickoff(0);
   requestAnimationFrame(frame);
