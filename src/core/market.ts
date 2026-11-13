@@ -11,6 +11,7 @@ import { makePlayer, ovr, salaryFor, assignNumbers } from './player';
 import { TIER_LVL, type Club } from './world';
 import type { Scout } from './staff';
 import { joinBond } from './bond';
+import { noteBuy } from './gm';
 import type { Player } from './types';
 import type { GameState } from './game';
 
@@ -154,7 +155,7 @@ export function scoutMonth(G: GameState, r: Rng): string[] {
   for (const s of o.scouts) {
     const cond = scoutCond(s);
     /* 腕がいいほど、1回に調べる人数が多い（問30） */
-    const n = 2 + (r.next() < s.skill ? 1 : 0) + (r.next() < s.skill * 0.6 ? 1 : 0);
+    const n = 2 + (r.next() < s.skill ? 1 : 0) + (r.next() < s.skill * 0.6 ? 1 : 0) + Math.floor(((o.fac.scout ?? 1) - 1) / 2);
     const budget = G.owner.money - mk.bids.reduce((t, b) => t + b.fee, 0);
     const reach = (w: Where) => cond.fit === false || ((w.club ? w.club.tier >= tier - 1 : true) && valueOf(w) <= Math.max(0, budget));
     const pros = pool.filter((w) => fits(cond, w.p.pos, w.p.age, valueOf(w), regionOfWhere(w)) && reach(w) && !(mk.known[w.p.id]?.full && mk.known[w.p.id].season === G.season));
@@ -296,7 +297,7 @@ export function resolveBids(G: GameState, r: Rng): string[] {
 /** 獲得が決まった：お金を払い、トップに入れる（登録に空きがあれば登録もする） */
 export function completeSign(G: GameState, w: Where, fee: number, salary: number, years: number, r: Rng) {
   const mk = G.owner.mk; const p = w.p;
-  if (fee) { G.owner.money -= fee; G.owner.ledger.buy += fee; if (G.budget) G.budget.spent += fee; if (w.club) clubEarn(w.club, 'sales', fee); }
+  if (fee) { G.owner.money -= fee; G.owner.ledger.buy += fee; if (G.budget) G.budget.spent += fee; if (w.club) clubEarn(w.club, 'sales', fee); noteBuy(G, fee); }
   if (w.club) replaceInClub(G, w.club, p, r);
   else mk.free = mk.free.filter((x) => x !== p);
   joinBond(p, false); p.origin = w.club ? '他クラブから' : 'フリーから'; p.contract = years; p.salary = salary; p.num = 0; p.req = false; p.listed = false; p.hist ??= [];

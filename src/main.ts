@@ -1,5 +1,6 @@
-import './ui/style.css';
-import { boot } from './ui/app';
-import { watchUpdates } from './ui/update';
+import './pc/style.css';
+import './pc/views';
+import './pc/views2';
+import './pc/modals';
+import { boot } from './pc/app';
 boot();
-watchUpdates();

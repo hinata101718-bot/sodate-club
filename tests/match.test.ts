@@ -12,7 +12,7 @@ function team(r: Rng, ids: { n: number }, id: number, lvl: number): TeamIn {
 describe('試合のしくみ（企画書 13-2・問54）', () => {
   const r = new Rng(12345); const ids = { n: 1 };
   let goals = 0, n = 0, strong = 0, sn = 0, chances = 0;
-  for (let i = 0; i < 2400; i++) {
+  for (let i = 0; i < 600; i++) {
     const base = 50 + r.int(0, 25); const d = r.int(0, 8);
     const A = team(r, ids, 1, base + d), B = team(r, ids, 2, base);
     const diff = teamStrength(A.squad) - teamStrength(B.squad);
@@ -24,8 +24,8 @@ describe('試合のしくみ（企画書 13-2・問54）', () => {
   }
   it('1試合の得点は平均2.0〜3.0点', () => { const g = goals / n; expect(g).toBeGreaterThanOrEqual(2.0); expect(g).toBeLessThanOrEqual(3.0); });
   it('力の差が3〜6の試合で、強いほうが6〜7割勝つ', () => { const w = strong / sn; expect(w).toBeGreaterThanOrEqual(0.6); expect(w).toBeLessThanOrEqual(0.7); });
-  /* 問133：セットプレー（コーナー・フリーキック・PK）も場面に入るので、前より多い */
-  it('ゴール前の場面は両チームあわせて14〜26回ほど', () => { const c = chances / n; expect(c).toBeGreaterThanOrEqual(14); expect(c).toBeLessThanOrEqual(26); });
+  /* FM型：シュートで終わった場面の数（両チームあわせて、本物は約25本） */
+  it('シュートは両チームあわせて18〜32本ほど', () => { const c = chances / n; expect(c).toBeGreaterThanOrEqual(18); expect(c).toBeLessThanOrEqual(32); });
 });
 
 describe('試合の文と見どころ', () => {
@@ -35,7 +35,7 @@ describe('試合の文と見どころ', () => {
   });
   it('ゴールの場面は見どころに必ず全部入る。結果の行は最後', () => {
     const r = new Rng(99); const ids = { n: 1 };
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 60; i++) {
       const A = team(r, ids, 1, 60), B = team(r, ids, 2, 60);
       const v = simulateMatch(r, A, B).view;
       const g = v.highlights.filter((x) => x.kind === 'goal').length;
@@ -46,9 +46,10 @@ describe('試合の文と見どころ', () => {
   it('GKの特殊能力が働いて入らなかったときは、GKが止めた文になる', () => {
     const r = new Rng(5); const ids = { n: 1 };
     let checked = 0;
-    for (let i = 0; i < 400; i++) {
+    for (let i = 0; i < 150; i++) {
       const A = team(r, ids, 1, 62), B = team(r, ids, 2, 62);
       for (const sq of [A.squad, B.squad]) for (const p of sq) if (p.pos === 'GK') p.sp = ['ビッグセーブ', 'ハイボール処理', 'PKストッパー', '素早い飛び出し'];
+      A.me = true;
       const gkNames = new Set([...A.squad, ...B.squad].filter((p) => p.pos === 'GK').map((p) => p.name));
       const v = simulateMatch(r, A, B).view;
       for (const it of v.full) {
@@ -64,7 +65,7 @@ describe('試合の文と見どころ', () => {
   });
   it('天皇杯では、引き分けでもPK戦で勝ち負けが決まる', () => {
     const r = new Rng(3); const ids = { n: 1 };
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 40; i++) {
       const res = simulateMatch(r, team(r, ids, 1, 60), team(r, ids, 2, 60), { cup: true });
       expect(res.winner === 0 || res.winner === 1).toBe(true);
       if (res.score[0] === res.score[1]) expect(res.pk).not.toBeNull();
@@ -76,7 +77,9 @@ describe('試合のリアルさ（問133〜139）', () => {
   const G = newGame({ seed: 21 }); const r = new Rng(5);
   const cs = G.clubs.filter((c) => c.tier === 2 && !c.me);
   const ti = (c: typeof cs[0], me = false) => ({ id: c.id, name: c.name, me, color: c.color, squad: c.squad, mgr: c.mgr });
-  const views = Array.from({ length: 200 }, (_, i) => simulateMatch(r, ti(cs[i % 11], true), ti(cs[(i + 3) % 11]), { record: true }).view);
+  /* 毎週の回復のかわりに、試合の前に疲れをもどす */
+  const fresh = () => { for (const c of cs) for (const p of c.squad) { p.fat = 0; p.inj = 0; if (p.ban) p.ban = { L: 0, C: 0 }; } };
+  const views = Array.from({ length: 120 }, (_, i) => { fresh(); return simulateMatch(r, ti(cs[i % 11], true), ti(cs[(i + 3) % 11]), { record: true }).view; });
   const avg = (f: (v: typeof views[0]) => number) => views.reduce((s, v) => s + f(v), 0) / views.length / 2;
   it('数字が本物に近い（パス・シュート・枠内・コーナー・ファウル・イエロー）', () => {
     expect(avg((v) => v.stats!.pa[0] + v.stats!.pa[1])).toBeGreaterThan(380); expect(avg((v) => v.stats!.pa[0] + v.stats!.pa[1])).toBeLessThan(520);

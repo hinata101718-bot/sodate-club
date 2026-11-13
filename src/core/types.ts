@@ -78,6 +78,10 @@ export interface Player {
   gType?: string;
   /** 表彰歴（年・賞・段・そのときのクラブ） */
   honors?: { y: number; title: string; tier: number; club: string }[];
+  /** PC版：個別練習（重点にする項目の番号。なし＝全体練習に従う） */
+  tf?: number;
+  /** PC版：このクラブでの出場数とゴール（殿堂の判定に使う） */
+  capps?: number; cgoals?: number;
 }
 
 export interface Manager {
@@ -109,6 +113,8 @@ export interface ViewItem {
   who?: '実況' | '解説';
   /** 並べる順（同じ分の中で） */
   ord?: number;
+  /** 試合の時計の秒（場面の始まり）と、行ごとの秒・見どころの大きさ */
+  sec?: number; secs?: number[]; hv?: number;
 }
 
 export interface MatchView {
@@ -144,6 +150,8 @@ export interface MatchView {
   cards?: { min: number; side: 0 | 1; who: string; red: boolean }[];
   /** 問133：自分のクラブのキッカー */
   kick?: { ck: string; fk: string; pk: string };
+  /** PC版：両チームの先発（2Dのピッチ用。[ホーム, アウェー]） */
+  lineups?: { name: string; num: number; pos: Pos; lr: 'L' | 'R' | 'C' }[][];
 }
 
 export interface ReportEntry {
