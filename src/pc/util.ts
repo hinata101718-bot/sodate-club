@@ -73,7 +73,7 @@ ACT.confirmOk = () => { const f = S.ui.confirm; S.ui.confirm = null; closeModal(
 export const posTag = (pos: Pos) => `<span class="pos ${POS_GROUP[pos]}">${pos}</span>`;
 export const val = (v: number) => `<span class="v ${colorOf(v)}">${Math.floor(v)}</span>`;
 export function ovrChip(o: number) {
-  const bg = o >= 85 ? '#6a4f12' : o >= 78 ? '#5a3f1a' : o >= 70 ? '#4d3a1e' : o >= 62 ? '#245a3e' : o >= 54 ? '#25485a' : '#323f44';
+  const bg = o >= 85 ? '#f3dd94' : o >= 78 ? '#f1d9bd' : o >= 70 ? '#f4e3d1' : o >= 62 ? '#d3ecdd' : o >= 54 ? '#dbe7f4' : '#e7ebe8';
   return `<span class="ovr-chip" style="background:${bg}">${o}</span>`;
 }
 export function starsHtml(lo: number, hi: number) {

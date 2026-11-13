@@ -13,7 +13,7 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
   const clubOf = (name: string) => g.clubs.find((c) => (c.me ? g.club.name : c.name) === name);
   const hc = clubOf(m.home.name), ac = clubOf(m.away.name);
   const hCol = m.home.me ? g.club.color : m.home.color; const aCol0 = m.away.me ? g.club.color : m.away.color; const aCol = aCol0 === hCol ? '#e8eef0' : aCol0;
-  const pitch = `<svg class="hpitch" viewBox="0 0 105 68" aria-label="ピッチ"><defs><pattern id="mow" width="21" height="68" patternUnits="userSpaceOnUse"><rect width="10.5" height="68" fill="#1b4a33"/><rect x="10.5" width="10.5" height="68" fill="#17402c"/></pattern></defs>
+  const pitch = `<svg class="hpitch" viewBox="0 0 105 68" aria-label="ピッチ"><defs><pattern id="mow" width="21" height="68" patternUnits="userSpaceOnUse"><rect width="10.5" height="68" fill="#348457"/><rect x="10.5" width="10.5" height="68" fill="#2f7a50"/></pattern></defs>
     <rect width="105" height="68" fill="url(#mow)"/><g fill="none" stroke="rgba(235,245,240,.55)" stroke-width=".4"><rect x="1.5" y="1.5" width="102" height="65"/><line x1="52.5" y1="1.5" x2="52.5" y2="66.5"/><circle cx="52.5" cy="34" r="9.15"/><rect x="1.5" y="13.85" width="16.5" height="40.3"/><rect x="1.5" y="24.85" width="5.5" height="18.3"/><rect x="87" y="13.85" width="16.5" height="40.3"/><rect x="98" y="24.85" width="5.5" height="18.3"/></g>
     <rect x="0" y="30.3" width="1.5" height="7.4" fill="${hCol}"/><rect x="103.5" y="30.3" width="1.5" height="7.4" fill="${aCol}"/>
     <circle id="ball-trail" cx="52.5" cy="34" r="3" fill="#fff" opacity=".12"/><circle id="ball" cx="52.5" cy="34" r="1.3" fill="#fff" stroke="#0a0f0c" stroke-width=".3" style="transition:cx .45s ease, cy .45s ease"/>
@@ -44,7 +44,7 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
       st.sc = it.goal.score;
       for (const k of [0, 1] as const) { const el = $('#sc' + k); if (el.textContent !== String(st.sc[k])) { el.textContent = String(st.sc[k]); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } }
       const gt = document.getElementById('goal-txt'); gt?.setAttribute('opacity', '1'); setTimeout(() => gt?.setAttribute('opacity', '0'), 1400);
-      return 1400;
+      return 2200;
     }
     return 0;
   };
@@ -53,10 +53,10 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     st.t++;
     $('#clock').textContent = st.t > 90 ? `90+${st.t - 90}'` : `${st.t}'`;
     let extra = 0;
-    while (st.i < items.length && items[st.i].min <= st.t) { extra += add(items[st.i]); st.i++; extra += 250 / st.speed; }
+    while (st.i < items.length && items[st.i].min <= st.t) { extra += add(items[st.i]); st.i++; extra += 650; }
     if (st.t % 5 === 0) { const fb = document.getElementById('flowbox'); if (fb) fb.innerHTML = flowSVG(m, st.t) + flowLegend(m); }
     if (st.t >= end && st.i >= items.length) { finish(); return; }
-    timer = window.setTimeout(tick, 260 / st.speed + extra / st.speed);
+    timer = window.setTimeout(tick, 1250 / st.speed + extra / st.speed);
   };
   const finish = () => {
     st.done = true; clearTimeout(timer);
