@@ -96,11 +96,11 @@ export function judgeGoal(G: GameState, tier: number, rank: number): string[] {
   if (ok) {
     const [ev, pop, sp] = g.level === 'むずかしい' ? [25, 6, 1.1] : g.level === 'ちょうどいい' ? [15, 4, 1.05] : [8, 2, 1.02];
     G.mgrEval = clamp((G.mgrEval ?? 60) + ev, 0, 100); o.pop = Math.min(100, o.pop + pop); G.spMul = sp;
-    out.push(`目標「${g.text}」に届いた！ 監督の評価が上がり、人気とスポンサーの評判も上がった。`);
+    out.push(`目標「${g.text}」に届いた！ オーナーの信頼が上がり、人気とスポンサーの評判も上がった。`);
   } else {
     const d = tier === g.tier ? rank - g.rank : 4;
     G.mgrEval = clamp((G.mgrEval ?? 60) - Math.min(40, 8 + d * 4), 0, 100); o.pop = Math.max(0, o.pop - Math.min(6, 2 + d)); G.spMul = Math.max(0.85, 0.97 - d * 0.02);
-    out.push(`目標「${g.text}」に届かなかった（${tier}部 ${rank}位）。監督の評価が下がり、人気とスポンサーの評判も少し下がった。`);
+    out.push(`目標「${g.text}」に届かなかった（${tier}部 ${rank}位）。オーナーの信頼が下がり、人気とスポンサーの評判も少し下がった。`);
   }
   G.goalLog = [...(G.goalLog ?? []), { season: G.season, text: g.text, level: g.level, ok }];
   return out;
@@ -154,9 +154,8 @@ export function monthMeeting(G: GameState): Meeting {
   mg.push(w + d + l ? (w > l ? `${mon}月は勝ちが先に立ちました。` : w < l ? `${mon}月は苦しい月でした。` : `${mon}月は五分の成績でした。`) : `${mon}月はリーグ戦がありませんでした。`);
   if (gl && rk) mg.push(rk <= gl.rank ? `目標の「${gl.text}」には、いまのところ届いています。` : `目標の「${gl.text}」まで、あと${rk - gl.rank}つ順位を上げたい。`);
   if (nextMatches) mg.push(l > w ? '来月は、ここで立て直します。' : '来月も、この調子で行きます。');
-  items.push({ role: '監督', who: G.mgr.name, lines: mg, doc: { title: `${mon}月の試合報告書`, stamp: '監督', secs: [
+  items.push({ role: 'ヘッドコーチ', who: G.mgr.name, lines: mg, doc: { title: `${mon}月の試合報告書`, stamp: 'ヘッドコーチ', secs: [
     { h: 'リーグ戦', rows: [{ k: '成績', v: w + d + l ? `${w}勝${d}分${l}敗` : 'なし' }, { k: '取った点・取られた点', v: w + d + l ? `${gf} − ${ga}` : '—' }, { k: '順位', v: rk ? `${s.rank ? `${s.rank}位 → ` : ''}${rk}位` : '開幕前', cls: s.rank && rk < s.rank ? 'good' : s.rank && rk > s.rank ? 'bad' : undefined }] },
-    { h: 'オーナーの頼み', rows: [{ k: '聞いた数', v: s.ord[0] ? `${s.ord[1]} / ${s.ord[0]}` : '頼みなし' }] },
     { h: '来月', rows: [{ k: 'リーグ戦', v: `${nextMatches}試合` }, ...(gl ? [{ k: '今年の目標', v: gl.text }] : [])] },
   ] } });
   const ups = G.squad.map((p) => ({ p, d: ovr(p) - (s.o?.[p.id] ?? ovr(p)), a: sumA(p) - (s.a[p.id] ?? sumA(p)) })).filter((x) => x.d > 0 || x.a >= 0.6).sort((a, b) => b.d - a.d || b.a - a.a).slice(0, 5);
@@ -199,7 +198,7 @@ export function monthMeeting(G: GameState): Meeting {
   { const sh: string[] = []; const gaPer = games ? ga / games : 0, gfPer = games ? gf / games : 0;
     if (games && gaPer >= 1.8) sh.push(`失点が多いこと（1試合 ${gaPer.toFixed(1)}点）`); if (games && gfPer < 1) sh.push(`点が取れていないこと（1試合 ${gfPer.toFixed(1)}点）`); if (gp.length) sh.push(`${gp.slice(0, 2).join('・')}`);
     tilt = games && gaPer >= 1.8 && gfPer >= 1 ? 'def' : games && gfPer < 1 && gaPer < 1.8 ? 'atk' : null;
-    add('監督', sh, tilt === 'def' ? '来月は、守りの人数を増やす並び方を多めに使います。' : tilt === 'atk' ? '来月は、攻めの人数を増やす並び方を多めに使います。' : '来月も、いまの戦い方を続けます。'); }
+    add('ヘッドコーチ', sh, tilt === 'def' ? '失点が多いので、方針を「守備的」にするか、守りの人数の多い並び方を試してはどうでしょう。' : tilt === 'atk' ? '点が取れていないので、方針を「攻撃的」にするか、前の人数の多い並び方を試してはどうでしょう。' : 'いまの戦い方で、うまくいっています。'); }
   { const sh: string[] = []; const longInj = inj.filter((p) => p.inj >= 4).length; const tired = G.squad.filter((p) => p.fat >= 40).length;
     if (!ups.length) sh.push('伸びた選手が少ないこと'); if (inj.length) sh.push(`ケガ人が${inj.length}人いること`); if (tired >= 3) sh.push(`疲れがたまっている選手が${tired}人いること`);
     care = longInj >= 1 || tired >= 3 || inj.length >= 3;
@@ -211,7 +210,7 @@ export function monthMeeting(G: GameState): Meeting {
     const need = gp.length ? gp[0].split('（')[0] : ''; const sh: string[] = [];
     if (!fr.length) sh.push('条件に合う選手が見つからなかったこと'); if (need) sh.push(`足りない${need}の候補が少ないこと`);
     add('スカウト', sh, need ? `${need}が足りていません。探すポジションを${need}にしてもらえれば、来月はそこを重点的に見て回ります。` : !fr.length ? '地域や年齢の条件を少し広げてもらえれば、来月は見つけやすくなると思います。' : '来月も、いまの条件で探し続けます。'); }
-  G.plan = { until: G.season * 48 + G.week + 5, tilt, care };
+  G.plan = { until: G.season * 48 + G.week + 5, tilt: G.gm ? null : tilt, care };
   return { kind: 'month', title: `${mon}月の経営会議`, items, pick: { goal: 1, budget: 1, policy: G.policy } };
 }
 
@@ -231,16 +230,16 @@ export function yearMeeting(G: GameState, judged: string[]): Meeting {
       { h: 'スポンサー', rows: [{ k: '今年', v: yenText(o.sponsor) }, { k: '来年の見こみ', v: yenText(spNext), cls: spNext >= o.sponsor ? 'good' : 'bad' }] },
     ] } });
   const opts = goalOptions(G, nt, G.season + 1, 2);
-  const ml = [`今年は ${t}部 ${rk}位でした。`, ...judged, `監督の評価：${evalWord(G.mgrEval ?? 60)}`];
-  if ((G.mgrEval ?? 60) < 25) ml.push('今年は結果を出せず、申し訳ありません。監督を代えるという判断も、受け入れます。');
-  ml.push(`来年（${nt}部）の目標を、3つ用意しました。どれで行くか、オーナーが決めてください。`);
+  const ml = [`今年は ${t}部 ${rk}位でした。`, ...judged, `あなたへの信頼：${evalWord(G.mgrEval ?? 60)}`];
+  if ((G.mgrEval ?? 60) < 25) ml.push('このままでは、あなたにクラブを任せ続けることはできません。来年は結果で示してください。');
+  ml.push(`来年（${nt}部）の目標を、3つ考えてきました。むずかしい目標ほど、届いたときの評価は高くなります。どれで行くか、GMが決めてください。`);
   const gl0 = G.goal; const row = G.leagues[t].table[0];
-  items.push({ role: '監督', who: G.mgr.name, lines: ml, ask: 'goal', doc: { title: `${G.season}年目の試合報告書`, stamp: '監督', secs: [
+  items.push({ role: 'オーナー', who: G.gm?.owner ?? G.mgr.name, lines: ml, ask: 'goal', doc: { title: `${G.season}年目の成績報告書`, stamp: 'オーナー', secs: [
     { h: 'リーグ戦', rows: [{ k: '順位', v: `${t}部 ${rk}位` }, { k: '成績', v: `${row.w}勝${row.d}分${row.l}敗` }, { k: '取った点・取られた点', v: `${row.gf} − ${row.ga}` }] },
     { h: '目標', rows: gl0 ? [{ k: gl0.text, v: (G.goalLog ?? []).slice(-1)[0]?.ok ? '届いた' : '届かなかった', cls: (G.goalLog ?? []).slice(-1)[0]?.ok ? 'good' : 'bad' }] : [{ k: 'なし', v: '—' }] },
   ] } });
   const gp = gaps(G);
-  items.push({ role: '監督', who: G.mgr.name, lines: [gp.length ? `いま足りないのは ${gp.join('、')} です。` : 'いまのところ、大きく足りないポジションはありません。', '来年は若手を使っていくか、勝ちを優先するか。チームの方針を決めてください。'], ask: 'policy' });
+  items.push({ role: 'ヘッドコーチ', who: G.mgr.name, lines: [gp.length ? `いま足りないのは ${gp.join('、')} です。` : 'いまのところ、大きく足りないポジションはありません。', '先発を自動で選ぶときに、若手を多めに使うか、勝ちを優先するか。私の選び方の方針を決めてください。'], ask: 'policy' });
   const budgets = [0.25, 0.45, 0.65].map((f) => Math.max(0, Math.round((o.money * f) / 100) * 100));
   items.push({ role: '経理', who: G.front!.acct, lines: [`補強の予算（冬と来年の夏の移籍金の上限）を決めてください。いまのお金は ${man(o.money)} です。`], ask: 'budget' });
   const notes = G.yearNotes ?? [];

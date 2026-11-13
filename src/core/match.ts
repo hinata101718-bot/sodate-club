@@ -21,7 +21,9 @@ export interface TeamIn { id: number; name: string; me: boolean; color: string; 
   /** 問133：オーナーが頼んだキッカー（選手のid） */
   kickReq?: { ck?: number; fk?: number; pk?: number };
   /** 頼んだキッカーを、監督が聞いてくれたか（試合の前に決まる） */
-  kickOk?: boolean; }
+  kickOk?: boolean;
+  /** PC版：GM兼監督が決めた並び方・先発・戦い方（auto なら先発はヘッドコーチが選ぶ） */
+  fixed?: { form: string; xi: (number | null)[]; auto: boolean; style: StyleName }; }
 export type Comp = 'L' | 'C';
 /** 問134：この大会で出場停止か */
 export const banned = (p: Player, c: Comp) => (p.ban?.[c] ?? 0) > 0;
@@ -118,6 +120,20 @@ export function pickLineup(r: Rng, t: TeamIn, form: string, assume = false): { l
   slots.forEach((pos, i) => { const p = filled[i]; if (p) lineup.push({ p, pos, sub: false }); });
   return { lineup, bench: sq.filter((p) => !used.has(p.id)) };
 }
+/** PC版：GMが決めた先発。出られない選手の枠は、残りから一番合う選手で埋める */
+export function fixedLineup(t: TeamIn, form: string, xi: (number | null)[]): { lineup: OnPl[]; bench: Player[] } {
+  const sq = t.squad.filter((p) => p.inj === 0 && !banned(p, t.comp ?? 'L'));
+  const slots = FORM[form]; const used = new Set<number>(); const filled: (Player | null)[] = slots.map(() => null);
+  slots.forEach((_, i) => { const id = xi[i]; const p = id != null ? sq.find((x) => x.id === id) : undefined; if (p && !used.has(p.id)) { filled[i] = p; used.add(p.id); } });
+  const pairs: { i: number; p: Player; s: number }[] = [];
+  slots.forEach((pos, i) => { if (!filled[i]) for (const p of sq) if (!used.has(p.id)) pairs.push({ i, p, s: posRating(p, pos) + p.cond * 1.5 - p.fat * 0.06 }); });
+  pairs.sort((a, b) => b.s - a.s);
+  for (const x of pairs) { if (filled[x.i] || used.has(x.p.id)) continue; filled[x.i] = x.p; used.add(x.p.id); }
+  const lineup: OnPl[] = []; slots.forEach((pos, i) => { const p = filled[i]; if (p) lineup.push({ p, pos, sub: false }); });
+  return { lineup, bench: sq.filter((p) => !used.has(p.id)) };
+}
+/** PC版：攻撃的＝1・守備的＝−1 */
+const tv = (s: { t: TeamIn }) => (s.t.tilt === 'atk' ? 1 : s.t.tilt === 'def' ? -1 : 0);
 export function chooseForm(m: Manager, myStr: number, oppStr: number, squad?: Player[], tilt?: 'def' | 'atk' | null): string {
   const f = m.forms; const diff = myStr - oppStr + (tilt === 'atk' ? 4 : tilt === 'def' ? -4 : 0);
   const byAtk = [...f].sort((x, y) => FORM_ATK[y] - FORM_ATK[x]);
@@ -146,6 +162,8 @@ function eff(side: Side, pl: OnPl, i: number, t: number, scene: string): number 
   v += side.day;
   if (p.age <= 23 && p.exp < 40 && !has(pl, '吸収力')) v -= 4 * (1 - p.exp / 40);
   if (STYLES[side.style].key.includes(i)) v += 1.5;
+  if (side.t.tilt === 'atk' && (i === SHT || i === DRI)) v += 1.2;
+  if (side.t.tilt === 'def' && (i === DEF || i === IQ)) v += 1.2;
   if (pl.sub && has(pl, 'スーパーサブ')) v += 3;
   if (hasBad(pl, '判断が遅い') && i === IQ && (scene === 'combo' || scene === 'counter')) v -= 5;
   if (hasBad(pl, '空中戦が苦手') && i === PHY && (scene === 'cross' || scene === 'setpiece' || scene === 'longball')) v -= 6;
@@ -211,10 +229,11 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
   home.comp = comp; away.comp = comp;
   const sides: Side[] = [home, away].map((t, ix) => {
     const myS = teamStrength(t.squad), opS = teamStrength((ix ? home : away).squad);
-    const form = chooseForm(t.mgr, myS, opS, t.squad.filter((p) => !banned(p, comp)), t.tilt);
-    const { lineup, bench } = pickLineup(r, t, form);
-    if (t.me && t.kickReq) t.kickOk = r.next() < Math.min(0.95, obeyChance(t.mgr.obey, 1) + 0.15);
-    const s: Side = { t, home: ix === 0 && !opts.neutral, day: (r.next() - 0.5) * 8, style: t.mgr.style, form, on: lineup, bench, subs: 0, goals: 0, str: myS, offs: [], changed: false, st: new Map(lineup.map((x) => [x.p, zeroSt()])),
+    const fx = t.fixed;
+    const form = fx ? fx.form : chooseForm(t.mgr, myS, opS, t.squad.filter((p) => !banned(p, comp)), t.tilt);
+    const { lineup, bench } = fx && !fx.auto ? fixedLineup(t, form, fx.xi) : pickLineup(r, t, form);
+    if (t.me && t.kickReq) t.kickOk = fx ? true : r.next() < Math.min(0.95, obeyChance(t.mgr.obey, 1) + 0.15);
+    const s: Side = { t, home: ix === 0 && !opts.neutral, day: (r.next() - 0.5) * 8, style: fx ? fx.style : t.mgr.style, form, on: lineup, bench, subs: 0, goals: 0, str: myS, offs: [], changed: !!fx, st: new Map(lineup.map((x) => [x.p, zeroSt()])),
       men: 11, moUntil: -1, fouls: 0, corners: 0, offsides: 0, cards: [], shots: [], windows: 0, subLog: [], lastAct: 0, duels: new Map(), cover: new Set(), kick: { ck: null, fk: null, pk: null }, banStart: t.squad.filter((p) => banned(p, comp)) };
     assignLR(s); s.kick = chooseKickers(r, s); return s;
   });
@@ -223,7 +242,7 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
   const poss: [number, number] = [0, 0]; let possHalf: [number, number] = [0, 0]; let lateTie = false;
   const T = (side: Side, pl: OnPl | Player): Token => ({ t: ('p' in pl ? pl.p : pl).name, me: side.t.me });
   const C = (side: Side): Token => ({ t: side.t.name, me: side.t.me });
-  const MG = (side: Side): Token => (side.t.me ? { t: mgrShort(side.t.mgr), me: true } : { t: side.t.name + 'の監督', me: false });
+  const MG = (side: Side): Token => (side.t.me ? { t: side.t.fixed ? side.t.mgr.name.split(' ')[0] + 'ヘッドコーチ' : mgrShort(side.t.mgr), me: true } : { t: side.t.name + 'の監督', me: false });
   const kOf = (s: Side) => (s === sides[0] ? 0 : 1) as 0 | 1;
   /* 問139：流れのグラフ（1分ごと・ホームから見て押していれば＋）と印 */
   const pg: number[] = Array(92).fill(0); const marks: { min: number; kind: 'goal' | 'red' | 'sub'; side: 0 | 1 }[] = [];
@@ -388,8 +407,8 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
     const mH = mid(sides[0]), mA = mid(sides[1]);
     const st0 = STYLES[sides[0].style], st1 = STYLES[sides[1].style];
     const lazy = (s: Side) => countBad(s, '守備をサボる') * 0.12;
-    const share = sig((mH - mA) / 11 + (st0.chanceAdj - st1.chanceAdj) * 0.15 + (st1.oppChance - st0.oppChance) * 0.06 + (FORM_ATK[sides[0].form] - FORM_ATK[sides[1].form]) * 0.05 + 0.08 + lazy(sides[1]) - lazy(sides[0]));
-    const total = TUNE.base + (st0.chanceAdj + st1.chanceAdj) * 0.12 + (st0.oppChance + st1.oppChance) * 0.1 + (FORM_ATK[sides[0].form] + FORM_ATK[sides[1].form]) * 0.06 + (blk >= 4 && sides[0].goals !== sides[1].goals ? TUNE.late : 0);
+    const share = sig((mH - mA) / 11 + (st0.chanceAdj - st1.chanceAdj) * 0.15 + (st1.oppChance - st0.oppChance) * 0.06 + (FORM_ATK[sides[0].form] - FORM_ATK[sides[1].form]) * 0.05 + 0.08 + lazy(sides[1]) - lazy(sides[0]) + (tv(sides[0]) - tv(sides[1])) * 0.04);
+    const total = TUNE.base + (st0.chanceAdj + st1.chanceAdj) * 0.12 + (st0.oppChance + st1.oppChance) * 0.1 + (FORM_ATK[sides[0].form] + FORM_ATK[sides[1].form]) * 0.06 + (tv(sides[0]) + tv(sides[1])) * 0.12 + (blk >= 4 && sides[0].goals !== sides[1].goals ? TUNE.late : 0);
     const n = Math.max(0, Math.round(total + (r.next() - 0.5) * 1.6));
     {
       const k = share >= 0.5 ? 0 : 1; const S = sides[k], O = sides[1 - k];

@@ -20,6 +20,8 @@ export interface GrowCtx {
   medical?: number;
   /** 克服を助けるコーチ（0〜1） */
   defCoach?: number; offCoach?: number; physCoach?: number;
+  /** PC版：練習のテーマ（項目ごとの倍率）・強度（伸びの倍率）・疲れの抜け方の増減・練習でのケガの確率 */
+  theme?: number[]; inten?: number; recov?: number; trainInj?: number;
 }
 export const DEFAULT_CTX: GrowCtx = { mgrGrow: 1, coach: [1, 1, 1, 1, 1, 1, 1, 1], field: 1, camp: false };
 
@@ -38,12 +40,13 @@ export function growPlayer(r: Rng, p: Player, ctx: GrowCtx): ReportEntry | null 
   if (p.age >= p.decl) gp = -0.18 * (p.age - p.decl + 1) * (p.sp.includes('衰えにくい') ? 0.5 : 1);
   const o = ovr(p);
   const room = Math.max(0, (p.pot - o) / 30);
-  const pr = 0.135 * ctx.field * (p.sp.includes('練習の虫') ? 1.5 * (0.6 + 0.4 * ctx.field) : 1) * (ctx.camp ? (p.sp.includes('キャンプで化ける') ? 3.2 : 2) : 1);
+  const pr = 0.135 * (ctx.inten ?? 1) * ctx.field * (p.sp.includes('練習の虫') ? 1.5 * (0.6 + 0.4 * ctx.field) : 1) * (ctx.camp ? (p.sp.includes('キャンプで化ける') ? 3.2 : 2) : 1);
   const mt = p.played ? 0.22 * ctx.mgrGrow * (p.sp.includes('実戦で伸びる') ? 1.5 : 1) : 0;
   let awake: ReportEntry['awake'] = null;
   for (let i = 0; i < 8; i++) {
     const w = W[p.pos][i] / 3 + 0.35;
-    let dlt = gp > 0 ? (pr * ctx.coach[i] + mt) * gp * w * Math.min(1.4, room) * (0.6 + r.next() * 0.8) : gp * 0.05 * (0.5 + r.next());
+    const fm = p.tf != null && p.tf >= 0 ? (p.tf === i ? 2.5 : 0.8) : 1;
+    let dlt = gp > 0 ? (pr * ctx.coach[i] * (ctx.theme?.[i] ?? 1) * fm + mt) * gp * w * Math.min(1.4, room) * (0.6 + r.next() * 0.8) : gp * 0.05 * (0.5 + r.next());
     if (p.a[i] >= 99 && dlt > 0) dlt = 0;
     p.a[i] = clamp(p.a[i] + dlt, 5, 99);
   }
@@ -87,9 +90,12 @@ export function growPlayer(r: Rng, p: Player, ctx: GrowCtx): ReportEntry | null 
   const swing = p.sp.includes('安定感') ? 0.5 : p.bad.includes('ムラっけ') ? 1.8 : 1;
   p.cond = clamp(Math.round(p.cond * 0.5 + (r.next() - 0.5) * 2.6 * swing), -2, 2);
   if (p.sp.includes('安定感') && p.cond < -1) p.cond = -1;
-  p.fat = clamp(p.fat - (p.sp.includes('回復が早い') ? 42 : 30), 0, 100);
+  p.fat = clamp(p.fat - (p.sp.includes('回復が早い') ? 42 : 30) - (ctx.recov ?? 0), 0, 100);
   const injNew = p.injNew; p.injNew = false;
   if (p.inj && !injNew) { p.inj--; if (p.inj > 0 && (p.sp.includes('回復が早い') || r.next() < (ctx.medical ?? 0) * 0.15)) p.inj--; }
+  /* PC版：ハードな練習は、ケガをすることがある */
+  let trInj = false;
+  if (!p.inj && ctx.trainInj && r.next() < ctx.trainInj * (p.bad.includes('スペ体質') ? 2.2 : 1) * (p.sp.includes('ケガをしにくい') ? 0.45 : 1) * (1 + p.fat / 100)) { p.inj = r.int(1, 3); p.injNew = true; trInj = true; }
   const after = p.a.map(Math.floor);
   const ups = after.map((v, i) => v - before[i]);
   const totalUp = ups.reduce((s, v) => s + Math.max(0, v), 0);
@@ -97,8 +103,8 @@ export function growPlayer(r: Rng, p: Player, ctx: GrowCtx): ReportEntry | null 
   /* 大きな覚醒：1つの項目が1度に10以上、または合計で20以上（企画書 8-7） */
   const big = !!awake || ups.some((v) => v >= 10) || totalUp >= 20;
   if (big && !awake) { const mi = ups.indexOf(Math.max(...ups)); awake = { i: mi, from: before[mi], to: after[mi] }; }
-  if (totalUp > 0 || newSp || cured || injNew || aptUp || ups.some((v) => v < 0))
-    return { pid: p.id, ups, before, after, awake: big ? awake : null, newSp, cured, injNew, aptUp };
+  if (totalUp > 0 || newSp || cured || injNew || trInj || aptUp || ups.some((v) => v < 0))
+    return { pid: p.id, ups, before, after, awake: big ? awake : null, newSp, cured, injNew: injNew || trInj, aptUp };
   return null;
 }
 

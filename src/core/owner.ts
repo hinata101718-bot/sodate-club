@@ -5,13 +5,14 @@ import { POS, type Pos } from './constants';
 import { PREFS, prefByName, prefScale } from './data/prefs';
 import { makePlayer, ovr, salaryFor, assignNumbers } from './player';
 import { makeCoach, makeManager, makeScout, COACH_ROLES, type Coach, type CoachRole, type Scout } from './staff';
-import { FAC_KEYS, debtCap, emptyLedger, facCost, facWeeks, gate, goodsSales, opsCost, distYear, sponsorYear, INTEREST, MAX_FAC, type FacKey, type Ledger, type MoneyKey } from './finance';
+import { FAC_KEYS, FAC_NAME, debtCap, emptyLedger, facCost, facWeeks, gate, goodsSales, opsCost, distYear, sponsorYear, INTEREST, MAX_FAC, type FacKey, type Ledger, type MoneyKey } from './finance';
 import { growPlayer, DEFAULT_CTX, type GrowCtx } from './growth';
 import { monthlyReport, type YouthReport } from './youth';
 import type { Manager, Player } from './types';
 import type { GameState } from './game';
 import { newManagerBond, loveSalaryMul } from './bond';
 import { initMarket, newMarketSeason, type MarketState } from './market';
+import { applyTrain, isCampBoost, tierTicket } from './gm';
 
 export interface Cand { id: number; p: Player; src: 'scout' | 'club' | 'trial'; fee: number; note: string; from: string; clubId?: number; scout?: string; until: number; }
 export interface OwnerState {
@@ -34,7 +35,7 @@ export function initOwner(r: Rng, ids: { n: number }, pref: string): OwnerState 
   for (const k of COACH_ROLES) coaches[k] = makeCoach(r, ids, k, 0.25 + r.next() * 0.2);
   const o: OwnerState = {
     money: Math.round((24000 + prefScale(pref) * 12000) / 100) * 100, debt: 0, ledger: emptyLedger(), lastLedger: null, pop: Math.round(15 + prefScale(pref) * 10), sponsor: 0,
-    fac: { field: 1, youth: 1, stadium: 1, medical: 1, dorm: 0 }, build: null,
+    fac: { field: 1, youth: 1, stadium: 1, medical: 1, dorm: 0, scout: 1, shop: 1 }, build: null,
     coaches, scouts: [makeScout(r, ids, 0.35)], mk: initMarket(),
     market: { mgr: [], coach: { off: [], def: [], gk: [], phys: [], youth: [] }, scout: [] },
     cands: [], trials: [], trialLog: [], renew: {}, warnedDebt: false,
@@ -54,11 +55,14 @@ const cf = (c: Coach | null) => (c ? 0.75 + c.skill * 0.6 : 0.65);
 export function growCtx(G: GameState, camp: boolean): GrowCtx {
   const o = G.owner; const C = o.coaches;
   const off = cf(C.off), def = cf(C.def), phys = cf(C.phys);
-  return {
-    ...DEFAULT_CTX, mgrGrow: G.mgr.grow, style: G.mgr.style, camp,
+  const base: GrowCtx = {
+    ...DEFAULT_CTX, mgrGrow: G.mgr.grow, style: G.gm ? G.gm.tac.style : G.mgr.style, camp,
     coach: [phys, off, off, off, phys, def, phys, def], field: 0.85 + o.fac.field * 0.15, medical: o.fac.medical,
     defCoach: C.def?.skill ?? 0, offCoach: C.off?.skill ?? 0, physCoach: C.phys?.skill ?? 0,
   };
+  const t = applyTrain(G, base);
+  if (isCampBoost(G)) t.inten = (t.inten ?? 1) * 1.3;
+  return t;
 }
 /** GKの4項目はキーパーコーチが受け持つ */
 export function gkCtx(G: GameState, base: GrowCtx): GrowCtx {
@@ -89,7 +93,7 @@ export function weekMoney(G: GameState, homeGate: { oppTier: number; cup: boolea
   earn(G, 'dist', Math.round(distYear(tierOf(G)) / 48));
   /* 問125：試合の日のお金。ホームは入場料とグッズと運営費、アウェイは遠征費 */
   if (homeGate) pay(G, 'ops', opsCost(tierOf(G), homeGate.home));
-  if (homeGate?.home) { const g = gate(tierOf(G), G.club.pref, o.pop, o.fac.stadium, homeGate.oppTier, homeGate.cup); const gd = goodsSales(tierOf(G), g.fans, homeGate.won); earn(G, 'gate', g.money); earn(G, 'goods', gd); if (G.yearStart) { G.yearStart.fans[0] += g.fans; G.yearStart.fans[1]++; } out.push(`ホームの試合に ${g.fans.toLocaleString()}人のお客さんが来た（入場料 ${g.money.toLocaleString()}万円・グッズ ${gd.toLocaleString()}万円）。`); }
+  if (homeGate?.home) { const g = gate(tierOf(G), G.club.pref, o.pop, o.fac.stadium, homeGate.oppTier, homeGate.cup, G.gm ? G.gm.ticket / tierTicket(tierOf(G)) : 1); const gd = Math.round(goodsSales(tierOf(G), g.fans, homeGate.won) * (1 + 0.15 * ((o.fac.shop ?? 1) - 1)) / 10) * 10; earn(G, 'gate', g.money); earn(G, 'goods', gd); if (G.yearStart) { G.yearStart.fans[0] += g.fans; G.yearStart.fans[1]++; } out.push(`ホームの試合に ${g.fans.toLocaleString()}人のお客さんが来た（入場料 ${g.money.toLocaleString()}万円・グッズ ${gd.toLocaleString()}万円）。`); }
   if (G.week % 4 === 3 && o.debt > 0) pay(G, 'interest', Math.round((o.debt * INTEREST) / 12));
   if (o.build) {
     o.build.weeks--;
@@ -107,7 +111,7 @@ export function weekMoney(G: GameState, homeGate: { oppTier: number; cup: boolea
   } else o.warnedDebt = false;
   return out;
 }
-const facLabel = (k: FacKey) => ({ field: '練習場', youth: 'ユースの施設', stadium: 'スタジアム', medical: 'メディカル施設', dorm: '寮' }[k]);
+const facLabel = (k: FacKey) => FAC_NAME[k];
 export function startBuild(G: GameState, key: FacKey): string | null {
   const o = G.owner; if (o.build) return 'いまは別の施設を強化している。';
   const next = o.fac[key] + 1; if (next > MAX_FAC) return 'これ以上は強化できない。';

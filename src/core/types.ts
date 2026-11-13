@@ -78,6 +78,10 @@ export interface Player {
   gType?: string;
   /** 表彰歴（年・賞・段・そのときのクラブ） */
   honors?: { y: number; title: string; tier: number; club: string }[];
+  /** PC版：個別練習（重点にする項目の番号。なし＝全体練習に従う） */
+  tf?: number;
+  /** PC版：このクラブでの出場数とゴール（殿堂の判定に使う） */
+  capps?: number; cgoals?: number;
 }
 
 export interface Manager {
