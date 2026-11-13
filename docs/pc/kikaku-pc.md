@@ -45,3 +45,4 @@
 - src/pc/：PC版の画面（app・views・views2・modals・matchplay・newgame・style.css）
 - scripts/pcsim.ts：おまかせのGMで何シーズンか進めるテスト（`N=6 DIFF=hard npx vite-node scripts/pcsim.ts`）
 - tests/gm.test.ts：PC版のしくみのテスト
+- src/pc/movement.ts・src/pc/movemodel.json・scripts/learn_movement.py：試合の2Dの動き（実データから学んだ立ち位置。docs/pc/movement.md）

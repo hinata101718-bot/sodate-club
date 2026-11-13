@@ -10,6 +10,7 @@ import { emblemSVG } from '../ui/emblem';
 import type { Pos } from '../core/constants';
 import type { Line, MatchView, Token, ViewItem } from '../core/types';
 import type { PlayResult } from '../core/game';
+import { shift, PASS_GAP } from './movement';
 
 let timer = 0;
 const BUDGET = 170000; // 「ふつう」の速さの、1試合の長さの目安（ミリ秒）
@@ -58,6 +59,7 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     <div class="scoreboard"><div class="side"><span class="kit" style="background:${hCol}"></span>${hc ? `<span class="emb">${emblemSVG(hc.me ? g.club.emblem : hc.emblem)}</span>` : ''}<span class="tn" style="color:${m.home.me ? 'var(--nm-me)' : 'var(--nm-op)'}">${esc(m.home.name)}</span><span class="muted small">→ 右へ攻める</span></div><div><div class="sc"><span id="sc0">0</span><span class="dash">-</span><span id="sc1">0</span></div><div class="clock" id="clock">0'</div></div><div class="side away"><span class="muted small">左へ攻める ←</span><span class="tn" style="color:${m.away.me ? 'var(--nm-me)' : 'var(--nm-op)'}">${esc(m.away.name)}</span>${ac ? `<span class="emb">${emblemSVG(ac.me ? g.club.emblem : ac.emblem)}</span>` : ''}<span class="kit" style="background:${aCol}"></span></div></div>
     <div class="mp-main"><div class="grid" style="gap:12px">${pitch}<div class="panel" id="flowbox">${flowSVG(m, 0)}${flowLegend(m)}</div></div>
     <div class="panel mp-feedbox"><div class="mp-now" id="mp-now">キックオフを待っている……</div><div class="feed mp-feed" id="feed" aria-live="polite"></div></div></div>
+    <div class="muted small">選手の動きは、実際の試合の位置データ（Metrica Sports のサンプルデータ）から学んだ立ち位置の傾向を使っている</div>
     <div id="msum"></div></div></div>`;
   /* 実況の名前の色を、ユニフォームの色にそろえる（白っぽい色は読めないので、濃い色に） */
   const ov = document.querySelector('.match-ov') as HTMLElement;
@@ -67,54 +69,90 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
   dots.forEach((d, i) => { d.el = svg.querySelector('#pl' + i) as SVGGElement; });
   const ball = svg.querySelector('#ball') as SVGCircleElement; const pass = svg.querySelector('#mp-pass') as SVGLineElement;
   const label = svg.querySelector('#mp-label') as SVGGElement; const lrect = svg.querySelector('#mp-lrect') as SVGRectElement; const ltext = svg.querySelector('#mp-ltext') as SVGTextElement;
-  let bx = 52.5, by = 34;
-  const setDot = (d: Dot, x: number, y: number) => { d.x = Math.max(2, Math.min(103, x)); d.y = Math.max(3, Math.min(65, y)); d.el!.style.transform = `translate(${d.x}px,${d.y}px)`; };
-  const moveBall = (x: number, y: number, showPass = false) => {
-    if (showPass) { pass.setAttribute('x1', String(bx)); pass.setAttribute('y1', String(by)); pass.setAttribute('x2', String(x)); pass.setAttribute('y2', String(y)); pass.setAttribute('opacity', '.7'); }
-    bx = Math.max(1, Math.min(104, x)); by = Math.max(2, Math.min(66, y)); ball.style.transform = `translate(${bx}px,${by}px)`;
+  /* ---- 動きのしくみ（毎フレーム）：実データから学んだ立ち位置へ、ばねのようになめらかに向かう ---- */
+  type Mv = Dot & { vx: number; vy: number; ph: number };
+  const mv = dots as Mv[]; for (const d of mv) { d.vx = 0; d.vy = 0; d.ph = Math.random() * 6.28; }
+  const B = { x: 52.5, y: 34, fx: 52.5, fy: 34, tx: 52.5, ty: 34, t: 1, dur: 0.01 };
+  let carrier: Mv | null = null; let possSide: 0 | 1 = 0; let busy = false; let lastPass = 0; let clock = 0;
+  const ovr = new Map<Mv, { x: number; y: number; until: number }>();
+  let tagged: { d: Mv; until: number } | null = null;
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  /** 自分のチームが右へ攻める向きの座標にする（ホームはそのまま、アウェーは反転。2回やるともどる） */
+  const tf = (side: 0 | 1, x: number, y: number): [number, number] => (side === 0 ? [x, y] : [105 - x, 68 - y]);
+  const goalX = (side: 0 | 1) => (side === 0 ? 105.5 : -0.5);
+  const kick = (x: number, y: number, speed = 24) => { B.fx = B.x; B.fy = B.y; B.tx = clamp(x, -1, 106); B.ty = clamp(y, 1, 67); B.dur = Math.max(0.25, Math.hypot(B.tx - B.fx, B.ty - B.fy) / speed); B.t = 0;
+    pass.setAttribute('x1', String(B.fx)); pass.setAttribute('y1', String(B.fy)); pass.setAttribute('x2', String(B.tx)); pass.setAttribute('y2', String(B.ty)); pass.setAttribute('opacity', '.55'); };
+  const targetOf = (d: Mv): [number, number] => {
+    const o = ovr.get(d); if (o && o.until > clock) return [o.x, o.y];
+    if (d === carrier && B.t >= 1) { const dir = d.side === 0 ? 1 : -1; return [d.x + dir * 2.4, d.y + (34 - d.y) * 0.04]; }
+    const [ax, ay] = tf(d.side, d.bx, d.by); const [bx2, by2] = tf(d.side, B.x, B.y);
+    if (d.pos === 'GK') return tf(d.side, ax + Math.max(0, (bx2 - 25) * 0.07), 34 + (by2 - 34) * 0.22);
+    const [sx, sy, sdv] = shift(ax, ay, bx2, by2, possSide === d.side);
+    const ph = d.ph + clock / 2.6; const j = Math.min(3.5, sdv * 0.22);
+    return tf(d.side, ax + sx + Math.sin(ph) * j, ay + sy + Math.cos(ph * 1.27) * j);
   };
-  const tag = (d: Dot | null, text = '') => {
-    if (!d) { label.setAttribute('opacity', '0'); return; }
-    const t = text || d.name; const w = Math.max(14, t.length * 2.9 + 4);
-    const lx = Math.max(w / 2 + 1, Math.min(104 - w / 2, d.x)); const ly = d.y > 12 ? d.y - 8 : d.y + 4.5;
-    lrect.setAttribute('x', String(lx - w / 2)); lrect.setAttribute('y', String(ly)); lrect.setAttribute('width', String(w));
-    ltext.setAttribute('x', String(lx)); ltext.setAttribute('y', String(ly + 3.6)); ltext.textContent = t; label.setAttribute('opacity', '1');
+  const nearest = (side: 0 | 1, x: number, y: number, skipGK = true) => mv.filter((d) => d.side === side && (!skipGK || d.pos !== 'GK')).sort((p, q) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y))[0] ?? null;
+  const passTo = (to: Mv, lead = 2) => { const dir = to.side === 0 ? 1 : -1; const lx = to.x + dir * lead, ly = to.y; kick(lx, ly); ovr.set(to, { x: lx, y: ly, until: clock + B.dur }); carrier = to; possSide = to.side; };
+  /** 場面のないときのボール回し：近くの味方へ、少し前向きにつなぐ。ときどき相手が奪う */
+  const idlePass = () => {
+    if (!carrier || carrier.side !== possSide) carrier = nearest(possSide, B.x, B.y);
+    if (!carrier) return;
+    const c = carrier; const dir = c.side === 0 ? 1 : -1;
+    if (Math.random() < 0.09) { const o = nearest((1 - possSide) as 0 | 1, B.x, B.y); if (o) { ovr.set(o, { x: B.x, y: B.y, until: clock + 0.8 }); carrier = o; possSide = o.side; tag(o, `${o.name} が奪う`, 1.2); } return; }
+    const mates = mv.filter((d) => d.side === c.side && d !== c && (d.pos !== 'GK' || (dir * (c.x - 52.5)) < -25));
+    const w = mates.map((d) => Math.exp(-Math.hypot(d.x - c.x, d.y - c.y) / 16) * (1 + Math.max(-0.6, dir * (d.x - c.x) / 30)));
+    let r = Math.random() * w.reduce((s2, v) => s2 + v, 0); let to = mates[0];
+    for (let i = 0; i < mates.length; i++) { r -= w[i]; if (r <= 0) { to = mates[i]; break; } }
+    if (to) passTo(to);
   };
-  const dotOf = (name: string, me: boolean) => { const side = sideOfMe(me); return dots.find((d) => d.side === side && d.name === name) ?? dots.find((d) => d.name === name) ?? null; };
-  const goalX = (side: 0 | 1) => (side === 0 ? 103 : 2);
-  /** 攻めている側を前へ、守る側を下げる（ボールの近くの選手はボールへ寄る） */
-  const shape = (atk: 0 | 1 | null, depth: number) => {
-    for (const d of dots) {
-      if (d.pos === 'GK') { setDot(d, d.bx + (atk === null ? 0 : (d.side === atk ? 1 : -1) * (d.side === 0 ? 1 : -1) * 2), 34 + (by - 34) * 0.15); continue; }
-      const dir = d.side === 0 ? 1 : -1;
-      const push = atk === null ? 0 : d.side === atk ? 9 + depth * 10 : -(4 + depth * 6);
-      let x = d.bx + dir * push, y = d.by + (by - 34) * 0.18;
-      const dist = Math.hypot(x - bx, y - by);
-      if (dist < 20) { const k = (20 - dist) / 20 * 0.35; x += (bx - x) * k; y += (by - y) * k; }
-      setDot(d, x, y);
+  const reset = (kickSide: 0 | 1) => { carrier = null; possSide = kickSide; B.x = B.fx = B.tx = 52.5; B.y = B.fy = B.ty = 34; B.t = 1; ovr.clear(); const k = mv.filter((d) => d.side === kickSide && (d.pos === 'ST' || d.pos === 'AM' || d.pos === 'CM'))[0]; if (k) { ovr.set(k, { x: 52.5 - (kickSide === 0 ? 1.2 : -1.2), y: 34, until: clock + 1.2 }); carrier = k; } };
+  const tag = (d: Mv | null, text = '', sec = 1.6) => { tagged = d ? { d, until: clock + sec } : null; if (d) { ltext.textContent = text || d.name; } else label.setAttribute('opacity', '0'); };
+  const dotOf = (name: string, me: boolean) => (mv.find((d) => d.side === sideOfMe(me) && d.name === name) ?? mv.find((d) => d.name === name) ?? null);
+  let lastT = performance.now();
+  const frame = (tnow: number) => {
+    if (!document.body.contains(svg)) return;
+    const dt = Math.min(0.05, (tnow - lastT) / 1000) * st.speed; lastT = tnow; clock += dt;
+    if (B.t < 1) { B.t = Math.min(1, B.t + dt / B.dur); const e = 1 - (1 - B.t) ** 2; B.x = B.fx + (B.tx - B.fx) * e; B.y = B.fy + (B.ty - B.fy) * e; if (B.t >= 1) pass.setAttribute('opacity', '0'); }
+    else if (carrier) { const dir = carrier.side === 0 ? 1 : -1; B.x = carrier.x + dir * 1.25; B.y = carrier.y + 0.35; }
+    for (const d of mv) {
+      const [tx, ty] = targetOf(d);
+      d.vx += ((tx - d.x) * 3.4 - d.vx * 2.7) * dt; d.vy += ((ty - d.y) * 3.4 - d.vy * 2.7) * dt;
+      const v = Math.hypot(d.vx, d.vy); const vmax = d === carrier ? 7 : 9.5; if (v > vmax) { d.vx *= vmax / v; d.vy *= vmax / v; }
+      d.x = clamp(d.x + d.vx * dt, 1.5, 103.5); d.y = clamp(d.y + d.vy * dt, 2, 66);
+      d.el!.style.transform = `translate(${d.x.toFixed(2)}px,${d.y.toFixed(2)}px)`;
     }
+    ball.style.transform = `translate(${B.x.toFixed(2)}px,${B.y.toFixed(2)}px)`;
+    if (tagged && tagged.until > clock) { const d = tagged.d; const t = ltext.textContent ?? ''; const w = Math.max(14, t.length * 2.9 + 4); const lx = clamp(d.x, w / 2 + 1, 104 - w / 2); const ly = d.y > 12 ? d.y - 8 : d.y + 4.5;
+      lrect.setAttribute('x', String(lx - w / 2)); lrect.setAttribute('y', String(ly)); lrect.setAttribute('width', String(w)); ltext.setAttribute('x', String(lx)); ltext.setAttribute('y', String(ly + 3.6)); label.setAttribute('opacity', '1'); }
+    else if (tagged) { tagged = null; label.setAttribute('opacity', '0'); }
+    if (!busy && !st.done && B.t >= 1 && clock - lastPass > PASS_GAP * 0.8) { lastPass = clock; idlePass(); }
+    requestAnimationFrame(frame);
   };
-  /** 1行の中身から、ボールと選手を動かす */
+  requestAnimationFrame(frame);
+  /** 1行の中身から、ボールと選手を動かす（実況の行と映像をそろえる） */
   const animate = (it: ViewItem, line: Line, idx: number, last: boolean) => {
     const txt = textOf(line); const names = line.map(tokName).filter((x): x is { t: string; me: boolean } => !!x);
-    const atkSide: 0 | 1 | null = it.kind === 'goal' || it.kind === 'chance' ? sideOfMe(it.me) : null;
-    const depth = Math.min(1, idx / 3);
-    pass.setAttribute('opacity', '0');
-    if (last && atkSide !== null && RES_GOAL.test(txt) && it.kind === 'goal') { moveBall(goalX(atkSide), 34 + (Math.random() - 0.5) * 4); shape(atkSide, 1); tag(null); return; }
-    if (atkSide !== null && RES_SAVE.test(txt)) { const gk = dots.find((d) => d.side !== atkSide && d.pos === 'GK'); if (gk) { moveBall(gk.x + (atkSide === 0 ? -1.5 : 1.5), gk.y); tag(gk); } shape(atkSide, 1); return; }
-    if (atkSide !== null && RES_MISS.test(txt)) { moveBall(atkSide === 0 ? 104 : 1, 34 + (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 8)); shape(atkSide, 1); tag(null); return; }
-    const who = names.length ? dotOf(names[0].t, names[0].me) : null;
-    if (who) {
-      const isShot = atkSide !== null && SHOT.test(txt);
-      if (atkSide !== null && who.side === atkSide) { const fwd = atkSide === 0 ? 1 : -1; setDot(who, who.x + fwd * (isShot ? 6 : 3), who.y); }
-      moveBall(who.x + (who.side === 0 ? 1.4 : -1.4), who.y, !!names.length && idx > 0);
-      shape(atkSide, depth);
-      setDot(who, bx - (who.side === 0 ? 1.4 : -1.4), by);
-      tag(who);
-      if (isShot) setTimeout(() => moveBall(bx + (atkSide === 0 ? 6 : -6), by + (34 - by) * 0.3, true), 380);
-      /* 2人目（パスの受け手・競り合う相手）も近くへ */
-      if (names[1]) { const d2 = dotOf(names[1].t, names[1].me); if (d2 && d2 !== who) setDot(d2, bx + (d2.side === 0 ? -3 : 3) * (d2.side === who.side ? -2 : 1), by + (d2.y > by ? 3 : -3)); }
-    } else if (atkSide === null) { shape(null, 0); tag(null); if (/キックオフ|後半/.test(txt)) moveBall(52.5, 34); }
+    const atk: 0 | 1 | null = it.kind === 'goal' || it.kind === 'chance' ? sideOfMe(it.me) : null;
+    void idx;
+    if (/キックオフ|後半が始|後半のキックオフ|後半開始/.test(txt)) { reset(/後半/.test(txt) ? 1 : 0); return; }
+    if (atk !== null) possSide = atk;
+    if (last && atk !== null && it.kind === 'goal' && RES_GOAL.test(txt)) { carrier = null; kick(goalX(atk), 34 + (Math.random() - 0.5) * 5, 30); tag(null); return; }
+    if (atk !== null && RES_SAVE.test(txt)) { const gk = mv.find((d) => d.side !== atk && d.pos === 'GK'); if (gk) { carrier = null; kick(gk.x, gk.y, 28); setTimeout(() => { carrier = gk; possSide = gk.side; }, 450); tag(gk); } return; }
+    if (atk !== null && RES_MISS.test(txt)) { carrier = null; kick(atk === 0 ? 106 : -1, 34 + (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 7), 28); const gk = mv.find((d) => d.side !== atk && d.pos === 'GK'); setTimeout(() => { if (gk) { B.x = B.fx = B.tx = gk.x; B.y = B.fy = B.ty = gk.y; B.t = 1; carrier = gk; possSide = gk.side; } }, 1300 / st.speed); tag(null); return; }
+    const who = names.length ? dotOf(names[0].t, names[0].me) : null; if (!who) return;
+    const steal = /奪|カット|インターセプト|クリア|かっさら|拾/.test(txt);
+    if (atk === null || steal) possSide = who.side;
+    /* 1人目にボールを渡す（遠ければパスでつなぐ） */
+    if (carrier !== who) { if (Math.hypot(B.x - who.x, B.y - who.y) > 4) passTo(who, 1.5); else { carrier = who; possSide = who.side; } }
+    tag(who);
+    const shot = atk !== null && who.side === atk && SHOT.test(txt);
+    if (shot) { const dir = who.side === 0 ? 1 : -1; ovr.set(who, { x: who.x + dir * 3, y: who.y + (34 - who.y) * 0.2, until: clock + 0.6 }); setTimeout(() => { carrier = null; kick(goalX(atk!) - (atk === 0 ? 4 : -4), 34 + (Math.random() - 0.5) * 8, 30); }, 450 / st.speed); return; }
+    /* 2人目：味方ならパスの受け手、相手なら寄せてくる */
+    const d2 = names[1] ? dotOf(names[1].t, names[1].me) : null;
+    if (d2 && d2 !== who) {
+      if (d2.side === who.side) setTimeout(() => { if (!st.done) { passTo(d2, 3); tag(d2); } }, 500 / st.speed);
+      else ovr.set(d2, { x: who.x + (who.side === 0 ? 2 : -2), y: who.y + (d2.y > who.y ? 1.5 : -1.5), until: clock + 1.6 });
+    }
   };
 
   /* ---- 流れる順番と、速さ ---- */
@@ -130,6 +168,7 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
   const step = (): number => {
     const it = items[st.i]; if (!it) return 0;
     if (st.li === 0) {
+      busy = it.kind === 'goal' || it.kind === 'chance';
       const div = document.createElement('div');
       const who = it.who ? `<span class="who">${it.who}</span>` : '';
       const side = it.kind === 'goal' || it.kind === 'chance' ? (it.me ? ' me' : ' op') : '';
@@ -148,14 +187,14 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     /* 結果の行の前は、少しためる */
     if (!last && st.li === it.lines.length - 1 && (it.kind === 'goal' || it.kind === 'chance')) wait *= 1.5;
     if (last) {
-      st.i++; st.li = 0;
+      st.i++; st.li = 0; setTimeout(() => { busy = false; lastPass = clock; }, 900 / st.speed);
       if (it.kind === 'goal' && it.goal) {
         st.sc = it.goal.score; showScore();
         st.cur!.classList.add('goal'); if (!it.goal.me) st.cur!.classList.add('opp');
         st.cur!.querySelector('.t')!.insertAdjacentHTML('afterbegin', `<b class="gol">ゴール！ ${it.goal.score[0]}-${it.goal.score[1]}</b><br>`);
         const gt = document.getElementById('goal-txt'); gt?.setAttribute('opacity', '1'); setTimeout(() => gt?.setAttribute('opacity', '0'), 2000);
         document.querySelector('.scoreboard')?.classList.add('shake'); setTimeout(() => document.querySelector('.scoreboard')?.classList.remove('shake'), 600);
-        wait += 2600;
+        wait += 2600; const conceded = (1 - sideOfMe(it.goal.me)) as 0 | 1; setTimeout(() => reset(conceded), 2200 / st.speed);
       } else if (it.kind === 'chance') { st.cur!.insertAdjacentHTML('beforeend', ''); wait += 500; }
     }
     return wait;
@@ -168,7 +207,9 @@ export function playMatch(m: MatchView, res: PlayResult, after: () => void) {
     }
     st.t++;
     $('#clock').textContent = st.t > 90 ? `90+${st.t - 90}'` : `${Math.max(0, st.t)}'`;
-    if (st.t % 3 === 0) { const fb = document.getElementById('flowbox'); if (fb) fb.innerHTML = flowSVG(m, st.t) + flowLegend(m); if (Math.random() < 0.5) { moveBall(35 + Math.random() * 35, 14 + Math.random() * 40); shape(null, 0); tag(null); } }
+    if (st.t % 3 === 0) { const fb = document.getElementById('flowbox'); if (fb) fb.innerHTML = flowSVG(m, st.t) + flowLegend(m); }
+    /* 流れのグラフで押している側が、ボールを持ちやすい */
+    if (!busy && st.t % 5 === 0 && m.flowG) { const v = m.flowG.pts[Math.min(m.flowG.pts.length - 1, Math.floor(st.t / 5))] ?? 0; if (Math.random() < 0.35 + Math.abs(v) * 0.4) possSide = v >= 0 ? 0 : 1; }
     if (st.t >= end && st.i >= items.length) { finish(); return; }
     timer = window.setTimeout(tick, 90 / st.speed);
   };
