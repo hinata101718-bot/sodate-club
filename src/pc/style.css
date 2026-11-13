@@ -371,3 +371,20 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .ovr-chip { color: #18231e; }
 .tbl tr.me td { background: #e5f2ec; }
 .btn.primary { color: #fff; }
+/* 試合の画面（22人の2D） */
+.mp-box { width: min(1320px, 100%); }
+.mp-main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; }
+.mp .mp-pl { transition: transform .75s cubic-bezier(.4, .1, .3, 1); }
+.mp #ball { transition: transform .55s cubic-bezier(.3, .1, .3, 1); }
+.mp #mp-pass { transition: opacity .3s; }
+.mp #mp-label { transition: opacity .2s; }
+.mp-feedbox { display: flex; flex-direction: column; gap: 10px; }
+.mp-now { font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.mp-feed { height: 520px; }
+.mp-feed .fe .ln { animation: lnin .35s ease-out; }
+@keyframes lnin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fe .gol { color: var(--accent); font-size: 15px; }
+.fe.goal.opp .gol { color: var(--bad); }
+.kit { width: 12px; height: 26px; border-radius: 3px; border: 1px solid var(--line2); flex: none; }
+.scoreboard.shake { animation: shake .5s; }
+@keyframes shake { 0%, 100% { transform: none; } 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }

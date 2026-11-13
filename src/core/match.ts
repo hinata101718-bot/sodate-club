@@ -237,6 +237,8 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
       men: 11, moUntil: -1, fouls: 0, corners: 0, offsides: 0, cards: [], shots: [], windows: 0, subLog: [], lastAct: 0, duels: new Map(), cover: new Set(), kick: { ck: null, fk: null, pk: null }, banStart: t.squad.filter((p) => banned(p, comp)) };
     assignLR(s); s.kick = chooseKickers(r, s); return s;
   });
+  /* PC版：2Dのピッチに出す、両チームの先発 */
+  const xi0 = sides.map((s) => s.on.map((x) => ({ name: x.p.name, num: x.p.num, pos: x.pos, lr: x.lr ?? 'C' })));
   const ev: Ev[] = []; const log: Chance[] = [];
   const mic = home.me || away.me; resetPhrases();
   const poss: [number, number] = [0, 0]; let possHalf: [number, number] = [0, 0]; let lateTie = false;
@@ -515,6 +517,7 @@ export function simulateMatch(r: Rng, home: TeamIn, away: TeamIn, opts: MatchOpt
   const rt = rateAll(sides, score);
   if (opts.record) record(r, sides, log, opts.label || '', rt, comp, injured);
   const view = buildView(sides, log, ev, score, pk, !!opts.big, opts.title || '', rt);
+  view.lineups = xi0 as MatchView['lineups'];
   /* 問135・139：試合の数字・流れのグラフ・シュートの位置・1対1・交代・カード */
   {
     const tot = Math.max(1, poss[0] + poss[1]); const P = Math.round((poss[0] / tot) * 100);

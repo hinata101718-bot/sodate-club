@@ -148,6 +148,8 @@ export interface MatchView {
   cards?: { min: number; side: 0 | 1; who: string; red: boolean }[];
   /** 問133：自分のクラブのキッカー */
   kick?: { ck: string; fk: string; pk: string };
+  /** PC版：両チームの先発（2Dのピッチ用。[ホーム, アウェー]） */
+  lineups?: { name: string; num: number; pos: Pos; lr: 'L' | 'R' | 'C' }[][];
 }
 
 export interface ReportEntry {
