@@ -54,8 +54,11 @@ export function modalKeep(html: string, cls = '', closable = true) {
 }
 export const closeModal = () => { $('#modal').innerHTML = ''; };
 export const modalOpen = () => !!$('#modal').innerHTML;
+/** ほかの部品がつなぐところ（効果音など） */
+export const hooks: { toast?: (kind: string) => void } = {};
 export function toast(title: string, text: string, kind = 'info') {
   const box = $('#toasts'); if (!box) return;
+  hooks.toast?.(kind);
   const el = document.createElement('div'); el.className = 'toast ' + kind;
   el.innerHTML = `<b>${esc(title)}</b>${esc(text)}`; box.appendChild(el);
   setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 450); }, 4200);

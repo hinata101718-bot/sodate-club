@@ -10,6 +10,7 @@ import { lineHTML } from '../ui/dom';
 import { flowSVG, flowLegend, statsHTML, shotMapHTML, bindShotMap, duelMapHTML, subsHTML, cardsHTML } from '../ui/matchgfx';
 import { emblemSVG } from '../ui/emblem';
 import { SIM, type Ag, type Tap } from '../core/sim';
+import { play, crowdStart, crowdLevel, crowdStop, type Sfx } from './sound';
 import { FORM, STYLE_NAMES, STYLES, type StyleName } from '../core/constants';
 import type { MatchView } from '../core/types';
 import type { LiveMatch, PlayResult } from '../core/game';
@@ -87,6 +88,41 @@ export function playLive(L: LiveMatch, finishWeek: () => PlayResult, after: (res
       if (!quiet) { const gt = document.getElementById('goal-txt'); gt?.setAttribute('opacity', '1'); setTimeout(() => gt?.setAttribute('opacity', '0'), 2200); document.querySelector('.scoreboard')?.classList.add('shake'); setTimeout(() => document.querySelector('.scoreboard')?.classList.remove('shake'), 600); }
     }
   };
+  /* ---- 音：エンジンの出来事を、見せている時刻に鳴らす。2倍より速いとき（見どころだけも同じ）は、大事な音だけ ---- */
+  let sfxT = sim.T;
+  const KICKS: Sfx[] = ['kick1', 'kick2', 'kick3'];
+  const kickS = (v: number) => play(KICKS[Math.floor(Math.random() * 3)], v, 0.94 + Math.random() * 0.14);
+  const flushSfx = (upto: number, quiet: boolean) => {
+    const E = sim.sfx; let i = E.length; while (i > 0 && E[i - 1].T > sfxT) i--;
+    const fast = st.speed >= 2;
+    for (; i < E.length && E[i].T <= upto; i++) {
+      const e = E[i]; sfxT = e.T;
+      if (quiet) continue;
+      const late = upto - e.T > 1.2 && e.s !== 'goal' && e.s !== 'end';
+      if (late) continue;
+      switch (e.s) {
+        case 'kick': if (!fast) kickS(e.v); break;
+        case 'shot': kickS(1.5); break;
+        case 'foul': case 'kickoff': play('whistle_short', e.s === 'kickoff' ? 0.8 : e.v); break;
+        case 'card': if (e.v > 1) play('whistle_long', 0.9); break;
+        case 'half': play('whistle_long'); break;
+        case 'end': play('whistle_end'); break;
+        case 'save': play('save_clap'); play('near_miss', 0.5); break;
+        case 'miss': play('near_miss'); break;
+        case 'post': play('near_miss', 1.2); break;
+        case 'block': play('near_miss', 0.5); break;
+        case 'goal': play(e.k === meK ? 'goal_cheer' : 'opp_goal'); break;
+      }
+    }
+    if (upto > sfxT) sfxT = upto;
+  };
+  /** スタンドのざわめき：ボールがゴールに近いほど大きい。止めているときは小さく */
+  const crowdTick = () => {
+    if (st.paused) { crowdLevel(0.25); return; }
+    const d = Math.min(sim.ball.x, 105 - sim.ball.x);
+    crowdLevel(0.5 + 0.5 * Math.max(0, 1 - d / 32));
+  };
+  crowdStart();
   /** upto の時刻までの行を出す（skip：見どころのあいだを飛ばしているときは、大事な行だけ） */
   const flushTap = (upto: number, skip = false) => {
     while (tp < sim.tap.length && sim.tap[tp].T <= upto) { const t = sim.tap[tp++]; if (!skip || t.imp) put(t, skip); else if (t.goal) showScore(t.goal); }
@@ -174,12 +210,12 @@ export function playLive(L: LiveMatch, finishWeek: () => PlayResult, after: (res
         /* 先へ飛ばす：次の見どころが出るまで、エンジンだけ進める（1フレームに少しずつ） */
         const t0 = performance.now();
         while (!sim.over && sim.hlNew.length <= st.hlSeen && performance.now() - t0 < 12) sim.step(SIM.liveDt);
-        flushTap(sim.T, true); st.disp = sim.T;
+        flushTap(sim.T, true); flushSfx(sim.T, true); st.disp = sim.T;
         $('#clock').textContent = mmss(sim.clk, sim.half); $('#mp-left').textContent = sim.over ? '' : `見どころをさがしている… ${sim.minute()}分`;
         if (sim.hlNew.length > st.hlSeen) {
           const h = sim.hlNew[st.hlSeen]; st.hlSeen = sim.hlNew.length;
           const start = Math.max(h.start, sim.frames[0]?.t ?? h.start, st.skipFrom);
-          st.disp = start; st.seg = { end: h.T + (h.hv >= 100 ? 7 : 3.5) };
+          st.disp = start; st.seg = { end: h.T + (h.hv >= 100 ? 7 : 3.5) }; sfxT = start;
           /* 見せる区間より前の行は、大事なものだけ出しておく */
           tp = sim.tap.findIndex((t) => t.T > start); if (tp < 0) tp = sim.tap.length;
           flash(`${Math.min(sim.half === 1 ? 45 : 90, Math.floor(clkAt(start) / 60) + 1)}分の見どころ`);
@@ -188,13 +224,13 @@ export function playLive(L: LiveMatch, finishWeek: () => PlayResult, after: (res
         st.disp += real * st.speed;
         while (sim.T < st.disp && !sim.over) sim.step(SIM.liveDt);
         if (st.disp > sim.T) st.disp = sim.T;
-        flushTap(st.disp);
+        flushTap(st.disp); flushSfx(st.disp, false);
         if (st.seg && st.disp >= st.seg.end) { st.seg = null; st.skipFrom = st.disp; }
         $('#clock').textContent = mmss(clkAt(st.disp), sim.half);
         $('#mp-left').textContent = st.mode === 'hl' ? '見どころ' : `のこり約${Math.max(1, Math.ceil(((95 * 60 - (sim.half === 1 ? sim.clk : sim.clk + 300)) / st.speed) / 60))}分（いまの速さ）`;
       }
       if (sim.half === 2 && !halfShown) { halfShown = true; flash('後半キックオフ', 2.2); }
-      mini();
+      mini(); crowdTick();
       if (sim.T - boardT > 3) { boardT = sim.T; if (!document.activeElement?.closest('#mp-board')) board(); }
       if (sim.over && (st.mode === 'hl' ? !st.seg : st.disp >= sim.T - 0.01)) finish();
     }
@@ -204,7 +240,11 @@ export function playLive(L: LiveMatch, finishWeek: () => PlayResult, after: (res
   let res: PlayResult | null = null;
   const finish = () => {
     if (st.done) return; st.done = true;
+    const skipped = !sim.over;
     if (!sim.over) sim.run();
+    /* 「結果へ」で飛ばしたときも、試合終了の笛は鳴らす */
+    if (skipped) play('whistle_end');
+    setTimeout(crowdStop, 2600);
     flushTap(Infinity, true);
     res = finishWeek();
     const m = res.match!;
@@ -216,7 +256,7 @@ export function playLive(L: LiveMatch, finishWeek: () => PlayResult, after: (res
   };
   const setMode = (md: 'full' | 'hl') => { if (st.done) return; S.ui.mMode = md; st.mode = md; st.seg = null; st.disp = sim.T; if (md === 'hl') { st.hlSeen = sim.hlNew.length; st.skipFrom = sim.T; } document.getElementById('mp-hl')?.classList.toggle('sel', md === 'hl'); document.getElementById('mp-full')?.classList.toggle('sel', md === 'full'); };
   const markSpeed = () => document.querySelectorAll<HTMLElement>('[data-act=mSpd]').forEach((b) => b.classList.toggle('sel', +b.dataset.arg! === st.speed));
-  const pause = (v?: boolean) => { st.paused = v ?? !st.paused; const b = document.getElementById('mp-pause'); if (b) { b.textContent = st.paused ? '再開' : '一時停止'; b.classList.toggle('sel', st.paused); } if (st.paused) board(); };
+  const pause = (v?: boolean) => { st.paused = v ?? !st.paused; crowdTick(); const b = document.getElementById('mp-pause'); if (b) { b.textContent = st.paused ? '再開' : '一時停止'; b.classList.toggle('sel', st.paused); } if (st.paused) board(); };
   const order = (f: () => void) => { if (st.done) return; f(); boardT = -99; board(); };
   S.ui.match = {
     st, finish, setMode, markSpeed, pause, after: () => { if (res) after(res); },
@@ -238,6 +278,9 @@ export function playLive(L: LiveMatch, finishWeek: () => PlayResult, after: (res
 function summary(m: MatchView, res: PlayResult, meHome: boolean) {
   const my = meHome ? m.score[0] : m.score[1], op = meHome ? m.score[1] : m.score[0];
   const win = m.pk ? (meHome ? m.pk[0] > m.pk[1] : m.pk[1] > m.pk[0]) : my > op; const draw = !m.pk && my === op;
+  /* 結果の曲：決勝で勝ったら大きなファンファーレ */
+  const final = /決勝/.test(m.title) && !/準決勝/.test(m.title);
+  setTimeout(() => { if (win && final) { play('j_bigwin'); play('big_applause'); } else if (win) { play('j_win'); play('win_crowd', 0.8); } else if (draw) play('j_draw'); else play('j_lose'); }, 1400);
   const pl = [...m.played].sort((a, b) => Number(a.sub) - Number(b.sub));
   const ratings = pl.map((x) => `<tr><td>${posTag(x.pos)}</td><td>${esc(x.name)}${x.sub ? ' <span class="chip">途中</span>' : ''}</td><td class="r num">${x.min ?? ''}分</td><td class="r num">${x.goals || ''}</td><td class="r num">${x.ast || ''}</td><td class="r num">${x.st ? `${x.st.sh}/${x.st.pa}/${x.st.tk}` : ''}</td><td class="r num" style="font-weight:700;color:${(x.rt ?? 6) >= 7.5 ? 'var(--good)' : (x.rt ?? 6) < 5.5 ? 'var(--bad)' : 'inherit'}">${x.rt != null ? x.rt.toFixed(1) : '-'}</td></tr>`).join('');
   $('#msum').innerHTML = `<div class="grid g2">
@@ -269,4 +312,4 @@ ACT.mSub = () => { S.ui.match?.sub(); };
 CHANGE.mForm = (v) => { S.ui.match?.form(v); };
 CHANGE.mStyle = (v) => { S.ui.match?.style(v as StyleName); };
 CHANGE.mAuto = (_v, _a, el) => { S.ui.match?.auto((el as HTMLInputElement).checked); };
-ACT.mClose = () => { const c = S.ui.match; $('#overlay').innerHTML = ''; S.ui.match = null; c?.after(); };
+ACT.mClose = () => { const c = S.ui.match; crowdStop(); $('#overlay').innerHTML = ''; S.ui.match = null; c?.after(); };

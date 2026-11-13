@@ -1,5 +1,5 @@
 /* PC版の画面（その2）：移籍・スカウト・スタッフ・施設・財務・メッセージ・実績・クラブ史・セーブ */
-import { S, G, ACT, CHANGE, esc, yen, fmt, moneyCls, posTag, ovrChip, potHtml, spChips, lineChart, toast, confirmBox, closeModal, modal } from './util';
+import { S, G, ACT, CHANGE, INPUT, esc, yen, fmt, moneyCls, posTag, ovrChip, potHtml, spChips, lineChart, toast, confirmBox, closeModal, modal } from './util';
 import { VIEWS, clubLink } from './views';
 import { myTier, clubById, answerOffer, ME } from '../core/game';
 import { ovr } from '../core/player';
@@ -12,6 +12,7 @@ import { FAC_KEYS, FAC_NAME, FAC_NOTE, facCost, facWeeks, MAX_FAC, STADIUM_CAP, 
 import { ACH, ACH_REWARD, tierTicket, releaseCost, releasePlayer, DIFFS } from '../core/gm';
 import { monthOf, isWindow } from '../core/calendar';
 import { answerWantOut } from '../core/bond';
+import { soundSettings, setSound, play, SOUND_CREDITS } from './sound';
 import { evalWord } from '../core/meeting';
 import { render, save } from './app';
 import { exportCode } from './newgame';
@@ -236,8 +237,22 @@ VIEWS.system = () => {
     <li>並び方・戦い方・方針・先発・キッカーは「戦術」、練習のテーマと強さ・個別練習は「練習」で決める。</li>
     <li>2月に春の昇格会議（ユースからトップへ）と春のキャンプ。開幕前と夏に、試合に出られる23人を登録する。</li>
     <li>移籍は7〜8月と12月。ほかのクラブの選手は、スカウトが調べるまで総合力のおおよそしかわからない。</li>
-    <li>毎月の終わりに経営会議、12月に表彰式と、来年の目標を決める会議がある。目標に届かないとオーナーの信頼が下がり、0になると解任される。</li></ul></section></div>`;
+    <li>毎月の終わりに経営会議、12月に表彰式と、来年の目標を決める会議がある。目標に届かないとオーナーの信頼が下がり、0になると解任される。</li></ul></section>
+  ${soundPanel()}</div>`;
 };
+function soundPanel() {
+  const s = soundSettings();
+  return `<section class="panel"><h2>音</h2>
+    <div class="row" style="align-items:center;gap:12px"><label class="small"><input type="checkbox" data-change="sndOn"${s.on ? ' checked' : ''}> 効果音を鳴らす</label>
+      <label class="small" style="display:flex;align-items:center;gap:8px">音量 <input type="range" min="0" max="100" step="5" value="${Math.round(s.vol * 100)}" data-change="sndVol" data-input="sndVolShow" style="width:160px"${s.on ? '' : ' disabled'}> <span id="snd-vol" class="num">${Math.round(s.vol * 100)}%</span></label>
+      <button class="btn small" data-act="sndTest"${s.on ? '' : ' disabled'}>試しに鳴らす</button></div>
+    <div class="muted small">試合の中（笛・ボールをける音・シュート・歓声・ため息・スタンドのざわめき）、結果の曲、画面の操作で鳴る。試合が2倍より速いときは、笛・シュート・ゴールなどの大事な音だけ。</div>
+    <h3>音の出典</h3><ul class="muted small" style="margin:0;padding-left:18px;display:grid;gap:2px">${SOUND_CREDITS.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></section>`;
+}
+CHANGE.sndOn = (_v, _a, el) => { setSound({ on: (el as HTMLInputElement).checked }); render(); };
+CHANGE.sndVol = (v) => { setSound({ vol: +v / 100 }); play('whistle_short'); };
+INPUT.sndVolShow = (v) => { const e = document.getElementById('snd-vol'); if (e) e.textContent = `${v}%`; };
+ACT.sndTest = () => { play('goal_cheer'); };
 ACT.exportCode = async () => { const code = await exportCode(g()); (document.querySelector('#export-box') as HTMLTextAreaElement).value = code; const m = document.querySelector('#export-msg'); if (m) m.textContent = `${Math.round(code.length / 1024)}KBのコードを書き出した`; };
 ACT.copyCode = () => { const box = document.querySelector('#export-box') as HTMLTextAreaElement; if (!box.value) return; navigator.clipboard?.writeText(box.value).then(() => { const m = document.querySelector('#export-msg'); if (m) m.textContent = 'コピーした'; }).catch(() => { box.select(); const m = document.querySelector('#export-msg'); if (m) m.textContent = 'コードを選んだ。Ctrl+C でコピーしてください'; }); };
 ACT.downloadSave = async () => { const code = await exportCode(g()); (document.querySelector('#export-box') as HTMLTextAreaElement).value = code; try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' })); a.download = `sodate-${g().club.name}-${g().season}年目.txt`; document.body.appendChild(a); a.click(); a.remove(); } catch { const m = document.querySelector('#export-msg'); if (m) m.textContent = 'この環境ではファイルに保存できない。コードをコピーしてください'; } };

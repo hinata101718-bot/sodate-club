@@ -99,6 +99,9 @@ export class MatchSim {
   xi0: MatchView['lineups'];
   /** 画面用：出た順の実況の行（T は止まらない時間。画面はこの時刻になったら出す） */
   tap: Tap[] = []; private gid = 0;
+  /** 画面用：音を鳴らす出来事（T は止まらない時間）。kick・shot・save・miss・post・block・goal・foul・card・kickoff・half・end */
+  sfx: { T: number; s: string; k: number; v: number }[] = []; private noKick = false;
+  private fx(s: string, k: number, v = 1, T = this.T) { if (!this.live) return; this.sfx.push({ T, s, k, v }); if (this.sfx.length > 600) this.sfx.splice(0, 200); }
   pkRes: [number, number] | null = null; result: MatchResult | null = null;
   /** いちばん前でボールを奪いにいく選手（この選手だけがタックルする） */
   p1: [Ag | null, Ag | null] = [null, null];
@@ -585,7 +588,7 @@ export class MatchSim {
     /* オフサイド */
     if ((kind === 'through' || px > this.oline[k] + 1) && tc(k, to.x, to.y)[0] > this.oline[k] + 0.5 && this.r.next() < SIM.offside * (1.25 - to.e[IQ] / 100) * (this.sp(1 - k).lineOut > 3 ? 1.4 : 1)) {
       this.kickBall(wx, wy, spd, false, () => {
-        s.offsides++;
+        s.offsides++; this.fx('foul', 1 - k, 0.8);
         if (this.mic && notable) this.line(k, ['オフサイドの旗が上がる。']);
         else if (this.mic && this.r.next() < 0.25) this.say([this.tok(to), ' はオフサイド。']);
         this.dead('fk', (1 - k) as 0 | 1, tc(k, to.x, to.y)[0] > 0 ? to.x : to.x, to.y, 9 + this.r.next() * 7);
@@ -648,6 +651,7 @@ export class MatchSim {
   }
   private nearestOpp(a: Ag, x: number, y: number): Ag | null { let b: Ag | null = null, bd = 1e9; for (const o of this.team(1 - a.k)) { if (o.o.pos === 'GK') continue; const d = hyp(o.x - x, o.y - y); if (d < bd) { bd = d; b = o; } } return b; }
   private kickBall(x: number, y: number, spd: number, high: boolean, land: () => void) {
+    if (this.noKick) this.noKick = false; else this.fx('kick', this.poss, spd >= 18 || high ? 1 : 0.65);
     const B = this.ball; B.st = 'air'; B.h = null; B.fx = B.x; B.fy = B.y; B.tx = x; B.ty = y; B.t0 = this.T; B.t1 = this.T + Math.max(0.25, hyp(x - B.x, y - B.y) / spd); B.high = high; B.land = land; this.carry = null;
   }
   private looseTo(x: number, y: number, sec: number) {
@@ -823,7 +827,9 @@ export class MatchSim {
     it.hv = Math.max(it.hv, 2 + xg * 22 + (sc === 'pk' ? 4 : 0));
     if (blk) {
       const [bx, by] = [blk.x, blk.y];
+      this.fx('shot', k); this.noKick = true;
       this.kickBall(bx, by, 24, false, () => {
+        this.fx('block', k);
         if (this.mic) { if (fires.length) this.line(k, this.fireTok(fires)); this.line(k, fillLine(pickFresh(r, PH.mid.lose.filter((x) => /ブロック|当て|投げ出/.test(x))), { D: this.tok(blk!), A: this.tok(h) })); }
         stOf(D, blk!.o.p).tk++;
         if (r.next() < 0.42) this.dead('corner', k, ...this.cornerSpot(k, by), 24 + r.next() * 12);
@@ -841,6 +847,7 @@ export class MatchSim {
     if (ot) st.ot++;
     if (g) this.duelGK(h, g, goal, ot);
     const spd = sc === 'pk' ? 24 : 26;
+    this.fx('shot', k); this.noKick = true;
     if (goal) {
       this.kickBall(gx, gyw, spd, false, () => this.scored(h, it, sc, headed));
       return;
@@ -850,6 +857,7 @@ export class MatchSim {
       it.save = true; it.hv += 3;
       const catchIt = r.next() < 0.45 + (this.E(g, SHT) - 60) / 150;
       this.kickBall(g.x + (k === 0 ? -0.6 : 0.6), g.y, spd, false, () => {
+        this.fx('save', k);
         if (this.mic) { const gkF = sf.filter((f) => f.gk); if (gkF.length) this.line(k, this.fireTok(gkF)); this.line(k, fillLine(pickFresh(r, gkF.length ? PH.save.sp : PH.save.any), { G: this.tok(g) })); }
         if (catchIt) { this.give(g, 'gk'); return; }
         if (r.next() < 0.5) this.dead('corner', k, ...this.cornerSpot(k, g.y), 24 + r.next() * 12);
@@ -861,6 +869,7 @@ export class MatchSim {
     if (post) it.hv += 3;
     const my = 34 + (r.next() < 0.5 ? -1 : 1) * (post ? 3.7 : 4.5 + r.next() * 6); const [mx, myw] = tc(k, post ? 104.8 : 106.5, my);
     this.kickBall(mx, myw, spd, false, () => {
+      this.fx(post ? 'post' : 'miss', k);
       if (this.mic) this.line(k, post ? [pickFresh(r, PH.miss.filter((x) => /ポスト|バー/.test(x)))] : [pickFresh(r, [...PH.miss.filter((x) => !/ポスト|バー/.test(x)), '{A} のシュートは、枠の外へ。'.replace('{A}', h.o.p.name)])]);
       if (post) this.looseTo(tc(k, 96 - r.next() * 10, 34 + (r.next() - 0.5) * 22)[0], tc(k, 96, 34 + (r.next() - 0.5) * 22)[1], 0.6);
       else if (r.next() < 0.08) this.dead('corner', k, ...this.cornerSpot(k, myw), 24 + r.next() * 12);
@@ -871,7 +880,7 @@ export class MatchSim {
   private scored(h: Ag, it: Item, sc: string, headed: boolean) {
     const k = h.k; const A = this.sides[k], D = this.sides[1 - k]; const g = this.gk(1 - k); const mm = this.minute();
     const before: [number, number] = [this.sides[0].goals, this.sides[1].goals];
-    A.goals++; this.lastGoal = mm; A.moUntil = mm + 5; this.marks.push({ min: mm, kind: 'goal', side: k });
+    this.fx('goal', k); A.goals++; this.lastGoal = mm; A.moUntil = mm + 5; this.marks.push({ min: mm, kind: 'goal', side: k });
     const st = stOf(A, h.o.p); st.g++; if (g) stOf(D, g.o.p).ga++;
     const as = it.assist && it.assist.k === k && it.assist !== h ? it.assist : null; if (as) stOf(A, as.o.p).as++;
     it.goal = true; it.hv = 100;
@@ -902,7 +911,7 @@ export class MatchSim {
     let pf = SIM.foul * mul * ((st.yc ?? 0) ? 0.6 : 1) * this.sp(d.k).foul * (DEFP.includes(d.o.pos) ? 1.1 : 0.92) * (ax0 > 88.5 && Math.abs(ay0 - 34) < 20.1 ? 0.3 : 1);
     if (hasBad(d.o, 'ラフプレイヤー')) pf *= 1.4; if (has(d.o, 'クリーンディフェンス')) pf *= 0.6;
     if (this.r.next() >= pf) return false;
-    D.fouls++; st.fo = (st.fo ?? 0) + 1;
+    D.fouls++; st.fo = (st.fo ?? 0) + 1; this.fx('foul', d.k);
     const mm = this.minute();
     const hot = (this.opts.big ? 1.3 : 1) * (mm >= 70 && D.goals < A.goals ? 1.35 : 1) * (mul > 1.3 ? 1.5 : 0.85);
     const py = SIM.yel * hot * ((st.yc ?? 0) ? 0.35 : 1) * (hasBad(d.o, 'ラフプレイヤー') ? 1.6 : 1) * (has(d.o, 'クリーンディフェンス') ? 0.5 : 1);
@@ -911,7 +920,7 @@ export class MatchSim {
     let pkProb = inBox ? 0.85 : 0; if (inBox && hasBad(d.o, 'ラフプレイヤー')) pkProb = 1;
     if (this.r.next() < 0.0012 * hot * (hasBad(d.o, 'ラフプレイヤー') ? 2 : 1)) this.sendOff(d, false);
     else if (this.r.next() < py) {
-      st.yc = (st.yc ?? 0) + 1; D.cards.push({ min: mm, p: d.o.p, red: false }); this.stopAcc += 15;
+      this.fx('card', d.k); st.yc = (st.yc ?? 0) + 1; D.cards.push({ min: mm, p: d.o.p, red: false }); this.stopAcc += 15;
       if (st.yc >= 2) this.sendOff(d, true);
       else if (this.mic) this.say(fillY(this.r, this.tok(d), this.tok(a)), 'flow', d.k === this.meK());
     }
@@ -931,6 +940,7 @@ export class MatchSim {
     const D = this.sides[d.k]; const mm = this.minute(); const st = stOf(D, d.o.p); st.rc = 1; st.to = mm;
     d.out = true; this.tmOk = false; D.on = D.on.filter((x) => x !== d.o); D.offs.push(d.o); D.men--; D.cards.push({ min: mm, p: d.o.p, red: true }); this.marks.push({ min: mm, kind: 'red', side: d.k });
     if (this.ball.h === d) this.ball.h = null;
+    this.fx('card', d.k, 1.3);
     this.stopAcc += 30;
     if (this.mic) this.say(second ? ['2枚目のイエロー。', this.tok(d), ' は退場だ。', this.ctok(D), ' は10人になった。'] : ['レッドカード！', this.tok(d), ' は一発退場。', this.ctok(D), ' は10人で戦うことになった。'], 'flow', D.t.me, 8);
     this.hlNew.push({ T: this.T, start: this.T - 8, hv: 6 });
@@ -993,6 +1003,7 @@ export class MatchSim {
     if (kind === 'fk') { this.poss = k; B.h = t; this.seq.from = 'fk'; const [x, y] = tc(k, R.x, R.y); this.shoot(t, 'fk', xgAt(x, y) * 1.15); return; }
     if (kind === 'pk') { this.poss = k; B.h = t; this.seq.from = 'pk'; const pv = this.E(t, SHT) + this.bonus(t, 'shot', 'pk', 'att'); void pv; this.shoot(t, 'pk', 0.74); return; }
     if (kind === 'kickoff') {
+      this.fx('kickoff', k);
       const mates = this.team(k).filter((a) => a !== t && (a.o.pos === 'CM' || a.o.pos === 'DM' || a.o.pos === 'CB'));
       const to = mates.sort((a, b) => hyp(a.x - R.x, a.y - R.y) - hyp(b.x - R.x, b.y - R.y))[0];
       this.give(t, 'restart'); if (to) { this.pass(t, to, ...tc(k, to.x, to.y), 'pass', 0.95); }
@@ -1204,7 +1215,7 @@ export class MatchSim {
     if (t) { this.restart!.taker = t; t.x = 52.5 + (k === 0 ? -0.8 : 0.8); t.y = 34; }
   }
   private halftime() {
-    this.closeItem(); const mm = 45;
+    this.closeItem(); const mm = 45; this.fx('half', 0);
     this.say(['前半終了。', this.ctok(this.sides[0]), ' ', String(this.sides[0].goals), ' - ', String(this.sides[1].goals), ' ', this.ctok(this.sides[1]), '。'], 'talk', false, 0, 2700 + this.add[0] * 60);
     if (this.mic) {
       const tot = Math.max(1, this.possT[0] + this.possT[1]);
@@ -1222,7 +1233,7 @@ export class MatchSim {
     void mm;
   }
   private fulltime() {
-    this.closeItem(); this.over = true;
+    this.closeItem(); this.over = true; this.fx('end', 0);
     this.say(['試合終了の笛。', this.ctok(this.sides[0]), ' ', String(this.sides[0].goals), ' - ', String(this.sides[1].goals), ' ', this.ctok(this.sides[1]), '。'], 'talk', false, 0);
     this.ev[this.ev.length - 1].t = 90;
   }

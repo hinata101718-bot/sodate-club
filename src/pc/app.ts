@@ -11,6 +11,7 @@ import { VIEWS } from './views';
 import { showBlocker, blockerOf, showReport } from './modals';
 import { playLive } from './matchplay';
 import { titleHTML } from './newgame';
+import { bindSound, play } from './sound';
 import type { MatchView, ReportEntry } from '../core/types';
 
 const NAV: [string, string][] = [['home', 'ホーム'], ['schedule', '日程と結果'], ['table', '順位表・天皇杯'], ['-', ''], ['squad', 'トップチーム'], ['tactics', '戦術'], ['training', '練習'], ['youth', 'ユース'], ['-', ''],
@@ -68,6 +69,7 @@ const BLOCK_LABEL: Record<string, string> = { sponsor: 'スポンサーを選ぶ
 export function nextWeek() {
   const g = G();
   const b = blockerOf(g); if (b) { showBlocker(b); return; }
+  tierBefore = myTier(g);
   /* 自分の試合がある週は、試合をその場で動かして見る（終わってから週の残りを進める） */
   const live = startMyMatch(g);
   const finishWeek = () => { const res = playWeek(g, live); save(); S.ui.lastRes = { report: res.report, news: res.news, season: g.season }; return res; };
@@ -79,11 +81,21 @@ function busy(text: string, f: () => void) {
   const el = document.createElement('div'); el.className = 'busy'; el.textContent = text; document.body.appendChild(el);
   setTimeout(() => { try { f(); } finally { el.remove(); } }, 30);
 }
+/** シーズンが変わったとき：昇格・優勝はファンファーレ、降格はさみしい曲 */
+function seasonSound(tier0: number, res: PlayResult) {
+  if (!res.seasonEnd) return;
+  const g = G(); const last = g.history[g.history.length - 1]; void tier0;
+  if (!last) return;
+  if (last.promoted || (last.tier === 1 && last.rank === 1)) setTimeout(() => { play('j_bigwin'); play('big_applause'); }, 600);
+  else if (last.relegated) setTimeout(() => play('j_lose'), 600);
+}
+let tierBefore = 3;
 function afterWeek(res: PlayResult) {
   render();
+  seasonSound(tierBefore, res);
   for (const t of res.toasts) toast(t.title, t.text, t.kind);
   const awake = res.report.filter((e) => e.awake);
-  if (awake.length) { showReport(res.report, true, () => chain()); return; }
+  if (awake.length) { play('j_awake'); showReport(res.report, true, () => chain()); return; }
   chain();
 }
 /** 決めることがあれば、順に出す */
@@ -96,7 +108,10 @@ export function skipWeeks() {
   const el = document.createElement('div'); el.className = 'busy'; document.body.appendChild(el);
   const one = () => {
     el.textContent = `まとめて進めています… ${n + 1}週目`;
+    const tier0 = myTier(g);
     const res = playWeek(g); n++;
+    seasonSound(tier0, res);
+    if (res.report.some((e) => e.awake)) play('j_awake');
     if (res.match) results.push({ m: res.match, title: res.match.title });
     reps.push(...res.report); toasts = toasts.concat(res.toasts);
     if (n < 8 && !(blockerOf(g) || res.report.some((e) => e.awake) || res.seasonEnd || g.pending.length || g.week === AWARD_WEEK)) { setTimeout(one, 0); return; }
@@ -123,6 +138,7 @@ ACT.saveNow = () => save(false);
 
 export function boot() {
   S.kv = safeStorage();
+  bindSound();
   bindEvents();
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modalOpen() && !S.ui.lockModal) closeModal();
