@@ -1,0 +1,37 @@
+rules_version = '2';
+// 家事ポイント帳（public/kaji/）のデータの守り方。
+// Firebase コンソール →「Firestore Database」→「ルール」にこの内容を貼って「公開」する。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+
+    // 自分の記録・設定：本人だけが読み書きできる（相手にも見えない）
+    match /users/{uid}/{document=**} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ふたりの帳面：招待コード＝帳面のID
+    match /couples/{cid} {
+      function members() { return resource.data.members; }
+      // コードを知っている人だけが1件ずつ開ける（一覧は不可）
+      allow get: if signedIn();
+      // つくる人は自分ひとりのメンバーでつくる
+      allow create: if signedIn() && request.resource.data.members == [request.auth.uid];
+      // メンバーはメンバー構成を変えずに更新できる。
+      // メンバーでない人は、ひとりだけの帳面に自分を足す（参加）ことだけできる
+      allow update: if signedIn() && (
+        (request.auth.uid in members() && request.resource.data.members == members())
+        || (members().size() == 1
+            && !(request.auth.uid in members())
+            && request.resource.data.members == members().concat([request.auth.uid])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'names']))
+      );
+
+      // 日ごとの点数・ひとこと日記：メンバーだけ
+      match /days/{day} {
+        allow read, write: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/couples/$(cid)).data.members;
+      }
+    }
+  }
+}
