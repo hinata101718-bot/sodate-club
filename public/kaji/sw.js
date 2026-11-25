@@ -1,7 +1,7 @@
 /* 家事ポイント帳：電波がなくても開けるようにするための保存係。
    画面（HTML）はネット優先で取りに行き、だめなら保存しておいたものを出す。
    アイコンやフォントは保存したものを優先して出す。 */
-const CACHE = "kaji-v1";
+const CACHE = "kaji-v2";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
