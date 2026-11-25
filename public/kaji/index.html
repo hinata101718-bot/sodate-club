@@ -95,7 +95,7 @@ header { display: flex; flex-direction: column; gap: 2px; }
 .offbtn { font-family: var(--gothic); border: 1px solid var(--line); background: transparent; color: var(--usuzumi); border-radius: 999px; padding: 3px 12px; font-size: .78rem; cursor: pointer; letter-spacing: .04em; }
 .offbtn[aria-pressed="true"] { border-color: var(--wakakusa); color: var(--wakakusa); background: var(--wakakusa-soft); }
 .score { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.big { font-size: 3rem; line-height: 1; font-weight: 500; letter-spacing: .06em; }
+.big { font-size: 3rem; line-height: 1; font-weight: 500; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .big small { font-size: 1rem; color: var(--usuzumi); margin-left: 4px; letter-spacing: .1em; }
 .msg { color: var(--usuzumi); letter-spacing: .1em; font-size: .95rem; }
 .msg.done { color: var(--beni); }
@@ -249,7 +249,7 @@ button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 
         <button class="offbtn" id="offBtn" type="button" aria-pressed="false">休みの日にする</button>
       </div>
       <div class="score">
-        <div class="big" id="total">〇<small>点</small></div>
+        <div class="big" id="total">0<small>点</small></div>
         <div class="msg" id="msg"></div>
       </div>
       <div class="slots" id="slots" aria-hidden="true"></div>
@@ -383,13 +383,6 @@ button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 
   const MONTHS = ["睦月","如月","弥生","卯月","皐月","水無月","文月","葉月","長月","神無月","霜月","師走"];
   const FLOWERS = ["水仙","梅","菜の花","桜","藤","紫陽花","朝顔","向日葵","萩","金木犀","山茶花","椿"];
   const WD = ["日","月","火","水","木","金","土"];
-  const KN = ["〇","一","二","三","四","五","六","七","八","九"];
-  const kanji = (n) => {
-    n = Math.floor(n); if (n < 0) return "−" + kanji(-n);
-    if (n < 10) return KN[n];
-    if (n < 100) { const t = Math.floor(n / 10), o = n % 10; return (t > 1 ? KN[t] : "") + "十" + (o ? KN[o] : ""); }
-    return String(n);
-  };
 
   const DEFAULT_PREFS = {
     goalWork: 5,
@@ -543,7 +536,7 @@ button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 
 
   function renderLog() {
     const k = curKey(); const isToday = k === todayKey(); const dt = parseKey(k);
-    const label = `${kanji(dt.getMonth() + 1)}月${kanji(dt.getDate())}日　${WD[dt.getDay()]}曜日`;
+    const label = `${dt.getMonth() + 1}月${dt.getDate()}日　${WD[dt.getDay()]}曜日`;
     $("viewing").hidden = isToday;
     $("viewingText").textContent = `${dt.getMonth() + 1}月${dt.getDate()}日の頁をひらいています`;
     $("dateLabel").textContent = label;
@@ -554,11 +547,11 @@ button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 
     off.setAttribute("aria-pressed", String(!!d.off));
     off.textContent = d.off ? `休みの日（目標${state.prefs.goalOff}点）` : "休みの日にする";
 
-    $("total").firstChild.nodeValue = kanji(total);
+    $("total").firstChild.nodeValue = String(total);
     $("total").setAttribute("aria-label", `${total}点`);
     const msg = $("msg");
     if (hit(k)) { msg.textContent = isToday ? "今日の目標に届きました" : "目標に届いた日"; msg.classList.add("done"); }
-    else { msg.textContent = total === 0 ? `目標は${kanji(goal)}点` : `あと${kanji(goal - total)}点`; msg.classList.remove("done"); }
+    else { msg.textContent = total === 0 ? `目標は${goal}点` : `あと${goal - total}点`; msg.classList.remove("done"); }
 
     const slots = $("slots"); slots.textContent = "";
     const prev = lastShown.key === k ? lastShown.total : null;
@@ -571,7 +564,7 @@ button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 
     }
     lastShown = { key: k, total };
     $("bonus").hidden = total <= goal;
-    $("bonus").textContent = `目標より${kanji(total - goal)}点多く`;
+    $("bonus").textContent = `目標より${total - goal}点多く`;
 
     const sh = $("shiori"); sh.hidden = !hit(k);
     if (hit(k)) { const qt = quoteOf(k); $("shioriQ").textContent = qt.q; $("shioriBy").textContent = "― " + byline(qt); }
