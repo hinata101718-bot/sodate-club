@@ -305,6 +305,10 @@ textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1p
 .quote-veil .vexp:empty { display: none; }
 .quote-veil.leaving { animation: veil .5s ease reverse both; }
 
+/* 起動のアニメーション（白地の動画。終わったらふわっと消える。タップで飛ばせる） */
+.splash { position: fixed; inset: 0; z-index: 80; background: #ffffff; display: grid; place-items: center; transition: opacity .45s ease; }
+.splash video, .splash img { width: 100%; height: 100%; max-width: 520px; object-fit: contain; display: block; }
+.splash.out { opacity: 0; pointer-events: none; }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--sumi); color: var(--paper); padding: 10px 18px; border-radius: 999px; font-size: .92rem; font-weight: 500; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; z-index: 60; }
 .toast.show { opacity: 1; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
@@ -316,6 +320,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
 </style>
 </head>
 <body>
+<div class="splash" id="splash" aria-hidden="true">
+  <video id="splashV" src="splash.mp4" muted playsinline autoplay preload="auto" disablepictureinpicture></video>
+</div>
+<script>
+// 起動のアニメーション：再生が終わったら少し止めてから消す。再生できないとき（低電力モードなど）は最後の絵を少し見せて消す
+(function () {
+  var sp = document.getElementById("splash"), v = document.getElementById("splashV"), done = false, started = false;
+  function hide(delay) { if (done) return; done = true; setTimeout(function () { sp.classList.add("out"); setTimeout(function () { sp.remove(); }, 500); }, delay); }
+  function still() { if (done) return; var im = new Image(); im.src = "splash-end.jpg"; im.alt = ""; v.replaceWith(im); hide(900); }
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { still(); return; }
+  v.addEventListener("playing", function () { started = true; });
+  v.addEventListener("ended", function () { hide(350); });
+  v.addEventListener("error", still);
+  sp.addEventListener("click", function () { hide(0); });
+  var p = v.play && v.play(); if (p && p.catch) p.catch(still);
+  setTimeout(function () { if (!started) still(); }, 1500);
+  setTimeout(function () { hide(0); }, 4500);
+})();
+</script>
 <div class="wrap">
   <header>
     <h1>家事してごほうび！</h1>

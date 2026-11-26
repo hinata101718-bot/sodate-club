@@ -2,10 +2,10 @@
    画面（HTML）はネット優先で取りに行き、だめなら保存しておいたものを出す。
    設定やアイコンなどは保存したものをすぐ出しつつ、裏で新しいものに入れ替える。
    フォントは保存したものを優先して出す。 */
-const CACHE = "kaji-v22";
+const CACHE = "kaji-v23";
 const CORE = [
   "./", "./index.html", "./manifest.webmanifest", "./firebase-config.js", "./vendor/firebase-10.14.1.js",
-  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png",
+  "./splash-end.jpg", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png",
 ];
 
 self.addEventListener("install", (e) => {
@@ -25,6 +25,7 @@ self.addEventListener("fetch", (e) => {
   const sameScope = url.origin === location.origin && url.pathname.startsWith(scopePath);
   const isFont = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
   if (!sameScope && !isFont) return; // Firebase との通信などはそのまま通す
+  if (url.pathname.endsWith(".mp4")) return; // 動画は分割して届くので、保存せずそのまま通す
 
   if (req.mode === "navigate") {
     e.respondWith(
