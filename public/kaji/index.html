@@ -85,12 +85,18 @@ button { font: inherit; color: inherit; }
 .linkbtn { border: none; background: none; color: var(--accent); cursor: pointer; padding: 6px 2px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 
 header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.head-right { display: flex; align-items: center; gap: 8px; }
+header h1 { white-space: nowrap; min-width: 0; font-size: clamp(1.1rem, 5.2vw, 1.4rem); }
+.head-right { display: flex; align-items: center; gap: 6px; flex: none; }
+.head-right .btn { white-space: nowrap; }
 .wallet { font-size: .92rem; color: var(--sub); white-space: nowrap; }
 .wallet b { font-family: var(--mincho); font-size: 1.3rem; color: var(--sumi); margin: 0 2px; font-variant-numeric: tabular-nums; }
 
 .tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--accent-soft); border-radius: 12px; padding: 4px; gap: 4px; }
 .tab { border: none; background: none; padding: 9px 2px; border-radius: 9px; cursor: pointer; color: var(--sub); font-weight: 700; font-size: .95rem; }
+.iconbtn { width: 38px; padding: 0; flex: none; }
+.iconbtn svg { flex: none; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.iconbtn svg circle { fill: currentColor; stroke: none; }
+.iconbtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
 .tab[aria-selected="true"] { background: var(--sheet); color: var(--sumi); box-shadow: 0 1px 2px rgb(0 0 0 / .1); }
 
 .panel { display: flex; flex-direction: column; gap: 20px; }
@@ -193,6 +199,15 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .note p { margin: 0; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
 .note p.none { color: var(--sub); }
 textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1px solid var(--btn-line); border-radius: 10px; padding: 10px 12px; width: 100%; min-height: 96px; resize: vertical; line-height: 1.7; }
+.fair { display: flex; flex-direction: column; gap: 14px; }
+.fair-h { font-family: var(--mincho); }
+.fair-list { display: flex; flex-direction: column; }
+.fair-item { padding: 12px 0; border-top: 1px solid var(--line); }
+.fair-item:first-child { border-top: none; padding-top: 0; }
+.fair-item:last-child { padding-bottom: 0; }
+.fair-item .who { font-size: .88rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.fair-item p { margin: 0; font-family: var(--mincho); font-size: 1.05rem; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fair-item p.none { font-family: var(--gothic); font-size: .95rem; color: var(--sub); }
 .note-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
 
 /* カレンダー */
@@ -284,6 +299,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
     <h1>家事ポイント帳</h1>
     <div class="head-right">
       <div class="wallet" id="wallet" hidden>ポイント<b id="balance">0</b></div>
+      <button class="btn sm iconbtn" type="button" id="calBtn" aria-label="カレンダー" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="8.5" cy="14.5" r="1.1"/><circle cx="12" cy="14.5" r="1.1"/><circle cx="15.5" cy="14.5" r="1.1"/></svg></button>
       <button class="btn sm" type="button" id="settingsBtn" hidden>設定</button>
     </div>
   </header>
@@ -314,9 +330,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
   <div id="app" class="panel">
   <nav class="tabs" role="tablist" aria-label="画面の切り替え">
     <button class="tab" role="tab" id="tab-log" data-tab="log" aria-selected="true">記録</button>
-    <button class="tab" role="tab" id="tab-diary" data-tab="diary" aria-selected="false" hidden>日記</button>
-    <button class="tab" role="tab" id="tab-cal" data-tab="cal" aria-selected="false">カレンダー</button>
     <button class="tab" role="tab" id="tab-reward" data-tab="reward" aria-selected="false">ご褒美</button>
+    <button class="tab" role="tab" id="tab-diary" data-tab="diary" aria-selected="false" hidden>日記</button>
   </nav>
 
   <!-- 記録 -->
@@ -386,6 +401,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
         <button class="arrow" type="button" id="pNext" aria-label="次の日">›</button>
       </div>
     </div>
+    <div class="card fair" id="diaryFair">
+      <h2 class="fair-h">ふたりの日記</h2>
+      <div class="fair-list" id="fairList"></div>
+    </div>
     <div class="card" id="diaryNotes">
       <div class="notes" id="notes"></div>
     </div>
@@ -396,7 +415,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
   </section>
 
   <!-- カレンダー -->
-  <section class="panel" id="panel-cal" role="tabpanel" aria-labelledby="tab-cal" hidden>
+  <section class="panel" id="panel-cal" aria-label="カレンダー" hidden>
     <div class="card">
       <div class="calnav">
         <button class="arrow" type="button" id="prevM" aria-label="前の月">‹</button>
@@ -418,7 +437,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
   <section class="panel" id="panel-reward" role="tabpanel" aria-labelledby="tab-reward" hidden>
     <div class="card" id="sharedRewards" hidden>
       <div class="section-head">
-        <h2 id="sharedH">一緒に使うご褒美</h2>
+        <h2 id="sharedH">ふたりのご褒美</h2>
         <button class="btn sm" id="editSharedBtn" type="button">編集</button>
       </div>
       <div class="pool" id="poolLine"></div>
@@ -914,6 +933,8 @@ function render() {
   ["log", "diary", "cal", "reward"].forEach((t) => { $("panel-" + t).hidden = showSettings || state.tab !== t; });
   $("backupCard").hidden = state.cloud || state.tab !== "log";
   $("settingsBtn").hidden = showSettings;
+  $("calBtn").hidden = $("app").hidden || showSettings;
+  $("calBtn").setAttribute("aria-pressed", String(state.tab === "cal"));
   if (state.cloud && $("sync").textContent === "読み込み中…") setSync("");
   renderLog(); renderCal(); renderRewards();
   if (state.cloud) { renderDiary(); renderSettings(); } else { renderBackup(); setSync(""); }
@@ -1022,7 +1043,7 @@ function renderLog() {
 
 function renderDiary() {
   const ok = paired();
-  $("diaryCard").hidden = !ok; $("diaryNotes").hidden = !ok; $("diaryInvite").hidden = ok;
+  $("diaryCard").hidden = !ok; $("diaryFair").hidden = !ok; $("diaryNotes").hidden = !ok; $("diaryInvite").hidden = ok;
   if (!ok) return;
   const tk = todayKey(); const k = state.pSel || tk;
   $("pDate").textContent = k === tk ? `今日　${md(k)}` : md(k);
@@ -1033,13 +1054,17 @@ function renderDiary() {
   const old = document.getElementById("myNote");
   const typing = old && document.activeElement === old && old.dataset.day === k;
 
-  const pw = el("div", "note");
-  const pn = n[pid];
-  pw.append(el("div", "who", nameOf(pid)), el("p", pn && pn.text ? "" : "none", pn && pn.text ? pn.text : "まだ書かれていません"));
+  // 清書：2人の保存済みの日記を読みものとして並べる
+  const fair = $("fairList"); fair.textContent = "";
+  [[pid, nameOf(pid)], [me, nameOf(me)]].forEach(([id, nm]) => {
+    const t = n[id] && n[id].text;
+    const it = el("div", "fair-item");
+    it.append(el("div", "who", nm), el("p", t ? "" : "none", t || "まだ書かれていません"));
+    fair.appendChild(it);
+  });
 
-  if (typing) { notes.replaceChild(pw, notes.firstChild); return; }
+  if (typing) return;
   notes.textContent = "";
-  notes.appendChild(pw);
 
   const mw = el("div", "note");
   mw.appendChild(el("div", "who", `${nameOf(me)}（自分）`));
@@ -1251,6 +1276,9 @@ function readImport(file) {
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
   state.tab = b.dataset.tab; state.confirmReward = ""; local.set("kaji2.tab", state.tab); render();
 }));
+$("calBtn").addEventListener("click", () => {
+  state.tab = state.tab === "cal" ? "log" : "cal"; state.confirmReward = ""; local.set("kaji2.tab", state.tab); render(); window.scrollTo(0, 0);
+});
 const openSettings = () => { state.settings = true; render(); window.scrollTo(0, 0); };
 $("settingsBtn").addEventListener("click", openSettings);
 $("settingsClose").addEventListener("click", () => { state.settings = false; render(); });
