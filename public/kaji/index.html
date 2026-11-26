@@ -133,6 +133,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .bonus.pop { animation: bonusPop .5s cubic-bezier(.3,1.8,.5,1) both; }
 @keyframes bonusPop { from { transform: scale(1.4); } to { transform: none; } }
 .owner { font-size: .92rem; font-weight: 700; color: var(--accent); margin-bottom: -6px; overflow-wrap: anywhere; }
+.did { margin: -4px 0 0; font-size: .85rem; color: var(--sub); line-height: 1.6; overflow-wrap: anywhere; }
 .bonus { font-size: .95rem; color: var(--beni); font-weight: 500; }
 .quote-mini { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 4px; }
 .quote-mini q { quotes: "「" "」"; font-family: var(--mincho); font-size: 1.02rem; line-height: 1.9; }
@@ -332,6 +333,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
         <div class="msg" id="msg"></div>
       </div>
       <div class="slots" id="slots" aria-hidden="true"></div>
+      <p class="did" id="didLine" hidden></p>
       <div class="bonus" id="bonus" hidden></div>
       <div class="quote-mini" id="quoteMini" hidden>
         <q id="quoteMiniQ"></q>
@@ -940,6 +942,11 @@ function renderLog() {
   // 同じ日・同じ点数なら描き直さない（保存の通知で描き直すと、咲く演出が途中で消えるため）
   if (!(lastShown.key === k && lastShown.total === total && lastShown.goal === goal)) slotRow($("slots"), total, goal, prevTotal);
   lastShown = { key: k, total, goal };
+  // 花の下に、その日にやったことを小さく（同じものは「×2」にまとめる）
+  const counts = new Map();
+  d.entries.forEach((e) => counts.set(e.n, (counts.get(e.n) || 0) + 1));
+  $("didLine").hidden = counts.size === 0;
+  $("didLine").textContent = [...counts].map(([n, c]) => c > 1 ? `${n}×${c}` : n).join("・");
   $("bonus").hidden = total <= goal;
   $("bonus").textContent = `目標より ${total - goal}pt 多い`;
   if (prevTotal !== null && total > prevTotal && total > goal) { const bn = $("bonus"); bn.classList.remove("pop"); void bn.offsetWidth; bn.classList.add("pop"); }
