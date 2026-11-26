@@ -2,7 +2,7 @@
    画面（HTML）はネット優先で取りに行き、だめなら保存しておいたものを出す。
    設定やアイコンなどは保存したものをすぐ出しつつ、裏で新しいものに入れ替える。
    フォントは保存したものを優先して出す。 */
-const CACHE = "kaji-v9";
+const CACHE = "kaji-v10";
 const CORE = [
   "./", "./index.html", "./manifest.webmanifest", "./firebase-config.js", "./vendor/firebase-10.14.1.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png",
