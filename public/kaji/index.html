@@ -138,6 +138,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .quote-mini { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 4px; }
 .quote-mini q { quotes: "「" "」"; font-family: var(--mincho); font-size: 1.02rem; line-height: 1.9; }
 .quote-mini .by { color: var(--sub); font-size: .88rem; text-align: right; }
+.quote-mini .qexp { margin: 4px 0 0; font-size: .9rem; color: var(--sub); line-height: 1.75; }
 .quote-mini .linkbtn { align-self: flex-end; }
 
 /* パートナーの今日 */
@@ -258,11 +259,13 @@ textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1p
 .quote-veil .flower .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1.2; }
 .quote-veil .flower .core { fill: var(--beni); }
 .vbox { display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 20px; max-width: 100%; animation: rise 1.6s .7s ease both; }
-.vq { writing-mode: vertical-rl; font-family: var(--mincho); font-size: 1.35rem; line-height: 2; letter-spacing: .08em; max-height: 56vh; max-height: 56dvh; margin: 0; }
+.vq { writing-mode: vertical-rl; font-family: var(--mincho); font-size: 1.35rem; line-height: 2; letter-spacing: .08em; max-height: 42vh; max-height: 42dvh; margin: 0; }
 .vby { writing-mode: vertical-rl; font-family: var(--mincho); font-size: .95rem; color: var(--sub); letter-spacing: .08em; align-self: flex-end; margin: 0; }
+.vexp { max-width: 24em; margin: 0; font-size: .95rem; line-height: 1.8; color: var(--sumi); background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; animation: rise 1.4s 1.2s ease both; }
 .quote-veil .close { font-size: .88rem; color: var(--sub); animation: rise 1.2s 1.6s ease both; }
 @keyframes veil { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.quote-veil .vexp:empty { display: none; }
 .quote-veil.leaving { animation: veil .5s ease reverse both; }
 
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--sumi); color: var(--paper); padding: 10px 18px; border-radius: 999px; font-size: .92rem; font-weight: 500; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; z-index: 60; }
@@ -338,6 +341,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
       <div class="quote-mini" id="quoteMini" hidden>
         <q id="quoteMiniQ"></q>
         <div class="by" id="quoteMiniBy"></div>
+        <p class="qexp" id="quoteMiniE"></p>
         <button class="linkbtn" type="button" id="quoteOpen">名言をもう一度見る</button>
       </div>
     </div>
@@ -504,6 +508,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
     <p class="vq" id="vq"></p>
     <p class="vby" id="vby"></p>
   </div>
+  <p class="vexp" id="vexp"></p>
   <div class="close">タップして閉じる</div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -513,30 +518,30 @@ import CONF from "./firebase-config.js";
 
 // ---------- 名言（日付ごとに1つ。同じ日は同じ言葉） ----------
 const QUOTES = [
-  { q: "急がず、休まず。", a: "ゲーテ" },
-  { q: "永久の未完成これ完成である", a: "宮沢賢治", s: "農民芸術概論綱要" },
-  { q: "明日がまだ何ひとつ失敗していない新しい日だと思うと、うれしくない？", a: "L・M・モンゴメリ", s: "赤毛のアン" },
-  { q: "あせっては不可せん。頭を悪くしては不可せん。根気づくでお出でなさい。", a: "夏目漱石", s: "芥川龍之介・久米正雄への手紙" },
-  { q: "天国は、頭の上だけでなく、足もとにもある。", a: "ソロー", s: "森の生活" },
-  { q: "みんなちがって、みんないい。", a: "金子みすゞ", s: "私と小鳥と鈴と" },
-  { q: "わたしたちの畑を耕さなければなりません。", a: "ヴォルテール", s: "カンディード" },
-  { q: "念ずれば花ひらく", a: "坂村真民" },
-  { q: "大きなことは、小さなことの積み重ねによって成し遂げられる。", a: "ゴッホ", s: "弟テオへの手紙" },
-  { q: "ゆく河の流れは絶えずして、しかももとの水にあらず。", a: "鴨長明", s: "方丈記" },
-  { q: "自然の歩調に合わせなさい。その秘訣は忍耐である。", a: "エマソン" },
-  { q: "しあわせはいつも じぶんのこころがきめる", a: "相田みつを" },
-  { q: "足るを知る者は富む。", a: "老子" },
-  { q: "菜の花や 月は東に 日は西に", a: "与謝蕪村" },
-  { q: "いちばんたいせつなことは、目に見えない。", a: "サン＝テグジュペリ", s: "星の王子さま" },
-  { q: "花はさかりに、月はくまなきをのみ見るものかは。", a: "吉田兼好", s: "徒然草" },
-  { q: "幸福とは「何を」ではなく「どのように」である。", a: "ヘルマン・ヘッセ" },
-  { q: "分け入つても分け入つても青い山", a: "種田山頭火" },
-  { q: "役に立つと分かっているもの、美しいと信じるもののほかは、家に置かないこと。", a: "ウィリアム・モリス" },
-  { q: "名月や 池をめぐりて 夜もすがら", a: "松尾芭蕉" },
-  { q: "希望は羽をもつもの", a: "エミリー・ディキンソン" },
-  { q: "雪とけて 村いっぱいの 子どもかな", a: "小林一茶" },
-  { q: "けれども ほんとうのさいわいは 一体何だろう。", a: "宮沢賢治", s: "銀河鉄道の夜" },
-  { q: "この里に 手まりつきつつ 子どもらと 遊ぶ春日は 暮れずともよし", a: "良寛" },
+  { q: "急がず、休まず。", a: "ゲーテ", e: "焦らなくていいけれど、止まらずに少しずつ続けよう、という意味です。毎日の家事も、コツコツ続けるのがいちばん強い。" },
+  { q: "永久の未完成これ完成である", a: "宮沢賢治", s: "農民芸術概論綱要", e: "いつまでも完成しないこと、そのものが完成した姿だ、という意味です。完璧でなくても、続けている今がもう十分。" },
+  { q: "明日がまだ何ひとつ失敗していない新しい日だと思うと、うれしくない？", a: "L・M・モンゴメリ", s: "赤毛のアン", e: "今日うまくいかなくても、明日はまっさらな一日。失敗を引きずらずに、また始めればいい、という言葉です。" },
+  { q: "あせっては不可せん。頭を悪くしては不可せん。根気づくでお出でなさい。", a: "夏目漱石", s: "芥川龍之介・久米正雄への手紙", e: "漱石が、弟子の芥川龍之介たちに送った手紙の言葉です。焦らず、無理をせず、根気よく進みなさい、という励まし。" },
+  { q: "天国は、頭の上だけでなく、足もとにもある。", a: "ソロー", s: "森の生活", e: "幸せは遠くの特別な場所だけでなく、足もとの毎日の暮らしの中にもある、という意味です。" },
+  { q: "みんなちがって、みんないい。", a: "金子みすゞ", s: "私と小鳥と鈴と", e: "人も小鳥も鈴も、それぞれ違うからこそ、それぞれにいい。人と比べなくていい、という詩の一節です。" },
+  { q: "わたしたちの畑を耕さなければなりません。", a: "ヴォルテール", s: "カンディード", e: "物語の最後の言葉です。大きな理屈を考えるより、目の前の自分の暮らし（畑）を大切に手入れしよう、という意味。" },
+  { q: "念ずれば花ひらく", a: "坂村真民", e: "心から願い続けていれば、やがて花が開くように、その願いはかたちになる、という言葉です。" },
+  { q: "大きなことは、小さなことの積み重ねによって成し遂げられる。", a: "ゴッホ", s: "弟テオへの手紙", e: "大きな成果は、一気にではなく小さなことの積み重ねでできている、という意味です。1ptの家事も立派な一歩。" },
+  { q: "ゆく河の流れは絶えずして、しかももとの水にあらず。", a: "鴨長明", s: "方丈記", e: "川はいつも流れているけれど、流れている水は同じではない。物事はいつも移り変わる、という『方丈記』の書き出しです。今日という日も一度きり。" },
+  { q: "自然の歩調に合わせなさい。その秘訣は忍耐である。", a: "エマソン", e: "自然は急がずに季節を進めていく。自分のペースで、根気よく続ければいい、という意味です。" },
+  { q: "しあわせはいつも じぶんのこころがきめる", a: "相田みつを", e: "幸せかどうかは、まわりの出来事ではなく、自分の心の受け止め方で決まる、という言葉です。" },
+  { q: "足るを知る者は富む。", a: "老子", e: "「もう十分ある」と満足できる人こそ、本当に豊かな人だ、という意味です。" },
+  { q: "菜の花や 月は東に 日は西に", a: "与謝蕪村", e: "一面の菜の花畑。東の空から月がのぼり、西に日が沈んでいく。春の夕暮れの、ゆったりと大きな景色を詠んだ句です。" },
+  { q: "いちばんたいせつなことは、目に見えない。", a: "サン＝テグジュペリ", s: "星の王子さま", e: "本当に大切なもの（思いやりや、人とのつながり）は、目では見えず、心で感じるもの、という意味です。" },
+  { q: "花はさかりに、月はくまなきをのみ見るものかは。", a: "吉田兼好", s: "徒然草", e: "花は満開のときだけ、月は雲のない満月のときだけ見るものだろうか、という意味です。つぼみや散りぎわ、雲にかくれた月にも良さがある。完璧でない姿にも味わいがある、ということ。" },
+  { q: "幸福とは「何を」ではなく「どのように」である。", a: "ヘルマン・ヘッセ", e: "幸せは「何を持っているか」ではなく、「どんなふうに過ごすか」で決まる、という意味です。" },
+  { q: "分け入つても分け入つても青い山", a: "種田山頭火", e: "歩いても歩いても、青い山がどこまでも続く。旅を続ける姿を詠んだ句です。終わりが見えなくても、歩くこと自体に意味がある。" },
+  { q: "役に立つと分かっているもの、美しいと信じるもののほかは、家に置かないこと。", a: "ウィリアム・モリス", e: "家には、役に立つものか、美しいと思うものだけを置こう、という意味です。暮らしを整えるヒント。" },
+  { q: "名月や 池をめぐりて 夜もすがら", a: "松尾芭蕉", e: "あまりに美しい名月に見とれて、池のまわりを一晩中歩いてしまった、という句です。好きなものに夢中になる幸せ。" },
+  { q: "希望は羽をもつもの", a: "エミリー・ディキンソン", e: "希望は小鳥のように心にとまって、どんなときも静かに歌い続けてくれる、という詩の書き出しです。" },
+  { q: "雪とけて 村いっぱいの 子どもかな", a: "小林一茶", e: "雪がとけて春になり、村じゅうに子どもたちが元気に飛び出してきた、という句です。待ちわびた春のよろこび。" },
+  { q: "けれども ほんとうのさいわいは 一体何だろう。", a: "宮沢賢治", s: "銀河鉄道の夜", e: "本当の幸せとは何だろう、と主人公が問いかける言葉です。答えは一つではなく、考え続けることが大切。" },
+  { q: "この里に 手まりつきつつ 子どもらと 遊ぶ春日は 暮れずともよし", a: "良寛", e: "村の子どもたちと手まりをついて遊ぶ春の日は、暮れなくてもいい（ずっと続けばいい）、という歌です。何気ない時間のいとおしさ。" },
 ];
 const WD = ["日","月","火","水","木","金","土"];
 
@@ -835,6 +840,7 @@ function showQuote(k, achievedNow) {
   const qt = quoteOf(k);
   $("vq").textContent = qt.q;
   $("vby").textContent = byline(qt);
+  $("vexp").textContent = qt.e || "";
   $("veilLead").textContent = achievedNow ? "今日の目標達成！" : `${md(k)}の名言`;
   const v = $("veil"); v.classList.remove("leaving"); v.hidden = false;
   lastFocus = document.activeElement; v.focus();
@@ -954,7 +960,7 @@ function renderLog() {
   $("ownerName").hidden = !owner;
   if (owner) $("ownerName").textContent = owner;
   $("quoteMini").hidden = !hit(k);
-  if (hit(k)) { const qt = quoteOf(k); $("quoteMiniQ").textContent = qt.q; $("quoteMiniBy").textContent = "― " + byline(qt); }
+  if (hit(k)) { const qt = quoteOf(k); $("quoteMiniQ").textContent = qt.q; $("quoteMiniBy").textContent = "― " + byline(qt); $("quoteMiniE").textContent = qt.e || ""; }
 
   // パートナーの今日
   const pc = $("partnerCard");
