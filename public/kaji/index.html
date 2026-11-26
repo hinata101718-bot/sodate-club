@@ -441,7 +441,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
         <button class="btn sm" id="editSharedBtn" type="button">編集</button>
       </div>
       <div class="pool" id="poolLine"></div>
-      <p class="small" style="margin:0">2人が貯めたポイントの合計で交換します。自分のポイントは減りません。</p>
+      <p class="small" id="poolNote" style="margin:0"></p>
       <div id="sRewards"></div>
       <div class="rows" id="sRewardEdit" hidden></div>
       <form class="addform" id="addShared" hidden>
@@ -1185,8 +1185,9 @@ function renderRewards() {
   if (showShared) {
     const c = state.couple; c.rewards = c.rewards || []; c.redeems = c.redeems || [];
     const pb = pool();
-    const pl = $("poolLine"); pl.textContent = `あなたと${nameOf(partnerId())}さんの合計`;
+    const pl = $("poolLine"); pl.textContent = "ふたりのポイント";
     const b = el("b", "", String(pb)); pl.append(b, document.createTextNode("pt"));
+    $("poolNote").textContent = `${nameOf(partnerId())}さんと自分のポイントを足した数です。ここで交換しても、右上の自分のポイントは減りません。`;
     const se = state.editShared;
     $("sRewards").hidden = se; $("sRewardEdit").hidden = !se; $("addShared").hidden = !se;
     $("editSharedBtn").textContent = se ? "完了" : "編集";
