@@ -16,35 +16,40 @@
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* 和紙と草花：生成りの和紙に薄墨の明朝。一輪ずつ花が咲いて、目標に届くと名言が縦書きで静かに現れる。一段組み。 */
+/* 和紙の色合いに、読みやすいゴシック体。見出し・大きな数字・名言だけ明朝体。押せるものは枠と面でボタンに見せる。一段組み。 */
 :root {
-  --paper: #f3f1e7;       /* 和紙 */
-  --sheet: #faf8f1;       /* 少し白い紙 */
-  --sumi: #34332e;        /* 墨 */
-  --usuzumi: #7a776c;     /* 薄墨 */
-  --line: #dcd7c6;
-  --wakakusa: #66844f;    /* 若草 */
-  --wakakusa-soft: #e3e9d6;
-  --beni: #b8675a;        /* 薄紅（花） */
-  --beni-soft: #f1ded6;
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .32 0 0 0 0 .25 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --paper: #f3f1e7;
+  --sheet: #fbfaf5;
+  --sumi: #2b2a26;        /* 本文 */
+  --sub: #5c5950;         /* 補足（薄すぎない） */
+  --line: #d8d3c1;
+  --btn: #ffffff;
+  --btn-line: #cfc9b4;
+  --accent: #557a3f;      /* 若草 */
+  --accent-soft: #e2ead4;
+  --on-accent: #ffffff;
+  --beni: #b0574a;
+  --beni-soft: #f3e0d9;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .32 0 0 0 0 .25 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   --mincho: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
   --gothic: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #1b1c19; --sheet: #23251f; --sumi: #e6e2d3; --usuzumi: #a39f8f; --line: #383a31;
-    --wakakusa: #a6c191; --wakakusa-soft: #2b3426; --beni: #e2a194; --beni-soft: #3c2b26;
-    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+    --paper: #1b1c19; --sheet: #24261f; --sumi: #efebdf; --sub: #c2bdac; --line: #3d4035;
+    --btn: #2c2f27; --btn-line: #4a4e41; --accent: #a8c592; --accent-soft: #2f3a28; --on-accent: #1b1c19;
+    --beni: #eaa597; --beni-soft: #432d28;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #1b1c19; --sheet: #23251f; --sumi: #e6e2d3; --usuzumi: #a39f8f; --line: #383a31;
-  --wakakusa: #a6c191; --wakakusa-soft: #2b3426; --beni: #e2a194; --beni-soft: #3c2b26;
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --paper: #1b1c19; --sheet: #24261f; --sumi: #efebdf; --sub: #c2bdac; --line: #3d4035;
+  --btn: #2c2f27; --btn-line: #4a4e41; --accent: #a8c592; --accent-soft: #2f3a28; --on-accent: #1b1c19;
+  --beni: #eaa597; --beni-soft: #432d28;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -54,239 +59,221 @@ body {
   margin: 0;
   -webkit-tap-highlight-color: transparent;
   background-color: var(--paper); background-image: var(--grain);
-  color: var(--sumi); font-family: var(--mincho); font-size: 16px; line-height: 1.8;
-  padding-left: max(20px, env(safe-area-inset-left, 0px));
-  padding-right: max(20px, env(safe-area-inset-right, 0px));
-  padding-top: calc(env(safe-area-inset-top, 0px) + 28px);
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
+  color: var(--sumi); font-family: var(--gothic); font-size: 17px; line-height: 1.65;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 48px);
 }
-.wrap { max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
-h1, h2 { margin: 0; font-weight: 600; text-wrap: balance; }
-h1 { font-size: 1.45rem; letter-spacing: .14em; font-weight: 800; }
-h2 { font-size: 1.02rem; letter-spacing: .1em; }
+.wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2 { margin: 0; text-wrap: balance; }
+h1 { font-family: var(--mincho); font-size: 1.4rem; font-weight: 700; }
+h2 { font-size: 1.05rem; font-weight: 700; }
 button { font: inherit; color: inherit; }
-.small { font-family: var(--gothic); font-size: .8rem; color: var(--usuzumi); letter-spacing: .04em; }
+.small { font-size: .88rem; color: var(--sub); }
+.hint { color: var(--sub); font-size: .92rem; margin: 0; }
+.empty { color: var(--sub); font-size: .95rem; margin: 0; }
 
-header { display: flex; flex-direction: column; gap: 2px; }
-.head-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.season { color: var(--usuzumi); font-size: .9rem; letter-spacing: .12em; }
-.wallet { font-family: var(--gothic); font-size: .78rem; color: var(--usuzumi); letter-spacing: .04em; }
-.wallet b { font-family: var(--mincho); font-size: 1.15rem; color: var(--sumi); font-weight: 600; margin: 0 2px; font-variant-numeric: tabular-nums; }
+/* ボタン */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 18px; border-radius: 10px; border: 1px solid var(--btn-line); background: var(--btn); color: var(--sumi); font-weight: 500; cursor: pointer; }
+.btn:active { transform: scale(.98); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.btn.danger { border-color: var(--beni); color: var(--beni); }
+.btn.danger.primary { background: var(--beni); color: var(--on-accent); }
+.btn:disabled { opacity: .4; cursor: default; transform: none; }
+.btn.sm { min-height: 36px; padding: 4px 14px; font-size: .92rem; border-radius: 8px; }
+.linkbtn { border: none; background: none; color: var(--accent); cursor: pointer; padding: 6px 2px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 
-.tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--line); }
-.tab { border: none; background: none; padding: 6px 0 10px; cursor: pointer; color: var(--usuzumi); letter-spacing: .2em; font-size: .98rem; position: relative; }
-.tab[aria-selected="true"] { color: var(--sumi); font-weight: 600; }
-.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: .2em; bottom: -1px; height: 2px; background: var(--wakakusa); border-radius: 2px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.head-right { display: flex; align-items: center; gap: 8px; }
+.wallet { font-size: .92rem; color: var(--sub); white-space: nowrap; }
+.wallet b { font-family: var(--mincho); font-size: 1.3rem; color: var(--sumi); margin: 0 2px; font-variant-numeric: tabular-nums; }
 
-.panel { display: flex; flex-direction: column; gap: 28px; }
-.sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 4px; padding: 22px 20px; }
-.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-.textbtn { border: none; background: none; color: var(--wakakusa); cursor: pointer; padding: 4px 2px; font-family: var(--gothic); font-size: .82rem; letter-spacing: .04em; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
-.primary { font-family: var(--gothic); font-weight: 500; border: 1px solid var(--wakakusa); background: var(--wakakusa); color: var(--sheet); border-radius: 3px; padding: 9px 18px; cursor: pointer; letter-spacing: .08em; }
-.primary:disabled { opacity: .35; cursor: default; }
-.ghost { font-family: var(--gothic); border: 1px solid var(--line); background: transparent; border-radius: 3px; padding: 9px 18px; cursor: pointer; letter-spacing: .06em; }
-.ghost.confirm { border-color: var(--beni); color: var(--beni); }
+.tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--accent-soft); border-radius: 12px; padding: 4px; gap: 4px; }
+.tab { border: none; background: none; padding: 9px 2px; border-radius: 9px; cursor: pointer; color: var(--sub); font-weight: 700; font-size: .95rem; }
+.tab[aria-selected="true"] { background: var(--sheet); color: var(--sumi); box-shadow: 0 1px 2px rgb(0 0 0 / .1); }
 
-/* 今日の頁 */
-.viewing { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: var(--gothic); font-size: .82rem; color: var(--usuzumi); border-left: 2px solid var(--beni); padding: 2px 0 2px 12px; }
-.today { display: flex; flex-direction: column; gap: 18px; }
+.panel { display: flex; flex-direction: column; gap: 20px; }
+.card { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px 16px; }
+.section-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+
+/* 今日 */
+.viewing { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--beni-soft); color: var(--sumi); border-radius: 10px; padding: 8px 12px; font-size: .92rem; }
+.today { display: flex; flex-direction: column; gap: 14px; }
 .daytop { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-.date { letter-spacing: .12em; }
-.offbtn { font-family: var(--gothic); border: 1px solid var(--line); background: transparent; color: var(--usuzumi); border-radius: 999px; padding: 3px 12px; font-size: .78rem; cursor: pointer; letter-spacing: .04em; }
-.offbtn[aria-pressed="true"] { border-color: var(--wakakusa); color: var(--wakakusa); background: var(--wakakusa-soft); }
-.score { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.big { font-size: 3rem; line-height: 1; font-weight: 500; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
-.big small { font-size: 1rem; color: var(--usuzumi); margin-left: 4px; letter-spacing: .1em; }
-.msg { color: var(--usuzumi); letter-spacing: .1em; font-size: .95rem; }
+.date { font-weight: 700; }
+.offbtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--sumi); }
+.score { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.big { font-family: var(--mincho); font-size: 3rem; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.big small { font-family: var(--gothic); font-size: 1rem; color: var(--sub); margin-left: 4px; font-weight: 500; }
+.msg { font-weight: 700; color: var(--sub); }
 .msg.done { color: var(--beni); }
-.slots { display: flex; gap: 10px; justify-content: flex-start; flex-wrap: wrap; }
-.slot { width: 48px; height: 48px; flex: none; }
+.slots { display: flex; gap: 8px; flex-wrap: wrap; }
+.slot { width: 46px; height: 46px; flex: none; }
 .slot svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.slot .ring { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 2 3; }
-.slot .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1; }
+.slot .ring { fill: none; stroke: var(--btn-line); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.slot .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1.2; }
 .slot .core { fill: var(--beni); }
 .slot.on .ring { display: none; }
 .slot:not(.on) .flower { display: none; }
-.slot.on.pop .flower { animation: bloom 1.1s ease-out both; transform-origin: 24px 24px; }
+.slot.on.pop .flower { animation: bloom 1s ease-out both; transform-origin: 24px 24px; }
 @keyframes bloom { from { opacity: 0; transform: scale(.4) rotate(-40deg); } to { opacity: 1; transform: none; } }
-.bonus { font-size: .88rem; color: var(--beni); letter-spacing: .08em; }
+.bonus { font-size: .95rem; color: var(--beni); font-weight: 500; }
+.quote-mini { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 4px; }
+.quote-mini q { quotes: "「" "」"; font-family: var(--mincho); font-size: 1.02rem; line-height: 1.9; }
+.quote-mini .by { color: var(--sub); font-size: .88rem; text-align: right; }
+.quote-mini .linkbtn { align-self: flex-end; }
 
-.shiori { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 6px; }
-.shiori q { quotes: "「" "」"; font-size: 1rem; line-height: 2; letter-spacing: .06em; }
-.shiori .by { color: var(--usuzumi); font-size: .85rem; letter-spacing: .08em; text-align: right; }
-.shiori .textbtn { align-self: flex-end; }
+/* パートナーの今日 */
+.partner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.partner .who { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.partner .pt { font-family: var(--mincho); font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.partner .pt small { font-family: var(--gothic); font-size: .9rem; color: var(--sub); font-weight: 500; margin-left: 2px; }
+.partner .state { font-size: .92rem; color: var(--sub); }
+.partner .state.done { color: var(--beni); font-weight: 700; }
+.mini-slots { display: flex; gap: 3px; margin-left: auto; }
+.mini-slots .slot { width: 22px; height: 22px; }
+.invite-nudge { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* 家事の一覧 */
-.chores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
-.chore { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 54px; padding: 10px 2px; border: none; border-bottom: 1px solid var(--line); background: none; text-align: left; cursor: pointer; transition: background .3s; }
-.chore:hover { background: var(--wakakusa-soft); }
-.chore:active { background: var(--wakakusa-soft); }
-.chore .name { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; letter-spacing: .04em; }
-.chore .pts { flex: none; font-family: var(--gothic); font-size: .78rem; color: var(--wakakusa); letter-spacing: .02em; }
-.chore.heavy .pts { color: var(--beni); }
+/* 家事ボタン */
+.chores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.chore { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 60px; padding: 10px 12px; border: 1px solid var(--btn-line); border-radius: 12px; background: var(--btn); text-align: left; cursor: pointer; box-shadow: 0 1px 0 var(--line); }
+.chore:active { transform: scale(.97); background: var(--accent-soft); }
+.chore .name { min-width: 0; overflow-wrap: anywhere; line-height: 1.35; font-weight: 500; }
+.chore .pts { flex: none; font-size: .9rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px; font-variant-numeric: tabular-nums; }
 
 .rows { display: flex; flex-direction: column; }
 .row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-.row input[type="text"] { flex: 1; min-width: 0; font: inherit; border: none; border-bottom: 1px dashed var(--line); background: transparent; color: var(--sumi); padding: 4px 2px; border-radius: 0; }
-.row .label { flex: 1; min-width: 0; }
-.stepper { display: flex; align-items: center; gap: 2px; flex: none; font-family: var(--gothic); }
-.stepper button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: transparent; cursor: pointer; }
+.row input[type="text"] { flex: 1; min-width: 0; font: inherit; border: 1px solid var(--btn-line); background: var(--btn); color: var(--sumi); padding: 8px 10px; border-radius: 8px; }
+.row .label { flex: 1; min-width: 0; font-weight: 500; }
+.stepper { display: flex; align-items: center; gap: 4px; flex: none; }
+.stepper button { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--btn-line); background: var(--btn); cursor: pointer; font-weight: 700; font-size: 1.1rem; }
 .stepper button:disabled { opacity: .3; }
-.stepper output { min-width: 3.4em; text-align: center; font-size: .9rem; font-variant-numeric: tabular-nums; }
-.del-x { flex: none; border: none; background: none; color: var(--beni); width: 30px; height: 30px; cursor: pointer; font-size: 1.1rem; }
-.addform { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
-.addform input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--sheet); color: var(--sumi); min-width: 0; }
+.stepper output { min-width: 3.4em; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.del-x { flex: none; border: 1px solid var(--beni); background: var(--btn); color: var(--beni); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; }
+.addform { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+.addform input { font: inherit; padding: 9px 12px; border: 1px solid var(--btn-line); border-radius: 10px; background: var(--btn); color: var(--sumi); min-width: 0; min-height: 44px; }
 .addform input[type="text"] { flex: 1 1 160px; }
-.addform input[type="number"] { width: 84px; font-family: var(--gothic); }
-.hint { color: var(--usuzumi); font-size: .85rem; margin: 0; line-height: 1.9; }
-.subhead { margin: 22px 0 6px; }
+.addform input[type="number"] { width: 90px; }
+.subhead { margin: 20px 0 6px; }
 
-/* 記録 */
+/* 一覧 */
 .log { list-style: none; margin: 0; padding: 0; }
-.log li { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px dotted var(--line); }
+.log li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .log li:last-child { border-bottom: none; }
-.log .t { font-family: var(--gothic); color: var(--usuzumi); font-size: .75rem; width: 3.4em; flex: none; font-variant-numeric: tabular-nums; }
-.log .n { flex: 1; min-width: 0; overflow-wrap: anywhere; letter-spacing: .04em; }
-.log .p { font-family: var(--gothic); font-size: .82rem; color: var(--wakakusa); font-variant-numeric: tabular-nums; }
+.log .t { color: var(--sub); font-size: .85rem; width: 3.2em; flex: none; font-variant-numeric: tabular-nums; }
+.log .n { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.log .p { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
 .log .p.minus { color: var(--beni); }
-.empty { color: var(--usuzumi); font-size: .9rem; margin: 0; line-height: 1.9; }
 
-/* 暦 */
-.calnav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
-.calnav button { border: none; background: none; width: 40px; height: 34px; cursor: pointer; font-size: 1.2rem; color: var(--usuzumi); }
-.calnav button:disabled { opacity: .25; cursor: default; }
+/* 日記 */
+.daypager { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.daypager .d { font-weight: 700; text-align: center; }
+.arrow { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--btn-line); background: var(--btn); cursor: pointer; font-size: 1.2rem; font-weight: 700; }
+.arrow:disabled { opacity: .3; cursor: default; }
+.notes { display: flex; flex-direction: column; gap: 18px; }
+.note .who { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
+.note p { margin: 0; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note p.none { color: var(--sub); }
+textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1px solid var(--btn-line); border-radius: 10px; padding: 10px 12px; width: 100%; min-height: 96px; resize: vertical; line-height: 1.7; }
+.note-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
+
+/* カレンダー */
+.calnav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .calnav h2 { text-align: center; }
-.calnav h2 span { display: block; font-size: .78rem; color: var(--usuzumi); font-weight: 400; letter-spacing: .14em; }
-.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
-.cal .wd { text-align: center; font-family: var(--gothic); font-size: .7rem; color: var(--usuzumi); padding-bottom: 6px; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.cal .wd { text-align: center; font-size: .8rem; color: var(--sub); padding-bottom: 4px; font-weight: 500; }
 .cal .wd.sun { color: var(--beni); }
 .cell { aspect-ratio: 1; max-width: 100%; border: none; background: none; border-radius: 50%; position: relative; cursor: pointer; padding: 0; min-width: 0; display: grid; place-items: center; }
-.cell .dn { font-size: .82rem; font-variant-numeric: tabular-nums; position: relative; z-index: 1; }
-.cell svg { position: absolute; inset: 8%; width: 84%; height: 84%; }
-.cell svg .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1; }
-.cell svg .core { fill: var(--beni); opacity: .4; }
-.cell.hit .dn { font-weight: 600; }
-.cell .offtag { position: absolute; top: -2px; right: 0; font-family: var(--gothic); font-size: .58rem; color: var(--wakakusa); }
-.cell.today { box-shadow: inset 0 0 0 1px var(--wakakusa); }
+.cell .dn { font-size: .92rem; font-variant-numeric: tabular-nums; position: relative; z-index: 1; }
+.cell svg { position: absolute; inset: 6%; width: 88%; height: 88%; }
+.cell svg .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1.2; }
+.cell svg .core { fill: var(--beni); opacity: .45; }
+.cell.hit .dn { font-weight: 700; }
+.cell .offtag { position: absolute; top: -2px; right: 0; font-size: .66rem; color: var(--accent); font-weight: 700; }
+.cell .pdot { position: absolute; bottom: 1px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--accent); }
+.cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
 .cell.future { opacity: .35; cursor: default; }
 .cell.pad { visibility: hidden; }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: .85rem; color: var(--sub); margin-top: 12px; }
+.legend b, .legend i { display: inline-block; vertical-align: middle; margin-right: 6px; border-radius: 50%; }
+.legend b { width: 12px; height: 12px; background: var(--beni-soft); border: 1px solid var(--beni); }
+.legend i { width: 7px; height: 7px; background: var(--accent); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
 .stat { text-align: center; }
 .stat + .stat { border-left: 1px solid var(--line); }
-.stat .k { font-family: var(--gothic); font-size: .72rem; color: var(--usuzumi); letter-spacing: .06em; }
-.stat .v { font-size: 1.5rem; font-weight: 500; line-height: 1.5; font-variant-numeric: tabular-nums; }
-.stat .v small { font-size: .78rem; color: var(--usuzumi); margin-left: 2px; }
+.stat .k { font-size: .82rem; color: var(--sub); }
+.stat .v { font-family: var(--mincho); font-size: 1.6rem; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.stat .v small { font-family: var(--gothic); font-size: .85rem; color: var(--sub); margin-left: 2px; }
 
 /* ご褒美 */
-.reward { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.reward { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .reward .info { flex: 1; min-width: 0; }
-.reward .rn { overflow-wrap: anywhere; letter-spacing: .04em; }
-.reward .rp { font-family: var(--gothic); font-size: .76rem; color: var(--usuzumi); }
-.reward .bar { height: 3px; background: var(--line); border-radius: 99px; margin-top: 8px; overflow: hidden; }
-.reward .bar i { display: block; height: 100%; background: var(--wakakusa); }
-.reward .go { flex: none; }
-.reward .go.confirm { background: var(--beni); border-color: var(--beni); }
+.reward .rn { font-weight: 500; overflow-wrap: anywhere; }
+.reward .rp { font-size: .88rem; color: var(--sub); }
+.reward .bar { height: 5px; background: var(--line); border-radius: 99px; margin-top: 6px; overflow: hidden; }
+.reward .bar i { display: block; height: 100%; background: var(--accent); }
+.pool { font-size: .95rem; color: var(--sub); margin-bottom: 4px; }
+.pool b { font-family: var(--mincho); font-size: 1.25rem; color: var(--sumi); margin: 0 2px; }
 
-.backup { display: flex; flex-direction: column; gap: 12px; }
-.backup .btns { display: flex; gap: 10px; flex-wrap: wrap; }
-.nudge { font-size: .85rem; color: var(--beni); border-left: 2px solid var(--beni); padding-left: 10px; }
-.sync { font-family: var(--gothic); font-size: .72rem; color: var(--usuzumi); text-align: center; letter-spacing: .06em; }
+/* ログイン・設定 */
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-size: .92rem; font-weight: 500; }
+.form input, .joinrow input { font: inherit; color: var(--sumi); background: var(--btn); border: 1px solid var(--btn-line); border-radius: 10px; padding: 10px 12px; min-height: 46px; width: 100%; min-width: 0; }
+.err { color: var(--beni); font-size: .92rem; margin: 0; font-weight: 500; }
+.split { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.code { font-size: 1.7rem; font-weight: 700; letter-spacing: .25em; text-align: center; padding: 12px; border: 2px dashed var(--accent); border-radius: 10px; user-select: all; -webkit-user-select: all; }
+.joinrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.joinrow input { flex: 1 1 150px; width: auto; text-transform: uppercase; letter-spacing: .15em; }
+.settings { display: flex; flex-direction: column; gap: 12px; }
+.nudge { font-size: .92rem; color: var(--beni); font-weight: 500; }
+.sync { font-size: .82rem; color: var(--sub); text-align: center; }
 
 /* 名言 */
 .quote-veil {
   position: fixed; inset: 0; z-index: 50; cursor: pointer;
   background-color: var(--paper); background-image: var(--grain);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
   padding: calc(env(safe-area-inset-top, 0px) + 32px) max(24px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 32px) max(24px, env(safe-area-inset-left, 0px));
-  animation: veil 1.4s ease both;
+  animation: veil 1.2s ease both;
 }
-.quote-veil .lead { font-family: var(--gothic); font-size: .78rem; color: var(--usuzumi); letter-spacing: .2em; animation: rise 1.4s .3s ease both; }
-.quote-veil .flower { width: 44px; height: 44px; animation: rise 1.4s .5s ease both; }
-.quote-veil .flower .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1; }
+.quote-veil .lead { font-size: .95rem; color: var(--sub); font-weight: 700; animation: rise 1.2s .3s ease both; }
+.quote-veil .flower { width: 44px; height: 44px; animation: rise 1.2s .5s ease both; }
+.quote-veil .flower .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1.2; }
 .quote-veil .flower .core { fill: var(--beni); }
-.vbox { display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 22px; max-width: 100%; animation: rise 1.8s .8s ease both; }
-.vq { writing-mode: vertical-rl; font-size: 1.32rem; line-height: 2.1; letter-spacing: .14em; max-height: 56vh; max-height: 56dvh; margin: 0; overflow-wrap: anywhere; }
-.vby { writing-mode: vertical-rl; font-size: .88rem; color: var(--usuzumi); letter-spacing: .16em; align-self: flex-end; margin: 0; }
-.quote-veil .close { font-family: var(--gothic); font-size: .75rem; color: var(--usuzumi); letter-spacing: .18em; animation: rise 1.4s 1.8s ease both; }
+.vbox { display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 20px; max-width: 100%; animation: rise 1.6s .7s ease both; }
+.vq { writing-mode: vertical-rl; font-family: var(--mincho); font-size: 1.35rem; line-height: 2; letter-spacing: .08em; max-height: 56vh; max-height: 56dvh; margin: 0; }
+.vby { writing-mode: vertical-rl; font-family: var(--mincho); font-size: .95rem; color: var(--sub); letter-spacing: .08em; align-self: flex-end; margin: 0; }
+.quote-veil .close { font-size: .88rem; color: var(--sub); animation: rise 1.2s 1.6s ease both; }
 @keyframes veil { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.quote-veil.leaving { animation: veil .6s ease reverse both; }
+.quote-veil.leaving { animation: veil .5s ease reverse both; }
 
-.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--sumi); color: var(--paper); padding: 8px 18px; border-radius: 3px; font-family: var(--gothic); font-size: .85rem; letter-spacing: .06em; opacity: 0; transition: opacity .4s; pointer-events: none; white-space: nowrap; z-index: 60; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--sumi); color: var(--paper); padding: 10px 18px; border-radius: 999px; font-size: .92rem; font-weight: 500; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; z-index: 60; }
 .toast.show { opacity: 1; }
-button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 2px solid var(--wakakusa); outline-offset: 3px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .slot.on.pop .flower, .quote-veil, .quote-veil *, .vbox { animation: none !important; }
-  .chore, .toast { transition: none; }
+  .toast { transition: none; }
 }
-
-/* ---- ふたり・ログイン ---- */
-.tabs { gap: 22px; }
-.auth { display: flex; flex-direction: column; gap: 14px; }
-.auth label { display: flex; flex-direction: column; gap: 4px; font-family: var(--gothic); font-size: .8rem; color: var(--usuzumi); letter-spacing: .04em; }
-.auth input, .pair input, .note-me textarea {
-  font: inherit; font-family: var(--mincho); font-size: 1rem; color: var(--sumi);
-  background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 10px 12px; min-width: 0; width: 100%;
-}
-.auth .err, .pair .err { color: var(--beni); font-size: .85rem; margin: 0; }
-.auth .switch { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.lede { margin: 0; line-height: 2; letter-spacing: .04em; }
-
-.daypager { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.daypager button { border: none; background: none; width: 40px; height: 34px; cursor: pointer; font-size: 1.2rem; color: var(--usuzumi); }
-.daypager button:disabled { opacity: .25; cursor: default; }
-.daypager .d { letter-spacing: .12em; text-align: center; }
-.pair-today { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin-top: 18px; }
-.person { display: flex; flex-direction: column; gap: 8px; padding: 0 14px; min-width: 0; }
-.person + .person { border-left: 1px solid var(--line); }
-.person .who { font-family: var(--gothic); font-size: .8rem; color: var(--usuzumi); letter-spacing: .08em; overflow-wrap: anywhere; }
-.person .pt { font-size: 1.9rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.person .pt small { font-size: .82rem; color: var(--usuzumi); margin-left: 3px; }
-.person .state { font-size: .82rem; color: var(--usuzumi); letter-spacing: .06em; }
-.person .state.done { color: var(--beni); }
-.mini-slots { display: flex; gap: 3px; flex-wrap: wrap; }
-.mini-slots .slot { width: 22px; height: 22px; }
-
-.notes { display: flex; flex-direction: column; gap: 18px; }
-.note { display: flex; flex-direction: column; gap: 4px; }
-.note .who { font-family: var(--gothic); font-size: .78rem; color: var(--usuzumi); letter-spacing: .08em; }
-.note p { margin: 0; line-height: 2; letter-spacing: .04em; white-space: pre-wrap; overflow-wrap: anywhere; }
-.note p.none { color: var(--usuzumi); font-size: .9rem; }
-.note-me textarea { resize: vertical; min-height: 84px; line-height: 1.9; }
-.note-me .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
-
-.pair { display: flex; flex-direction: column; gap: 14px; }
-.code { font-family: var(--gothic); font-size: 1.6rem; letter-spacing: .3em; text-align: center; padding: 12px; border: 1px dashed var(--wakakusa); border-radius: 4px; user-select: all; -webkit-user-select: all; }
-.joinrow { display: flex; gap: 10px; flex-wrap: wrap; }
-.joinrow input { flex: 1 1 160px; text-transform: uppercase; letter-spacing: .2em; font-family: var(--gothic); }
-
-.account { display: flex; flex-direction: column; gap: 10px; }
-.account .row input[type="text"] { font-size: .95rem; }
-
-.cell .pdot { position: absolute; bottom: 2px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--wakakusa); }
-.legend { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--gothic); font-size: .75rem; color: var(--usuzumi); margin-top: 12px; }
-.legend i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--wakakusa); margin-right: 6px; vertical-align: middle; }
-.legend b { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--beni-soft); border: 1px solid var(--beni); margin-right: 6px; vertical-align: middle; }
-.pool { font-family: var(--gothic); font-size: .8rem; color: var(--usuzumi); }
-.pool b { font-family: var(--mincho); font-size: 1.1rem; color: var(--sumi); font-weight: 600; margin: 0 2px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="head-row">
-      <h1>家事ポイント帳</h1>
-      <div class="wallet" id="wallet" hidden>使えるポイント<b id="balance">0</b>点</div>
+    <h1>家事ポイント帳</h1>
+    <div class="head-right">
+      <div class="wallet" id="wallet" hidden>ポイント<b id="balance">0</b></div>
+      <button class="btn sm" type="button" id="settingsBtn" hidden>設定</button>
     </div>
-    <div class="season" id="season"></div>
   </header>
 
   <!-- ログイン -->
-  <section class="sheet auth" id="authPanel" hidden aria-labelledby="authH">
-    <h2 id="authH">ふたりの帳面にログイン</h2>
-    <p class="lede" id="authLede">メールアドレスとパスワードでログインします。はじめての方は「新しく登録する」から。</p>
-    <form id="authForm" class="auth">
-      <label id="nameWrap" hidden>呼び名（相手の画面に表示されます）
+  <section class="card form" id="authPanel" hidden aria-labelledby="authH">
+    <h2 id="authH">ログイン</h2>
+    <p class="hint" id="authLede">パートナーと記録を共有するために、メールアドレスとパスワードでログインします。</p>
+    <form id="authForm" class="form">
+      <label id="nameWrap" hidden>表示名（相手の画面にも表示されます）
         <input type="text" id="authName" maxlength="12" autocomplete="nickname" placeholder="例：ひなた">
       </label>
       <label>メールアドレス
@@ -296,19 +283,19 @@ button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 
         <input type="password" id="authPass" autocomplete="current-password" minlength="6" required>
       </label>
       <p class="err" id="authErr" hidden></p>
-      <button class="primary" type="submit" id="authSubmit">ログイン</button>
-      <div class="switch">
-        <button class="textbtn" type="button" id="authSwitch">新しく登録する</button>
-        <button class="textbtn" type="button" id="authReset">パスワードを忘れた</button>
-      </div>
+      <button class="btn primary" type="submit" id="authSubmit">ログイン</button>
     </form>
+    <div class="split">
+      <button class="linkbtn" type="button" id="authSwitch">新規登録はこちら</button>
+      <button class="linkbtn" type="button" id="authReset">パスワードを忘れた</button>
+    </div>
   </section>
 
   <div id="app" class="panel">
-  <nav class="tabs" role="tablist" aria-label="表示の切り替え">
+  <nav class="tabs" role="tablist" aria-label="画面の切り替え">
     <button class="tab" role="tab" id="tab-log" data-tab="log" aria-selected="true">記録</button>
-    <button class="tab" role="tab" id="tab-pair" data-tab="pair" aria-selected="false" hidden>ふたり</button>
-    <button class="tab" role="tab" id="tab-cal" data-tab="cal" aria-selected="false">こよみ</button>
+    <button class="tab" role="tab" id="tab-diary" data-tab="diary" aria-selected="false" hidden>日記</button>
+    <button class="tab" role="tab" id="tab-cal" data-tab="cal" aria-selected="false">カレンダー</button>
     <button class="tab" role="tab" id="tab-reward" data-tab="reward" aria-selected="false">ご褒美</button>
   </nav>
 
@@ -316,181 +303,196 @@ button:focus-visible, input:focus-visible, .quote-veil:focus-visible { outline: 
   <section class="panel" id="panel-log" role="tabpanel" aria-labelledby="tab-log">
     <div class="viewing" id="viewing" hidden>
       <span id="viewingText"></span>
-      <button class="textbtn" id="backToday" type="button">今日に戻る</button>
+      <button class="btn sm" id="backToday" type="button">今日に戻る</button>
     </div>
-    <div class="sheet today">
+    <div class="card today">
       <div class="daytop">
         <span class="date" id="dateLabel"></span>
-        <button class="offbtn" id="offBtn" type="button" aria-pressed="false">休みの日にする</button>
+        <button class="btn sm offbtn" id="offBtn" type="button" aria-pressed="false">休みの日にする</button>
       </div>
       <div class="score">
-        <div class="big" id="total">0<small>点</small></div>
+        <div class="big" id="total">0<small>pt</small></div>
         <div class="msg" id="msg"></div>
       </div>
       <div class="slots" id="slots" aria-hidden="true"></div>
       <div class="bonus" id="bonus" hidden></div>
-      <div class="shiori" id="shiori" hidden>
-        <q id="shioriQ"></q>
-        <div class="by" id="shioriBy"></div>
-        <button class="textbtn" type="button" id="shioriOpen">もう一度ゆっくり読む</button>
+      <div class="quote-mini" id="quoteMini" hidden>
+        <q id="quoteMiniQ"></q>
+        <div class="by" id="quoteMiniBy"></div>
+        <button class="linkbtn" type="button" id="quoteOpen">名言をもう一度見る</button>
       </div>
+    </div>
+
+    <div class="card partner" id="partnerCard" hidden></div>
+    <div class="card invite-nudge" id="inviteNudge" hidden>
+      <span>パートナーを招待すると、お互いの点数が見られます</span>
+      <button class="btn sm" type="button" id="inviteGo">招待する</button>
     </div>
 
     <div>
       <div class="section-head">
-        <h2 id="choresH">やったことを記す</h2>
-        <button class="textbtn" id="editBtn" type="button">項目とポイントを編集</button>
+        <h2 id="choresH">やったことを記録</h2>
+        <button class="btn sm" id="editBtn" type="button">編集</button>
       </div>
       <div class="chores" id="chores"></div>
       <div class="rows" id="choreEdit" hidden></div>
       <form class="addform" id="addChore" hidden>
         <input type="text" id="newChoreName" placeholder="例：洗濯" maxlength="20" required aria-label="追加する項目の名前">
         <input type="number" id="newChorePts" min="1" max="20" value="1" required aria-label="ポイント">
-        <button class="primary" type="submit">追加</button>
+        <button class="btn primary" type="submit">追加</button>
       </form>
       <div id="goalEdit" hidden>
-        <h2 class="subhead">一日の目標</h2>
+        <h2 class="subhead">1日の目標</h2>
         <div class="rows" id="goalRows"></div>
       </div>
     </div>
 
-    <div>
-      <div class="section-head"><h2 id="logH">今日の記録</h2></div>
+    <div class="card">
+      <div class="section-head"><h2 id="logH">今日やったこと</h2></div>
       <ul class="log" id="log"></ul>
       <p class="empty" id="logEmpty"></p>
     </div>
   </section>
 
-  <!-- ふたり -->
-  <section class="panel" id="panel-pair" role="tabpanel" aria-labelledby="tab-pair" hidden>
-    <div class="sheet pair" id="pairSetup" hidden>
-      <h2>ふたりの帳面</h2>
-      <div id="pairNone">
-        <p class="lede">どちらか一人が帳面をつくり、表示される招待コードを相手に伝えてください。相手は「招待コードで参加」に入力します。</p>
-        <div class="pair" style="margin-top:14px">
-          <button class="primary" type="button" id="createCouple">ふたりの帳面をつくる</button>
-          <div class="joinrow">
-            <input type="text" id="joinCode" maxlength="8" placeholder="招待コード" aria-label="招待コード" autocapitalize="characters" autocomplete="off">
-            <button class="ghost" type="button" id="joinBtn">招待コードで参加</button>
-          </div>
-          <p class="err" id="pairErr" hidden></p>
-        </div>
-      </div>
-      <div id="pairWait" hidden>
-        <p class="lede">帳面をつくりました。この招待コードを相手に伝えてください。相手が参加すると、ここにふたりの頁が開きます。</p>
-        <div class="code" id="inviteCode" style="margin-top:12px"></div>
-        <button class="textbtn" type="button" id="copyCode" style="align-self:center">コードをコピー</button>
-      </div>
-    </div>
-
-    <div class="sheet" id="pairDay" hidden>
+  <!-- 日記 -->
+  <section class="panel" id="panel-diary" role="tabpanel" aria-labelledby="tab-diary" hidden>
+    <div class="card" id="diaryCard">
       <div class="daypager">
-        <button type="button" id="pPrev" aria-label="前の日">‹</button>
+        <button class="arrow" type="button" id="pPrev" aria-label="前の日">‹</button>
         <div class="d" id="pDate"></div>
-        <button type="button" id="pNext" aria-label="次の日">›</button>
+        <button class="arrow" type="button" id="pNext" aria-label="次の日">›</button>
       </div>
-      <div class="pair-today" id="pairToday"></div>
     </div>
-
-    <div id="diaryWrap" hidden>
-      <div class="section-head"><h2 id="diaryH">ひとこと日記</h2></div>
+    <div class="card" id="diaryNotes">
       <div class="notes" id="notes"></div>
     </div>
-
-    <section class="sheet account" aria-labelledby="accH">
-      <h2 id="accH">アカウント</h2>
-      <div class="rows" id="accRows"></div>
-      <p class="small" id="accEmail"></p>
-      <button class="textbtn" type="button" id="logoutBtn" style="align-self:flex-start">ログアウト</button>
-    </section>
+    <div class="card invite-nudge" id="diaryInvite" hidden>
+      <span>日記はパートナーと共有します。まずはパートナーを招待してください</span>
+      <button class="btn sm" type="button" id="inviteGo2">招待する</button>
+    </div>
   </section>
 
-  <!-- こよみ -->
+  <!-- カレンダー -->
   <section class="panel" id="panel-cal" role="tabpanel" aria-labelledby="tab-cal" hidden>
-    <div class="sheet">
+    <div class="card">
       <div class="calnav">
-        <button type="button" id="prevM" aria-label="前の月">‹</button>
+        <button class="arrow" type="button" id="prevM" aria-label="前の月">‹</button>
         <h2 id="monthLabel"></h2>
-        <button type="button" id="nextM" aria-label="次の月">›</button>
+        <button class="arrow" type="button" id="nextM" aria-label="次の月">›</button>
       </div>
       <div class="cal" id="cal"></div>
-      <div class="legend" id="legend" hidden><span><b></b>自分が達成</span><span id="legendP"><i></i>相手が達成</span></div>
+      <div class="legend"><span><b></b>目標達成</span><span id="legendP" hidden><i></i><span id="legendPName"></span>が達成</span></div>
       <div class="stats">
-        <div class="stat"><div class="k">続けて達成</div><div class="v"><span id="streak">0</span><small>日</small></div></div>
+        <div class="stat"><div class="k">連続達成</div><div class="v"><span id="streak">0</span><small>日</small></div></div>
         <div class="stat"><div class="k">今月の達成</div><div class="v"><span id="mHits">0</span><small>日</small></div></div>
-        <div class="stat"><div class="k">今月の合計</div><div class="v"><span id="mSum">0</span><small>点</small></div></div>
+        <div class="stat"><div class="k">今月の合計</div><div class="v"><span id="mSum">0</span><small>pt</small></div></div>
       </div>
     </div>
-    <p class="hint">花の咲いた日は、目標を達成した日です。日付を押すと、その日の記録を見たり、つけ忘れを書き足したりできます。「休」は休みの日です。</p>
+    <p class="hint">日付をタップすると、その日の記録を見たり、付け忘れを追加したりできます。「休」は休みの日です。</p>
   </section>
 
   <!-- ご褒美 -->
   <section class="panel" id="panel-reward" role="tabpanel" aria-labelledby="tab-reward" hidden>
-    <div id="sharedRewards" hidden>
+    <div class="card" id="sharedRewards" hidden>
       <div class="section-head">
-        <h2>ふたりのご褒美</h2>
-        <button class="textbtn" id="editSharedBtn" type="button">編集</button>
+        <h2 id="sharedH">一緒に使うご褒美</h2>
+        <button class="btn sm" id="editSharedBtn" type="button">編集</button>
       </div>
-      <div class="pool">ふたりのポイント<b id="pool">0</b>点<span class="small">　（ふたりが貯めた点の合計。自分のポイントは減りません）</span></div>
+      <div class="pool" id="poolLine"></div>
+      <p class="small" style="margin:0">2人が貯めたポイントの合計で交換します。自分のポイントは減りません。</p>
       <div id="sRewards"></div>
       <div class="rows" id="sRewardEdit" hidden></div>
       <form class="addform" id="addShared" hidden>
-        <input type="text" id="newSharedName" placeholder="例：ふたりで温泉" maxlength="30" required aria-label="追加するふたりのご褒美">
+        <input type="text" id="newSharedName" placeholder="例：温泉に行く" maxlength="30" required aria-label="追加するご褒美">
         <input type="number" id="newSharedPts" min="1" max="99999" value="100" required aria-label="必要なポイント">
-        <button class="primary" type="submit">追加</button>
+        <button class="btn primary" type="submit">追加</button>
       </form>
     </div>
 
-    <div>
+    <div class="card">
       <div class="section-head">
-        <h2 id="myRewardH">ポイントで交換</h2>
-        <button class="textbtn" id="editRewardBtn" type="button">ご褒美を編集</button>
+        <h2 id="myRewardH">自分のご褒美</h2>
+        <button class="btn sm" id="editRewardBtn" type="button">編集</button>
       </div>
       <div id="rewards"></div>
       <div class="rows" id="rewardEdit" hidden></div>
       <form class="addform" id="addReward" hidden>
         <input type="text" id="newRewardName" placeholder="例：映画を観に行く" maxlength="30" required aria-label="追加するご褒美">
         <input type="number" id="newRewardPts" min="1" max="9999" value="30" required aria-label="必要なポイント">
-        <button class="primary" type="submit">追加</button>
+        <button class="btn primary" type="submit">追加</button>
       </form>
     </div>
-    <div>
-      <div class="section-head"><h2>交換した記録</h2></div>
+    <div class="card">
+      <div class="section-head"><h2>交換の履歴</h2></div>
       <ul class="log" id="redeemLog"></ul>
-      <p class="empty" id="redeemEmpty">まだ交換していません。ポイントが貯まったら、上のご褒美と交換できます。</p>
+      <p class="empty" id="redeemEmpty">まだ交換していません。ポイントが貯まったら、ご褒美と交換できます。</p>
     </div>
   </section>
 
-  <section class="sheet backup" id="backupCard" aria-labelledby="backupH">
+  <!-- 設定 -->
+  <section class="panel" id="panel-settings" hidden aria-labelledby="setH">
+    <div class="section-head" style="margin:0">
+      <h2 id="setH">設定</h2>
+      <button class="btn sm" type="button" id="settingsClose">閉じる</button>
+    </div>
+
+    <div class="card settings" id="partnerSettings">
+      <h2>パートナーと共有</h2>
+      <div id="pairDone" hidden><p class="hint" id="pairDoneText" style="margin:0"></p></div>
+      <div id="pairNone" class="settings">
+        <p class="hint">どちらか1人が招待コードを作り、もう1人がそのコードを入力します。</p>
+        <button class="btn primary" type="button" id="createCouple">招待コードを作る</button>
+        <div class="joinrow">
+          <input type="text" id="joinCode" maxlength="8" placeholder="招待コード（8文字）" aria-label="招待コード" autocapitalize="characters" autocomplete="off">
+          <button class="btn" type="button" id="joinBtn">コードを入力して参加</button>
+        </div>
+      </div>
+      <div id="pairWait" class="settings" hidden>
+        <p class="hint">この招待コードをパートナーに送ってください。パートナーがアプリの「設定」で入力すると、共有が始まります。</p>
+        <div class="code" id="inviteCode"></div>
+        <button class="btn" type="button" id="copyCode">コードをコピー</button>
+      </div>
+      <p class="err" id="pairErr" hidden></p>
+    </div>
+
+    <div class="card settings" id="accountCard">
+      <h2>アカウント</h2>
+      <div class="rows" id="accRows"></div>
+      <p class="small" id="accEmail" style="margin:0"></p>
+      <button class="btn danger" type="button" id="logoutBtn">ログアウト</button>
+    </div>
+  </section>
+
+  <section class="card settings" id="backupCard" aria-labelledby="backupH">
     <h2 id="backupH">バックアップ</h2>
-    <p class="hint">記録はこのスマホの中だけに保存されています。機種変更やブラウザのデータ削除にそなえて、ときどきバックアップを保存してください。</p>
+    <p class="hint">記録はこのスマホの中だけに保存されています。機種変更などにそなえて、ときどきバックアップを保存してください。</p>
     <div class="nudge" id="nudge" hidden></div>
-    <div class="btns">
-      <button class="primary" type="button" id="exportBtn">バックアップを保存</button>
-      <button class="ghost" type="button" id="importBtn">バックアップから戻す</button>
+    <div class="split">
+      <button class="btn primary" type="button" id="exportBtn">バックアップを保存</button>
+      <button class="btn" type="button" id="importBtn">バックアップから戻す</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
     </div>
-    <p class="small" id="lastBackup"></p>
+    <p class="small" id="lastBackup" style="margin:0"></p>
   </section>
   </div>
   <div class="sync" id="sync"></div>
 </div>
 
 <div class="quote-veil" id="veil" role="dialog" aria-modal="true" aria-labelledby="vq" tabindex="-1" hidden>
-  <div class="lead" id="veilLead">今日の目標に届きました</div>
+  <div class="lead" id="veilLead">今日の目標達成！</div>
   <svg class="flower" viewBox="0 0 48 48" aria-hidden="true" id="veilFlower"></svg>
   <div class="vbox">
     <p class="vq" id="vq"></p>
     <p class="vby" id="vby"></p>
   </div>
-  <div class="close">画面を押すと閉じます</div>
+  <div class="close">タップして閉じる</div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
 import CONF from "./firebase-config.js";
 
-// ---------- 名言（日付ごとに一つ。同じ日は同じ言葉） ----------
+// ---------- 名言（日付ごとに1つ。同じ日は同じ言葉） ----------
 const QUOTES = [
   { q: "急がず、休まず。", a: "ゲーテ" },
   { q: "永久の未完成これ完成である", a: "宮沢賢治", s: "農民芸術概論綱要" },
@@ -517,8 +519,6 @@ const QUOTES = [
   { q: "けれども ほんとうのさいわいは 一体何だろう。", a: "宮沢賢治", s: "銀河鉄道の夜" },
   { q: "この里に 手まりつきつつ 子どもらと 遊ぶ春日は 暮れずともよし", a: "良寛" },
 ];
-const MONTHS = ["睦月","如月","弥生","卯月","皐月","水無月","文月","葉月","長月","神無月","霜月","師走"];
-const FLOWERS = ["水仙","梅","菜の花","桜","藤","紫陽花","朝顔","向日葵","萩","金木犀","山茶花","椿"];
 const WD = ["日","月","火","水","木","金","土"];
 
 const DEFAULT_PREFS = {
@@ -545,9 +545,9 @@ const DEFAULT_PREFS = {
   redeems: [],
 };
 const DEFAULT_SHARED_REWARDS = [
-  { n: "ふたりでちょっといいケーキ", p: 60 },
-  { n: "ふたりで外食", p: 150 },
-  { n: "ふたりで日帰り旅行", p: 400 },
+  { n: "ちょっといいケーキを買う", p: 60 },
+  { n: "外食に行く", p: 150 },
+  { n: "日帰り旅行", p: 400 },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -555,8 +555,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 
 const state = {
   days: {}, prefs: clone(DEFAULT_PREFS), tab: "log", sel: null, calMonth: null,
-  editChores: false, editRewards: false, editShared: false, confirmReward: "",
-  // ふたり
+  editChores: false, editRewards: false, editShared: false, confirmReward: "", settings: false,
   cloud: !!(CONF && CONF.config), me: null, profile: null, couple: null, cdays: {}, pSel: null,
   authMode: "signin", ready: !(CONF && CONF.config), authKnown: false,
 };
@@ -566,6 +565,7 @@ const pad = (n) => String(n).padStart(2, "0");
 const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 const shiftKey = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
+const md = (k) => { const d = parseKey(k); return `${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）`; };
 const todayKey = () => keyOf(new Date());
 const curKey = () => state.sel || todayKey();
 const day = (k) => state.days[k] || { entries: [], off: false };
@@ -579,9 +579,8 @@ const quoteOf = (k) => { const n = Math.round(parseKey(k).getTime() / 86400000);
 const byline = (qt) => qt.a + (qt.s ? `『${qt.s}』` : "");
 const paired = () => !!(state.couple && state.couple.members && state.couple.members.length >= 2);
 const partnerId = () => paired() ? state.couple.members.find((u) => u !== state.me.uid) : null;
-const nameOf = (uid) => (state.couple && state.couple.names && state.couple.names[uid]) || (uid === state.me?.uid ? "自分" : "相手");
+const nameOf = (uid) => (state.couple && state.couple.names && state.couple.names[uid]) || (uid === state.me?.uid ? "自分" : "パートナー");
 const cday = (k) => state.cdays[k] || {};
-const cSum = (k, uid) => { const s = (cday(k).s || {})[uid]; return s ? Number(s.t) || 0 : 0; };
 const cHit = (k, uid) => { const s = (cday(k).s || {})[uid]; return !!(s && s.t > 0 && s.t >= s.g); };
 const pool = () => {
   let t = 0;
@@ -613,7 +612,7 @@ async function startCloud() {
     state.authKnown = true;
     stopListeners();
     if (u) { state.me = { uid: u.uid, email: u.email }; state.ready = false; listenMe(); }
-    else { state.me = null; state.profile = null; state.couple = null; state.cdays = {}; state.days = {}; state.prefs = clone(DEFAULT_PREFS); state.ready = true; }
+    else { state.me = null; state.profile = null; state.couple = null; state.cdays = {}; state.days = {}; state.prefs = clone(DEFAULT_PREFS); state.ready = true; state.settings = false; }
     render();
   });
 }
@@ -625,7 +624,7 @@ const prefsRef = () => fb.doc(db, "users", state.me.uid, "meta", "prefs");
 const udayRef = (k) => fb.doc(db, "users", state.me.uid, "days", k);
 const coupleRef = (cid) => fb.doc(db, "couples", cid);
 const cdayRef = (k) => fb.doc(db, "couples", state.profile.coupleId, "days", k);
-const fail = () => setSync("保存できませんでした。通信が戻ると自動で送られます");
+const fail = () => setSync("保存できませんでした。通信が戻ると自動で送信されます");
 
 function listenMe() {
   let gotPrefs = false, gotDays = false;
@@ -650,12 +649,12 @@ function listenMe() {
     const days = {};
     snap.docs.forEach((d) => { const v = d.data(); if (v && Array.isArray(v.entries)) days[d.id] = { entries: v.entries, off: !!v.off }; });
     state.days = days; gotDays = true; done();
-    setSync(snap.metadata.hasPendingWrites ? "送信待ちの記録があります" : "アカウントに保存しています");
+    setSync(snap.metadata.hasPendingWrites ? "送信待ちの記録があります（通信が戻ると送信されます）" : "");
     render();
   }, () => {}));
 }
 
-// はじめてログインしたとき、このスマホに残っていた記録をアカウントへ移す
+// 初めてログインしたとき、このスマホに残っていた記録をアカウントへ移す
 function migrateLocal() {
   const days = local.get("kaji2.days", {}) || {};
   const prefs = local.get("kaji2.prefs", null);
@@ -678,7 +677,7 @@ function listenCouple(cid) {
   }, () => {}));
 }
 
-// ---------- 保存（どちらのモードでも同じ呼び方） ----------
+// ---------- 保存 ----------
 function saveDay(k) {
   if (!state.cloud) { local.set("kaji2.days", state.days); return; }
   if (!state.me) return;
@@ -699,7 +698,6 @@ function saveShared() {
 function saveNote(k, text) {
   fb.setDoc(cdayRef(k), { notes: { [state.me.uid]: { text, at: new Date().toISOString() } } }, { merge: true }).catch(fail);
 }
-// ふたりの帳面に、これまでの自分の点数をまとめて載せる
 function syncSummaries(cid) {
   const b = fb.writeBatch(db); let n = 0;
   for (const k of Object.keys(state.days)) {
@@ -709,7 +707,7 @@ function syncSummaries(cid) {
   return n ? b.commit() : Promise.resolve();
 }
 
-// ---------- ふたりの帳面をつくる・参加する ----------
+// ---------- 招待 ----------
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function newCode() { const a = new Uint32Array(8); crypto.getRandomValues(a); return Array.from(a, (x) => CODE_CHARS[x % CODE_CHARS.length]).join(""); }
 function pairError(t) { const e = $("pairErr"); e.textContent = t; e.hidden = !t; }
@@ -720,7 +718,7 @@ async function createCouple() {
     await fb.setDoc(coupleRef(cid), { members: [uid], names: { [uid]: state.profile.name }, rewards: DEFAULT_SHARED_REWARDS, redeems: [], createdAt: new Date().toISOString() });
     await fb.updateDoc(uref(), { coupleId: cid });
     await syncSummaries(cid);
-  } catch { pairError("帳面をつくれませんでした。通信を確認して、もう一度お試しください"); }
+  } catch { pairError("招待コードを作れませんでした。通信を確認して、もう一度お試しください"); }
 }
 async function joinCouple() {
   pairError("");
@@ -729,27 +727,28 @@ async function joinCouple() {
   const uid = state.me.uid;
   try {
     const s = await fb.getDoc(coupleRef(cid));
-    if (!s.exists()) { pairError("この招待コードの帳面が見つかりません"); return; }
+    if (!s.exists()) { pairError("この招待コードは見つかりませんでした。入力を確認してください"); return; }
     const v = s.data();
     if (!v.members.includes(uid)) {
-      if (v.members.length >= 2) { pairError("この帳面には、もうふたりが参加しています"); return; }
+      if (v.members.length >= 2) { pairError("この招待コードは、すでに使われています"); return; }
       await fb.updateDoc(coupleRef(cid), { members: fb.arrayUnion(uid), [`names.${uid}`]: state.profile.name });
     }
     await fb.updateDoc(uref(), { coupleId: cid });
     await syncSummaries(cid);
-    toast("ふたりの帳面に参加しました");
+    toast("共有を始めました");
   } catch { pairError("参加できませんでした。コードと通信を確認して、もう一度お試しください"); }
 }
 
 // ---------- ログイン ----------
 let pendingName = "";
 const AUTH_ERR = {
-  "auth/invalid-email": "メールアドレスの形が正しくありません",
-  "auth/email-already-in-use": "このメールアドレスは登録済みです。「ログイン」からお入りください",
+  "auth/invalid-email": "メールアドレスの形式が正しくありません",
+  "auth/email-already-in-use": "このメールアドレスは登録済みです。ログインしてください",
   "auth/weak-password": "パスワードは6文字以上にしてください",
   "auth/invalid-credential": "メールアドレスかパスワードが違います",
   "auth/wrong-password": "メールアドレスかパスワードが違います",
   "auth/user-not-found": "このメールアドレスは登録されていません",
+  "auth/missing-password": "パスワードを入力してください",
   "auth/network-request-failed": "通信できませんでした。電波のよいところでお試しください",
   "auth/too-many-requests": "何度も失敗したため、少し時間をおいてからお試しください",
 };
@@ -761,7 +760,7 @@ async function submitAuth(ev) {
   try {
     if (state.authMode === "signup") {
       const name = $("authName").value.trim();
-      if (!name) { authError("呼び名を入れてください"); btn.disabled = false; return; }
+      if (!name) { authError("表示名を入力してください"); btn.disabled = false; return; }
       pendingName = name;
       await fb.createUserWithEmailAndPassword(auth, email, pass);
     } else {
@@ -771,7 +770,7 @@ async function submitAuth(ev) {
   btn.disabled = false;
 }
 
-// ---------- 花の絵 ----------
+// ---------- 花 ----------
 const NS = "http://www.w3.org/2000/svg";
 function drawFlower(svg, withRing) {
   svg.setAttribute("viewBox", "0 0 48 48");
@@ -787,7 +786,7 @@ function drawFlower(svg, withRing) {
   svg.appendChild(g);
   return svg;
 }
-function slotRow(box, total, goal, cls, popFrom) {
+function slotRow(box, total, goal, popFrom) {
   box.textContent = "";
   for (let i = 1; i <= goal; i++) {
     const s = document.createElement("div");
@@ -799,20 +798,20 @@ function slotRow(box, total, goal, cls, popFrom) {
 }
 drawFlower($("veilFlower"), false);
 
-// ---------- 名言の頁 ----------
+// ---------- 名言 ----------
 let lastFocus = null;
 function showQuote(k, achievedNow) {
   const qt = quoteOf(k);
   $("vq").textContent = qt.q;
   $("vby").textContent = byline(qt);
-  $("veilLead").textContent = achievedNow ? "今日の目標に届きました" : `${parseKey(k).getMonth() + 1}月${parseKey(k).getDate()}日のことば`;
+  $("veilLead").textContent = achievedNow ? "今日の目標達成！" : `${md(k)}の名言`;
   const v = $("veil"); v.classList.remove("leaving"); v.hidden = false;
   lastFocus = document.activeElement; v.focus();
 }
 function hideQuote() {
   const v = $("veil"); if (v.hidden) return;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce) { v.hidden = true; } else { v.classList.add("leaving"); setTimeout(() => { v.hidden = true; v.classList.remove("leaving"); }, 600); }
+  if (reduce) { v.hidden = true; } else { v.classList.add("leaving"); setTimeout(() => { v.hidden = true; v.classList.remove("leaving"); }, 500); }
   if (lastFocus && lastFocus.focus) lastFocus.focus();
 }
 $("veil").addEventListener("click", hideQuote);
@@ -824,30 +823,30 @@ function addEntry(c) {
   const k = curKey(); const d = day(k);
   const before = hit(k);
   const now = new Date();
-  const t = k === todayKey() ? `${pad(now.getHours())}:${pad(now.getMinutes())}` : "後から";
+  const t = k === todayKey() ? `${pad(now.getHours())}:${pad(now.getMinutes())}` : "追加";
   setDay(k, { ...d, entries: [...d.entries, { n: c.n, p: c.p, t, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }] });
-  if (!before && hit(k)) setTimeout(() => showQuote(k, k === todayKey()), 900);
-  else toast(`${c.n}　＋${c.p}点`);
+  if (!before && hit(k)) setTimeout(() => showQuote(k, k === todayKey()), 800);
+  else toast(`${c.n}　+${c.p}pt`);
 }
 function removeEntry(id) { const k = curKey(); const d = day(k); setDay(k, { ...d, entries: d.entries.filter((e) => e.id !== id) }); }
 function toggleOff() {
   const k = curKey(); const d = day(k); const before = hit(k);
   setDay(k, { ...d, off: !d.off });
-  if (!before && hit(k)) setTimeout(() => showQuote(k, k === todayKey()), 900);
+  if (!before && hit(k)) setTimeout(() => showQuote(k, k === todayKey()), 800);
 }
 
 let toastT;
 function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 1800); }
 
-// ---------- 小さな部品 ----------
+// ---------- 部品 ----------
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+function button(cls, text, onClick, label) { const b = el("button", cls, text); b.type = "button"; if (label) b.setAttribute("aria-label", label); b.addEventListener("click", onClick); return b; }
 function stepper(value, min, max, step, onChange, label) {
-  const w = document.createElement("div"); w.className = "stepper";
-  const minus = document.createElement("button"); minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", label + "を減らす");
-  const out = document.createElement("output"); out.textContent = value + "点";
-  const plus = document.createElement("button"); plus.type = "button"; plus.textContent = "+"; plus.setAttribute("aria-label", label + "を増やす");
+  const w = el("div", "stepper");
+  const minus = button("", "−", () => onChange(Math.max(min, value - step)), label + "を減らす");
+  const out = el("output", "", value + "pt");
+  const plus = button("", "+", () => onChange(Math.min(max, value + step)), label + "を増やす");
   minus.disabled = value <= min; plus.disabled = value >= max;
-  minus.addEventListener("click", () => onChange(Math.max(min, value - step)));
-  plus.addEventListener("click", () => onChange(Math.min(max, value + step)));
   w.append(minus, out, plus); return w;
 }
 function nameInput(value, onCommit, label) {
@@ -855,74 +854,93 @@ function nameInput(value, onCommit, label) {
   i.addEventListener("change", () => { const v = i.value.trim(); if (v) onCommit(v); else i.value = value; });
   return i;
 }
-function delBtn(label, onClick) {
-  const x = document.createElement("button"); x.type = "button"; x.className = "del-x"; x.textContent = "×"; x.setAttribute("aria-label", label); x.addEventListener("click", onClick); return x;
-}
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const delBtn = (label, onClick) => button("del-x", "✕", onClick, label);
 
 // ---------- 描画 ----------
 function render() {
-  const now = new Date();
-  $("season").textContent = `${MONTHS[now.getMonth()]}　${FLOWERS[now.getMonth()]}のころ`;
   const needLogin = state.cloud && !state.me;
   $("authPanel").hidden = !needLogin || !state.authKnown;
-  $("app").hidden = needLogin || (state.cloud && !state.ready);
+  const loading = (state.cloud && !state.authKnown) || (state.cloud && state.me && !state.ready);
+  $("app").hidden = needLogin || loading;
   $("wallet").hidden = $("app").hidden;
+  $("settingsBtn").hidden = $("app").hidden || !state.cloud;
   if (needLogin) { renderAuth(); setSync(state.authKnown ? "" : "読み込み中…"); return; }
-  if (state.cloud && !state.ready) { setSync("読み込み中…"); return; }
+  if (loading) { setSync("読み込み中…"); return; }
 
-  $("tab-pair").hidden = !state.cloud;
-  if (state.tab === "pair" && !state.cloud) state.tab = "log";
+  $("tab-diary").hidden = !state.cloud;
+  if (state.tab === "diary" && !state.cloud) state.tab = "log";
   $("balance").textContent = balance();
+  const showSettings = state.cloud && state.settings;
+  document.querySelector(".tabs").hidden = showSettings;
+  $("panel-settings").hidden = !showSettings;
   document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
-  ["log", "pair", "cal", "reward"].forEach((t) => { $("panel-" + t).hidden = state.tab !== t; });
-  $("backupCard").hidden = state.cloud;
+  ["log", "diary", "cal", "reward"].forEach((t) => { $("panel-" + t).hidden = showSettings || state.tab !== t; });
+  $("backupCard").hidden = state.cloud || state.tab !== "log";
+  $("settingsBtn").hidden = showSettings;
+  if (state.cloud && $("sync").textContent === "読み込み中…") setSync("");
   renderLog(); renderCal(); renderRewards();
-  if (state.cloud) renderPair(); else renderBackup();
-  if (!state.cloud) setSync("このスマホに保存しています");
+  if (state.cloud) { renderDiary(); renderSettings(); } else { renderBackup(); setSync(""); }
 }
 
 function renderAuth() {
   const up = state.authMode === "signup";
-  $("authH").textContent = up ? "はじめての登録" : "ふたりの帳面にログイン";
+  $("authH").textContent = up ? "新規登録" : "ログイン";
   $("nameWrap").hidden = !up;
-  $("authSubmit").textContent = up ? "登録してはじめる" : "ログイン";
-  $("authSwitch").textContent = up ? "登録済みの方はこちら" : "新しく登録する";
+  $("authSubmit").textContent = up ? "登録する" : "ログイン";
+  $("authSwitch").textContent = up ? "登録済みの方はログイン" : "新規登録はこちら";
+  $("authReset").hidden = up;
   $("authPass").autocomplete = up ? "new-password" : "current-password";
 }
 
 function renderLog() {
-  const k = curKey(); const isToday = k === todayKey(); const dt = parseKey(k);
+  const k = curKey(); const isToday = k === todayKey();
   $("viewing").hidden = isToday;
-  $("viewingText").textContent = `${dt.getMonth() + 1}月${dt.getDate()}日の頁をひらいています`;
-  $("dateLabel").textContent = `${dt.getMonth() + 1}月${dt.getDate()}日　${WD[dt.getDay()]}曜日`;
-  $("logH").textContent = isToday ? "今日の記録" : `${dt.getMonth() + 1}月${dt.getDate()}日の記録`;
+  $("viewingText").textContent = `${md(k)}の記録を表示中`;
+  $("dateLabel").textContent = isToday ? `今日　${md(k)}` : md(k);
+  $("logH").textContent = isToday ? "今日やったこと" : `${md(k)}にやったこと`;
 
   const d = day(k); const total = sumOf(k); const goal = goalOf(k);
   const off = $("offBtn");
   off.setAttribute("aria-pressed", String(!!d.off));
-  off.textContent = d.off ? `休みの日（目標${state.prefs.goalOff}点）` : "休みの日にする";
+  off.textContent = d.off ? `休みの日（目標${state.prefs.goalOff}pt）` : "休みの日にする";
   $("total").firstChild.nodeValue = String(total);
   const msg = $("msg");
-  if (hit(k)) { msg.textContent = isToday ? "今日の目標に届きました" : "目標に届いた日"; msg.classList.add("done"); }
-  else { msg.textContent = total === 0 ? `目標は${goal}点` : `あと${goal - total}点`; msg.classList.remove("done"); }
-  slotRow($("slots"), total, goal, "", lastShown.key === k ? lastShown.total : null);
+  if (hit(k)) { msg.textContent = "目標達成！"; msg.classList.add("done"); }
+  else { msg.textContent = total === 0 ? `目標 ${goal}pt` : `あと ${goal - total}pt`; msg.classList.remove("done"); }
+  slotRow($("slots"), total, goal, lastShown.key === k ? lastShown.total : null);
   lastShown = { key: k, total };
   $("bonus").hidden = total <= goal;
-  $("bonus").textContent = `目標より${total - goal}点多く`;
-  $("shiori").hidden = !hit(k);
-  if (hit(k)) { const qt = quoteOf(k); $("shioriQ").textContent = qt.q; $("shioriBy").textContent = "― " + byline(qt); }
+  $("bonus").textContent = `目標より ${total - goal}pt 多い`;
+  $("quoteMini").hidden = !hit(k);
+  if (hit(k)) { const qt = quoteOf(k); $("quoteMiniQ").textContent = qt.q; $("quoteMiniBy").textContent = "― " + byline(qt); }
+
+  // パートナーの今日
+  const pc = $("partnerCard");
+  const pid = state.cloud && paired() ? partnerId() : null;
+  pc.hidden = !pid;
+  $("inviteNudge").hidden = !(state.cloud && state.profile && !state.profile.coupleId);
+  if (pid) {
+    pc.textContent = "";
+    const s = (cday(k).s || {})[pid];
+    const t = s ? Number(s.t) || 0 : 0, g = s ? s.g : 5;
+    const h = t > 0 && t >= g;
+    const pt = el("span", "pt", String(t)); pt.appendChild(el("small", "", `/ ${g}pt`));
+    const slots = el("div", "mini-slots"); slotRow(slots, t, g, null);
+    pc.append(el("span", "who", nameOf(pid) + (s && s.off ? "（休み）" : "")), pt,
+      el("span", "state" + (h ? " done" : ""), h ? "達成！" : (t === 0 ? "まだ記録なし" : `あと ${g - t}pt`)), slots);
+  }
 
   const ed = state.editChores;
   $("chores").hidden = ed; $("choreEdit").hidden = !ed; $("addChore").hidden = !ed; $("goalEdit").hidden = !ed;
-  $("editBtn").textContent = ed ? "編集を終える" : "項目とポイントを編集";
-  $("choresH").textContent = ed ? "項目とポイント" : "やったことを記す";
+  $("editBtn").textContent = ed ? "完了" : "編集";
+  $("editBtn").classList.toggle("primary", ed);
+  $("choresH").textContent = ed ? "項目とポイントの編集" : "やったことを記録";
   if (!ed) {
     const box = $("chores"); box.textContent = "";
     state.prefs.chores.forEach((c) => {
-      const b = el("button", "chore" + (c.p >= 3 ? " heavy" : "")); b.type = "button";
-      b.append(el("span", "name", c.n), el("span", "pts", `＋${c.p}`));
-      b.addEventListener("click", () => addEntry(c)); box.appendChild(b);
+      const b = button("chore", undefined, () => addEntry(c));
+      b.append(el("span", "name", c.n), el("span", "pts", `+${c.p}`));
+      box.appendChild(b);
     });
   } else {
     const rows = $("choreEdit"); rows.textContent = "";
@@ -945,105 +963,89 @@ function renderLog() {
 
   const log = $("log"); log.textContent = "";
   $("logEmpty").hidden = d.entries.length > 0;
-  $("logEmpty").textContent = isToday ? "まだ何も記していません。上の項目を押すと、ここに残ります。" : "この日の記録はありません。上の項目を押すと書き足せます。";
+  $("logEmpty").textContent = isToday ? "まだ記録がありません。上のボタンをタップすると記録されます。" : "この日の記録はありません。上のボタンで追加できます。";
   d.entries.slice().reverse().forEach((e) => {
     const li = document.createElement("li");
-    const x = el("button", "textbtn", "取り消す"); x.type = "button";
-    x.setAttribute("aria-label", `${e.n}の記録を取り消す`);
-    x.addEventListener("click", () => removeEntry(e.id));
-    li.append(el("span", "t", e.t || ""), el("span", "n", e.n), el("span", "p", `＋${e.p}`), x);
+    li.append(el("span", "t", e.t || ""), el("span", "n", e.n), el("span", "p", `+${e.p}`),
+      button("btn sm", "削除", () => removeEntry(e.id), `${e.n}の記録を削除`));
     log.appendChild(li);
   });
 }
 
-function renderPair() {
-  const p = state.profile || {};
-  const hasCouple = !!p.coupleId;
-  $("pairSetup").hidden = paired();
-  $("pairNone").hidden = hasCouple;
-  $("pairWait").hidden = !hasCouple || paired();
-  if (hasCouple && !paired()) $("inviteCode").textContent = p.coupleId;
-  $("pairDay").hidden = !paired();
-  $("diaryWrap").hidden = !paired();
-
-  // アカウント
-  const rows = $("accRows"); rows.textContent = "";
-  const r = el("div", "row");
-  r.append(el("span", "label", "呼び名"), nameInput(p.name || "", (v) => {
-    fb.updateDoc(uref(), { name: v }).catch(fail);
-    if (hasCouple && state.couple) fb.updateDoc(coupleRef(p.coupleId), { [`names.${state.me.uid}`]: v }).catch(fail);
-  }, "呼び名"));
-  rows.appendChild(r);
-  $("accEmail").textContent = state.me ? `ログイン中：${state.me.email}` : "";
-
-  if (!paired()) return;
-  const tk = todayKey();
-  const k = state.pSel || tk; const dt = parseKey(k);
-  $("pDate").textContent = `${k === tk ? "今日　" : ""}${dt.getMonth() + 1}月${dt.getDate()}日　${WD[dt.getDay()]}曜日`;
+function renderDiary() {
+  const ok = paired();
+  $("diaryCard").hidden = !ok; $("diaryNotes").hidden = !ok; $("diaryInvite").hidden = ok;
+  if (!ok) return;
+  const tk = todayKey(); const k = state.pSel || tk;
+  $("pDate").textContent = k === tk ? `今日　${md(k)}` : md(k);
   $("pNext").disabled = k >= tk;
   const me = state.me.uid, pid = partnerId();
-
-  const box = $("pairToday"); box.textContent = "";
-  [me, pid].forEach((uid) => {
-    const s = (cday(k).s || {})[uid];
-    const t = uid === me ? sumOf(k) : (s ? Number(s.t) || 0 : 0);
-    const g = uid === me ? goalOf(k) : (s ? s.g : 5);
-    const off = uid === me ? !!day(k).off : !!(s && s.off);
-    const isHit = t > 0 && t >= g;
-    const card = el("div", "person");
-    const pt = el("div", "pt", String(t)); pt.appendChild(el("small", "", `／${g}点`));
-    const st = el("div", "state" + (isHit ? " done" : ""), isHit ? "目標に届きました" : (t === 0 ? "まだ記録なし" : `あと${g - t}点`));
-    const slots = el("div", "mini-slots"); slotRow(slots, t, g, "", null);
-    card.append(el("div", "who", (uid === me ? "自分（" + nameOf(uid) + "）" : nameOf(uid)) + (off ? "・休み" : "")), pt, slots, st);
-    box.appendChild(card);
-  });
-
-  // ひとこと日記
-  $("diaryH").textContent = k === tk ? "今日のひとこと日記" : `${dt.getMonth() + 1}月${dt.getDate()}日のひとこと日記`;
-  const notes = $("notes"); notes.textContent = "";
   const n = cday(k).notes || {};
-  const pn = n[pid];
+  const notes = $("notes");
+  const old = document.getElementById("myNote");
+  const typing = old && document.activeElement === old && old.dataset.day === k;
+
   const pw = el("div", "note");
+  const pn = n[pid];
   pw.append(el("div", "who", nameOf(pid)), el("p", pn && pn.text ? "" : "none", pn && pn.text ? pn.text : "まだ書かれていません"));
+
+  if (typing) { notes.replaceChild(pw, notes.firstChild); return; }
+  notes.textContent = "";
   notes.appendChild(pw);
 
-  const mw = el("div", "note note-me");
-  mw.appendChild(el("div", "who", nameOf(me) + "（自分）"));
-  const ta = document.createElement("textarea"); ta.id = "myNote"; ta.maxLength = 200; ta.placeholder = "今日のこと、ひとことどうぞ";
+  const mw = el("div", "note");
+  mw.appendChild(el("div", "who", `${nameOf(me)}（自分）`));
+  const ta = document.createElement("textarea"); ta.id = "myNote"; ta.dataset.day = k; ta.maxLength = 200; ta.placeholder = "今日のひとことを書いてみましょう";
+  ta.setAttribute("aria-label", "自分の日記");
   const saved = (n[me] && n[me].text) || "";
   const draftKey = "kaji2.draft." + k;
   const draft = local.get(draftKey, null);
   ta.value = draft !== null ? draft : saved;
-  ta.setAttribute("aria-label", "自分のひとこと日記");
-  const bar = el("div", "bar");
+  const bar = el("div", "note-bar");
   const count = el("span", "small", `${ta.value.length}/200`);
-  const save = el("button", "primary", saved ? "書き直す" : "残す"); save.type = "button";
+  const save = button("btn primary", "保存", () => {
+    saveNote(k, ta.value.trim());
+    try { localStorage.removeItem(draftKey); } catch {}
+    ta.blur();
+    toast("日記を保存しました");
+  });
   const dirty = () => ta.value.trim() !== saved;
   save.disabled = !dirty();
   ta.addEventListener("input", () => { count.textContent = `${ta.value.length}/200`; save.disabled = !dirty(); local.set(draftKey, ta.value); });
-  save.addEventListener("click", () => {
-    saveNote(k, ta.value.trim());
-    try { localStorage.removeItem(draftKey); } catch {}
-    toast("日記を残しました");
-  });
   bar.append(count, save);
   mw.append(ta, bar);
-  // 入力中に相手の更新で書き換わらないよう、フォーカス中は差し替えない
-  const old = document.getElementById("myNote");
-  if (old && document.activeElement === old) { notes.textContent = ""; notes.appendChild(pw); notes.appendChild(old.closest(".note")); return; }
   notes.appendChild(mw);
+}
+
+function renderSettings() {
+  const p = state.profile || {};
+  const hasCouple = !!p.coupleId;
+  $("pairDone").hidden = !paired();
+  $("pairNone").hidden = hasCouple;
+  $("pairWait").hidden = !hasCouple || paired();
+  if (hasCouple && !paired()) $("inviteCode").textContent = p.coupleId;
+  if (paired()) $("pairDoneText").textContent = `${nameOf(partnerId())}さんと共有しています。`;
+
+  const rows = $("accRows"); rows.textContent = "";
+  const r = el("div", "row");
+  r.append(el("span", "label", "表示名"), nameInput(p.name || "", (v) => {
+    fb.updateDoc(uref(), { name: v }).catch(fail);
+    if (hasCouple && state.couple) fb.updateDoc(coupleRef(p.coupleId), { [`names.${state.me.uid}`]: v }).catch(fail);
+    toast("表示名を変更しました");
+  }, "表示名"));
+  rows.appendChild(r);
+  $("accEmail").textContent = state.me ? `ログイン中：${state.me.email}` : "";
 }
 
 function renderCal() {
   const now = new Date();
   if (!state.calMonth) state.calMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const y = state.calMonth.getFullYear(), m = state.calMonth.getMonth();
-  const ml = $("monthLabel"); ml.textContent = `${y}年 ${m + 1}月`;
-  ml.appendChild(el("span", "", `${MONTHS[m]}・${FLOWERS[m]}`));
+  $("monthLabel").textContent = `${y}年${m + 1}月`;
   $("nextM").disabled = y > now.getFullYear() || (y === now.getFullYear() && m >= now.getMonth());
   const pid = state.cloud && paired() ? partnerId() : null;
-  $("legend").hidden = !pid;
-  if (pid) $("legendP").lastChild.nodeValue = `${nameOf(pid)}が達成`;
+  $("legendP").hidden = !pid;
+  if (pid) $("legendPName").textContent = nameOf(pid);
   const cal = $("cal"); cal.textContent = "";
   WD.forEach((w, i) => cal.appendChild(el("div", "wd" + (i === 0 ? " sun" : ""), w)));
   const first = new Date(y, m, 1).getDay(); const days = new Date(y, m + 1, 0).getDate();
@@ -1056,7 +1058,7 @@ function renderCal() {
     const c = el("button", "cell" + (h ? " hit" : "") + (k === tk ? " today" : "") + (future ? " future" : "")); c.type = "button";
     c.disabled = future;
     const ph = pid && cHit(k, pid);
-    c.setAttribute("aria-label", `${m + 1}月${d}日 ${v}点${h ? " 達成" : ""}${day(k).off ? " 休み" : ""}${ph ? `、${nameOf(pid)}も達成` : ""}`);
+    c.setAttribute("aria-label", `${m + 1}月${d}日 ${v}pt${h ? " 達成" : ""}${day(k).off ? " 休み" : ""}${ph ? `、${nameOf(pid)}も達成` : ""}`);
     if (h) c.appendChild(drawFlower(document.createElementNS(NS, "svg"), false));
     c.appendChild(el("span", "dn", String(d)));
     if (day(k).off) c.append(el("span", "offtag", "休"));
@@ -1079,14 +1081,13 @@ function rewardList(box, list, bal, prefix, onRedeem) {
     const info = el("div", "info");
     const bar = el("div", "bar"); const fill = document.createElement("i");
     fill.style.width = Math.min(100, Math.max(0, bal) / r.p * 100) + "%"; bar.appendChild(fill);
-    info.append(el("div", "rn", r.n), el("div", "rp", bal >= r.p ? `${r.p}点 ・ 交換できます` : `${r.p}点 ・ あと${r.p - bal}点`), bar);
+    info.append(el("div", "rn", r.n), el("div", "rp", bal >= r.p ? `${r.p}pt ・ 交換できます` : `${r.p}pt ・ あと ${r.p - bal}pt`), bar);
     const id = prefix + i; const confirming = state.confirmReward === id;
-    const go = el("button", "primary go" + (confirming ? " confirm" : ""), confirming ? "交換する" : "交換"); go.type = "button";
-    go.disabled = bal < r.p;
-    go.addEventListener("click", () => {
+    const go = button("btn sm " + (confirming ? "danger primary" : "primary"), confirming ? "本当に交換" : "交換", () => {
       if (!confirming) { state.confirmReward = id; render(); return; }
       state.confirmReward = ""; onRedeem(r);
     });
+    go.disabled = bal < r.p;
     row.append(info, go); box.appendChild(row);
   });
 }
@@ -1105,34 +1106,35 @@ function rewardEditor(box, list, step, max, save) {
 const stamp = () => { const n = new Date(); return `${keyOf(n)} ${pad(n.getHours())}:${pad(n.getMinutes())}`; };
 
 function renderRewards() {
-  // ふたりのご褒美
   const showShared = state.cloud && paired();
   $("sharedRewards").hidden = !showShared;
-  $("myRewardH").textContent = showShared ? "自分のご褒美" : "ポイントで交換";
+  $("myRewardH").textContent = showShared ? "自分のご褒美" : "ご褒美";
   if (showShared) {
     const c = state.couple; c.rewards = c.rewards || []; c.redeems = c.redeems || [];
-    const pb = pool(); $("pool").textContent = pb;
+    const pb = pool();
+    const pl = $("poolLine"); pl.textContent = `あなたと${nameOf(partnerId())}さんの合計`;
+    const b = el("b", "", String(pb)); pl.append(b, document.createTextNode("pt"));
     const se = state.editShared;
     $("sRewards").hidden = se; $("sRewardEdit").hidden = !se; $("addShared").hidden = !se;
-    $("editSharedBtn").textContent = se ? "編集を終える" : "編集";
+    $("editSharedBtn").textContent = se ? "完了" : "編集";
+    $("editSharedBtn").classList.toggle("primary", se);
     if (!se) rewardList($("sRewards"), c.rewards, pb, "s", (r) => {
       c.redeems = [...c.redeems, { n: r.n, p: r.p, at: stamp(), by: state.me.uid, id: Date.now().toString(36) }];
-      saveShared(); render(); toast(`ふたりで「${r.n}」と交換しました`);
+      saveShared(); render(); toast(`「${r.n}」と交換しました`);
     });
     else rewardEditor($("sRewardEdit"), c.rewards, 10, 99990, saveShared);
   }
 
-  // 自分のご褒美
   const bal = balance(); const ed = state.editRewards;
   $("rewards").hidden = ed; $("rewardEdit").hidden = !ed; $("addReward").hidden = !ed;
-  $("editRewardBtn").textContent = ed ? "編集を終える" : "ご褒美を編集";
+  $("editRewardBtn").textContent = ed ? "完了" : "編集";
+  $("editRewardBtn").classList.toggle("primary", ed);
   if (!ed) rewardList($("rewards"), state.prefs.rewards, bal, "m", (r) => {
     state.prefs.redeems = [...(state.prefs.redeems || []), { n: r.n, p: r.p, at: stamp(), id: Date.now().toString(36) }];
-    savePrefs(); render(); toast(`${r.n}と交換しました`);
+    savePrefs(); render(); toast(`「${r.n}」と交換しました`);
   });
   else rewardEditor($("rewardEdit"), state.prefs.rewards, 5, 9995, savePrefs);
 
-  // 交換した記録（ふたりの分も時系列で）
   const all = (state.prefs.redeems || []).map((r) => ({ ...r, kind: "m" }));
   if (showShared) state.couple.redeems.forEach((r) => all.push({ ...r, kind: "s" }));
   all.sort((a, b) => (a.at || "").localeCompare(b.at || ""));
@@ -1140,15 +1142,12 @@ function renderRewards() {
   $("redeemEmpty").hidden = all.length > 0;
   all.reverse().forEach((r) => {
     const li = document.createElement("li");
-    const name = r.kind === "s" ? `【ふたり】${r.n}` : r.n;
-    const x = el("button", "textbtn", "取り消す"); x.type = "button";
-    x.setAttribute("aria-label", `${r.n}の交換を取り消す`);
-    x.addEventListener("click", () => {
-      if (r.kind === "s") { state.couple.redeems = state.couple.redeems.filter((z) => z.id !== r.id); saveShared(); }
-      else { state.prefs.redeems = state.prefs.redeems.filter((z) => z.id !== r.id); savePrefs(); }
-      render();
-    });
-    li.append(el("span", "t", (r.at || "").slice(5, 10).replace("-", "/")), el("span", "n", name), el("span", "p minus", `−${r.p}`), x);
+    li.append(el("span", "t", (r.at || "").slice(5, 10).replace("-", "/")), el("span", "n", r.kind === "s" ? `${r.n}（一緒）` : r.n), el("span", "p minus", `−${r.p}`),
+      button("btn sm", "取り消し", () => {
+        if (r.kind === "s") { state.couple.redeems = state.couple.redeems.filter((z) => z.id !== r.id); saveShared(); }
+        else { state.prefs.redeems = state.prefs.redeems.filter((z) => z.id !== r.id); savePrefs(); }
+        render();
+      }, `${r.n}の交換を取り消し`));
     log.appendChild(li);
   });
 }
@@ -1166,7 +1165,7 @@ function renderBackup() {
   nudge.textContent = last ? `前回のバックアップから${days}日たっています` : "記録がたまってきたら、バックアップを保存しておきましょう";
   const ib = $("importBtn");
   ib.textContent = pendingImport ? "上書きして戻す" : "バックアップから戻す";
-  ib.classList.toggle("confirm", !!pendingImport);
+  ib.classList.toggle("danger", !!pendingImport);
 }
 async function exportBackup() {
   const k = todayKey();
@@ -1194,8 +1193,8 @@ function readImport(file) {
       const v = JSON.parse(r.result);
       if (!v || v.app !== "kaji-points" || typeof v.days !== "object" || typeof v.prefs !== "object") throw 0;
       pendingImport = v; renderBackup();
-      toast("もう一度押すと、今の記録をバックアップで上書きします");
-    } catch { pendingImport = null; renderBackup(); toast("家事ポイント帳のバックアップではないようです"); }
+      toast("もう一度押すと、今の記録を上書きします");
+    } catch { pendingImport = null; renderBackup(); toast("このアプリのバックアップファイルではありません"); }
   };
   r.readAsText(file);
 }
@@ -1204,9 +1203,14 @@ function readImport(file) {
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
   state.tab = b.dataset.tab; state.confirmReward = ""; local.set("kaji2.tab", state.tab); render();
 }));
+const openSettings = () => { state.settings = true; render(); window.scrollTo(0, 0); };
+$("settingsBtn").addEventListener("click", openSettings);
+$("settingsClose").addEventListener("click", () => { state.settings = false; render(); });
+$("inviteGo").addEventListener("click", openSettings);
+$("inviteGo2").addEventListener("click", openSettings);
 $("offBtn").addEventListener("click", toggleOff);
 $("backToday").addEventListener("click", () => { state.sel = null; render(); });
-$("shioriOpen").addEventListener("click", () => showQuote(curKey(), false));
+$("quoteOpen").addEventListener("click", () => showQuote(curKey(), false));
 $("editBtn").addEventListener("click", () => { state.editChores = !state.editChores; render(); });
 $("editRewardBtn").addEventListener("click", () => { state.editRewards = !state.editRewards; state.confirmReward = ""; render(); });
 $("editSharedBtn").addEventListener("click", () => { state.editShared = !state.editShared; state.confirmReward = ""; render(); });
@@ -1247,7 +1251,7 @@ $("authForm").addEventListener("submit", submitAuth);
 $("authSwitch").addEventListener("click", () => { state.authMode = state.authMode === "signup" ? "signin" : "signup"; authError(""); renderAuth(); });
 $("authReset").addEventListener("click", async () => {
   const email = $("authEmail").value.trim();
-  if (!email) { authError("メールアドレスを入れてから押してください"); return; }
+  if (!email) { authError("メールアドレスを入力してから押してください"); return; }
   try { await fb.sendPasswordResetEmail(auth, email); authError(""); toast("パスワード再設定のメールを送りました"); }
   catch (e) { authError(AUTH_ERR[e && e.code] || "メールを送れませんでした"); }
 });
@@ -1260,10 +1264,10 @@ $("copyCode").addEventListener("click", async () => {
 $("logoutBtn").addEventListener("click", () => { if (auth) fb.signOut(auth); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
 
-// ---------- はじまり ----------
+// ---------- 起動 ----------
 {
   const t = local.get("kaji2.tab", null);
-  if (["log", "pair", "cal", "reward"].includes(t)) state.tab = t;
+  if (["log", "diary", "cal", "reward"].includes(t)) state.tab = t;
 }
 if (!state.cloud) {
   const d = local.get("kaji2.days", null); if (d && typeof d === "object") state.days = d;
