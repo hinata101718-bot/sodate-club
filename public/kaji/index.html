@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* 和紙の色合いに、読みやすいゴシック体。見出し・大きな数字・名言だけ明朝体。押せるものは枠と面でボタンに見せる。一段組み。 */
+/* 和紙の色合いに、読みやすいゴシック体。名言だけ明朝体。数字は全角。押せるものは枠と面でボタンに見せる。一段組み。 */
 :root {
   --paper: #f3f1e7;
   --sheet: #fbfaf5;
@@ -32,6 +32,7 @@
   --on-accent: #ffffff;
   --beni: #b0574a;
   --beni-soft: #f3e0d9;
+  --pink: #b8577a;        /* 名前の色（ピンク） */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .32 0 0 0 0 .25 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   --mincho: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
   --gothic: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
@@ -40,7 +41,7 @@
   :root:not([data-theme="light"]) {
     --paper: #1b1c19; --sheet: #24261f; --sumi: #efebdf; --sub: #c2bdac; --line: #3d4035;
     --btn: #2c2f27; --btn-line: #4a4e41; --accent: #a8c592; --accent-soft: #2f3a28; --on-accent: #1b1c19;
-    --beni: #eaa597; --beni-soft: #432d28;
+    --beni: #eaa597; --beni-soft: #432d28; --pink: #f0a6c0;
     --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
@@ -48,7 +49,7 @@
 :root[data-theme="dark"] {
   --paper: #1b1c19; --sheet: #24261f; --sumi: #efebdf; --sub: #c2bdac; --line: #3d4035;
   --btn: #2c2f27; --btn-line: #4a4e41; --accent: #a8c592; --accent-soft: #2f3a28; --on-accent: #1b1c19;
-  --beni: #eaa597; --beni-soft: #432d28;
+  --beni: #eaa597; --beni-soft: #432d28; --pink: #f0a6c0;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   color-scheme: dark;
 }
@@ -67,7 +68,7 @@ body {
 }
 .wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 h1, h2 { margin: 0; text-wrap: balance; }
-h1 { font-family: var(--mincho); font-size: 1.4rem; font-weight: 700; }
+h1 { font-size: 1.4rem; font-weight: 700; }
 h2 { font-size: 1.05rem; font-weight: 700; }
 button { font: inherit; color: inherit; }
 .small { font-size: .88rem; color: var(--sub); }
@@ -85,11 +86,11 @@ button { font: inherit; color: inherit; }
 .linkbtn { border: none; background: none; color: var(--accent); cursor: pointer; padding: 6px 2px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 
 header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-header h1 { white-space: nowrap; min-width: 0; font-size: clamp(.95rem, 4vw, 1.4rem); }
+header h1 { white-space: nowrap; min-width: 0; font-size: clamp(.9rem, 3.7vw, 1.35rem); }
 .head-right { display: flex; align-items: center; gap: 6px; flex: none; }
 .head-right .btn { white-space: nowrap; }
 .wallet { font-size: .92rem; color: var(--sub); white-space: nowrap; }
-.wallet b { font-family: var(--mincho); font-size: 1.3rem; color: var(--sumi); margin: 0 2px; font-variant-numeric: tabular-nums; }
+.wallet b { font-size: 1.25rem; font-weight: 700; color: var(--sumi); margin: 0 2px; font-variant-numeric: tabular-nums; }
 
 .tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--accent-soft); border-radius: 12px; padding: 4px; gap: 4px; }
 .tab { border: none; background: none; padding: 9px 2px; border-radius: 9px; cursor: pointer; color: var(--sub); font-weight: 700; font-size: .95rem; }
@@ -110,8 +111,8 @@ header h1 { white-space: nowrap; min-width: 0; font-size: clamp(.95rem, 4vw, 1.4
 .date { font-weight: 700; }
 .offbtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--sumi); }
 .score { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.big { font-family: var(--mincho); font-size: 3rem; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
-.big small { font-family: var(--gothic); font-size: 1rem; color: var(--sub); margin-left: 4px; font-weight: 500; }
+.big { font-size: 2.8rem; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.big small { font-size: 1rem; color: var(--sub); margin-left: 4px; font-weight: 500; }
 .msg { font-weight: 700; color: var(--sub); }
 .msg.done { color: var(--beni); }
 .slots { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -150,8 +151,8 @@ header h1 { white-space: nowrap; min-width: 0; font-size: clamp(.95rem, 4vw, 1.4
 /* パートナーの今日 */
 .partner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .partner .who { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
-.partner .pt { font-family: var(--mincho); font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.partner .pt small { font-family: var(--gothic); font-size: .9rem; color: var(--sub); font-weight: 500; margin-left: 2px; }
+.partner .pt { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.partner .pt small { font-size: .9rem; color: var(--sub); font-weight: 500; margin-left: 2px; }
 .partner .state { font-size: .92rem; color: var(--sub); }
 .partner .state.done { color: var(--beni); font-weight: 700; }
 .mini-slots { display: flex; gap: 3px; margin-left: auto; }
@@ -163,7 +164,7 @@ header h1 { white-space: nowrap; min-width: 0; font-size: clamp(.95rem, 4vw, 1.4
 .chore { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 60px; padding: 10px 12px; border: 1px solid var(--btn-line); border-radius: 12px; background: var(--btn); text-align: left; cursor: pointer; box-shadow: 0 1px 0 var(--line); }
 .chore:active { transform: scale(.97); background: var(--accent-soft); }
 .chore .name { min-width: 0; overflow-wrap: anywhere; line-height: 1.35; font-weight: 500; }
-.chore .pts { flex: none; font-size: .9rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px; font-variant-numeric: tabular-nums; }
+.chore .pts { flex: none; font-size: .9rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
 
 .rows { display: flex; flex-direction: column; }
 .row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
@@ -200,14 +201,21 @@ header h1 { white-space: nowrap; min-width: 0; font-size: clamp(.95rem, 4vw, 1.4
 .note p.none { color: var(--sub); }
 textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1px solid var(--btn-line); border-radius: 10px; padding: 10px 12px; width: 100%; min-height: 96px; resize: vertical; line-height: 1.7; }
 .fair { display: flex; flex-direction: column; gap: 14px; }
-.fair-h { font-family: var(--mincho); }
 .fair-list { display: flex; flex-direction: column; }
 .fair-item { padding: 12px 0; border-top: 1px solid var(--line); }
 .fair-item:first-child { border-top: none; padding-top: 0; }
 .fair-item:last-child { padding-bottom: 0; }
 .fair-item .who { font-size: .88rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
-.fair-item p { margin: 0; font-family: var(--mincho); font-size: 1.05rem; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; }
-.fair-item p.none { font-family: var(--gothic); font-size: .95rem; color: var(--sub); }
+.fair-item p { margin: 0; font-size: 1rem; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fair-item p.none { font-size: .95rem; color: var(--sub); }
+.c-pink { color: var(--pink) !important; }
+.c-green { color: var(--accent) !important; }
+.cell .pdot.c-pink, .legend i.c-pink { background: var(--pink); }
+.colorpick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.colorpick .label { flex: 1; font-weight: 500; }
+.colorpick .btn[aria-pressed="true"] { border-width: 2px; font-weight: 700; }
+.colorpick .btn.c-pink[aria-pressed="true"] { border-color: var(--pink); }
+.colorpick .btn.c-green[aria-pressed="true"] { border-color: var(--accent); }
 .note-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
 
 /* カレンダー */
@@ -235,8 +243,8 @@ textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1p
 .stat { text-align: center; }
 .stat + .stat { border-left: 1px solid var(--line); }
 .stat .k { font-size: .82rem; color: var(--sub); }
-.stat .v { font-family: var(--mincho); font-size: 1.6rem; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; }
-.stat .v small { font-family: var(--gothic); font-size: .85rem; color: var(--sub); margin-left: 2px; }
+.stat .v { font-size: 1.5rem; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.stat .v small { font-size: .85rem; color: var(--sub); margin-left: 2px; }
 
 /* ご褒美 */
 .reward { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
@@ -246,7 +254,7 @@ textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1p
 .reward .bar { height: 5px; background: var(--line); border-radius: 99px; margin-top: 6px; overflow: hidden; }
 .reward .bar i { display: block; height: 100%; background: var(--accent); }
 .pool { font-size: .95rem; color: var(--sub); margin-bottom: 4px; }
-.pool b { font-family: var(--mincho); font-size: 1.25rem; color: var(--sumi); margin: 0 2px; }
+.pool b { font-size: 1.2rem; font-weight: 700; color: var(--sumi); margin: 0 2px; }
 
 /* ログイン・設定 */
 .form { display: flex; flex-direction: column; gap: 14px; }
@@ -479,7 +487,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
 
     <div class="card settings" id="partnerSettings">
       <h2>パートナーと共有</h2>
-      <div id="pairDone" hidden><p class="hint" id="pairDoneText" style="margin:0"></p></div>
+      <div id="pairDone" class="settings" hidden>
+        <p class="hint" id="pairDoneText" style="margin:0"></p>
+        <div class="colorpick">
+          <span class="label">自分の名前の色</span>
+          <button class="btn sm c-pink" type="button" id="colPink" aria-pressed="false">ピンク</button>
+          <button class="btn sm c-green" type="button" id="colGreen" aria-pressed="false">グリーン</button>
+        </div>
+        <p class="small" style="margin:0">相手はもう片方の色になります。</p>
+      </div>
       <div id="pairNone" class="settings">
         <p class="hint">どちらか1人が招待コードを作り、もう1人がそのコードを入力します。</p>
         <button class="btn primary" type="button" id="createCouple">招待コードを作る</button>
@@ -490,7 +506,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
       </div>
       <div id="pairWait" class="settings" hidden>
         <p class="hint">この招待コードをパートナーに送ってください。パートナーがアプリの「設定」で入力すると、共有が始まります。</p>
-        <div class="code" id="inviteCode"></div>
+        <div class="code" id="inviteCode" data-hankaku></div>
         <button class="btn" type="button" id="copyCode">コードをコピー</button>
       </div>
       <p class="err" id="pairErr" hidden></p>
@@ -499,7 +515,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
     <div class="card settings" id="accountCard">
       <h2>アカウント</h2>
       <div class="rows" id="accRows"></div>
-      <p class="small" id="accEmail" style="margin:0"></p>
+      <p class="small" id="accEmail" data-hankaku style="margin:0"></p>
       <button class="btn danger" type="button" id="logoutBtn">ログアウト</button>
     </div>
   </section>
@@ -623,6 +639,9 @@ const paired = () => !!(state.couple && state.couple.members && state.couple.mem
 const partnerId = () => paired() ? state.couple.members.find((u) => u !== state.me.uid) : null;
 const nameOf = (uid) => (state.couple && state.couple.names && state.couple.names[uid]) || (uid === state.me?.uid ? "自分" : "パートナー");
 const cday = (k) => state.cdays[k] || {};
+// 名前の色（ふたりの帳面に保存。未設定なら色分けしない）
+const colorOf = (uid) => { const c = state.couple && state.couple.colors && state.couple.colors[uid]; return c === "pink" || c === "green" ? c : ""; };
+const nameCls = (base, uid) => { const c = colorOf(uid); return base + (c ? " c-" + c : ""); };
 const cHit = (k, uid) => { const s = (cday(k).s || {})[uid]; return !!(s && s.t > 0 && s.t >= s.g); };
 const pool = () => {
   let t = 0;
@@ -978,6 +997,7 @@ function renderLog() {
   if (prevTotal !== null && total > prevTotal && total > goal) { const bn = $("bonus"); bn.classList.remove("pop"); void bn.offsetWidth; bn.classList.add("pop"); }
   const owner = state.cloud && state.profile && state.profile.name;
   $("ownerName").hidden = !owner;
+  $("ownerName").className = state.me ? nameCls("owner", state.me.uid) : "owner";
   if (owner) $("ownerName").textContent = owner;
   $("quoteMini").hidden = !hit(k);
   if (hit(k)) { const qt = quoteOf(k); $("quoteMiniQ").textContent = qt.q; $("quoteMiniBy").textContent = "― " + byline(qt); $("quoteMiniE").textContent = qt.e || ""; }
@@ -994,7 +1014,7 @@ function renderLog() {
     const h = t > 0 && t >= g;
     const pt = el("span", "pt", String(t)); pt.appendChild(el("small", "", `/ ${g}pt`));
     const slots = el("div", "mini-slots"); slotRow(slots, t, g, null);
-    pc.append(el("span", "who", nameOf(pid) + (s && s.off ? "（休み）" : "")), pt,
+    pc.append(el("span", nameCls("who", pid), nameOf(pid) + (s && s.off ? "（休み）" : "")), pt,
       el("span", "state" + (h ? " done" : ""), h ? "達成！" : (t === 0 ? "まだ記録なし" : `あと ${g - t}pt`)), slots);
   }
 
@@ -1007,7 +1027,7 @@ function renderLog() {
     const box = $("chores"); box.textContent = "";
     state.prefs.chores.forEach((c) => {
       const b = button("chore", undefined, () => addEntry(c));
-      b.append(el("span", "name", c.n), el("span", "pts", `+${c.p}`));
+      b.append(el("span", "name", c.n), el("span", "pts", `＋${c.p}`));
       box.appendChild(b);
     });
   } else {
@@ -1034,7 +1054,7 @@ function renderLog() {
   $("logEmpty").textContent = isToday ? "まだ記録がありません。上のボタンをタップすると記録されます。" : "この日の記録はありません。上のボタンで追加できます。";
   d.entries.slice().reverse().forEach((e) => {
     const li = document.createElement("li");
-    li.append(el("span", "t", e.t || ""), el("span", "n", e.n), el("span", "p", `+${e.p}`),
+    li.append(el("span", "t", e.t || ""), el("span", "n", e.n), el("span", "p", `＋${e.p}`),
       button("btn sm", "削除", () => removeEntry(e.id), `${e.n}の記録を削除`));
     log.appendChild(li);
   });
@@ -1058,7 +1078,7 @@ function renderDiary() {
   [[pid, nameOf(pid)], [me, nameOf(me)]].forEach(([id, nm]) => {
     const t = n[id] && n[id].text;
     const it = el("div", "fair-item");
-    it.append(el("div", "who", nm), el("p", t ? "" : "none", t || "まだ書かれていません"));
+    it.append(el("div", nameCls("who", id), nm), el("p", t ? "" : "none", t || "まだ書かれていません"));
     fair.appendChild(it);
   });
 
@@ -1066,7 +1086,7 @@ function renderDiary() {
   notes.textContent = "";
 
   const mw = el("div", "note");
-  mw.appendChild(el("div", "who", `${nameOf(me)}（自分）`));
+  mw.appendChild(el("div", nameCls("who", me), `${nameOf(me)}（自分）`));
   const ta = document.createElement("textarea"); ta.id = "myNote"; ta.dataset.day = k; ta.maxLength = 200; ta.placeholder = "今日のひとことを書いてみましょう";
   ta.setAttribute("aria-label", "自分の日記");
   const saved = (n[me] && n[me].text) || "";
@@ -1096,7 +1116,12 @@ function renderSettings() {
   $("pairNone").hidden = hasCouple;
   $("pairWait").hidden = !hasCouple || paired();
   if (hasCouple && !paired()) $("inviteCode").textContent = p.coupleId;
-  if (paired()) $("pairDoneText").textContent = `${nameOf(partnerId())}さんと共有しています。`;
+  if (paired()) {
+    $("pairDoneText").textContent = `${nameOf(partnerId())}さんと共有しています。`;
+    const mc = colorOf(state.me.uid);
+    $("colPink").setAttribute("aria-pressed", String(mc === "pink"));
+    $("colGreen").setAttribute("aria-pressed", String(mc === "green"));
+  }
 
   const rows = $("accRows"); rows.textContent = "";
   const r = el("div", "row");
@@ -1117,7 +1142,7 @@ function renderCal() {
   $("nextM").disabled = y > now.getFullYear() || (y === now.getFullYear() && m >= now.getMonth());
   const pid = state.cloud && paired() ? partnerId() : null;
   $("legendP").hidden = !pid;
-  if (pid) $("legendPName").textContent = nameOf(pid);
+  if (pid) { $("legendPName").textContent = nameOf(pid); document.querySelector("#legendP i").className = colorOf(pid) === "pink" ? "c-pink" : ""; }
   const cal = $("cal"); cal.textContent = "";
   WD.forEach((w, i) => cal.appendChild(el("div", "wd" + (i === 0 ? " sun" : ""), w)));
   const first = new Date(y, m, 1).getDay(); const days = new Date(y, m + 1, 0).getDate();
@@ -1134,7 +1159,7 @@ function renderCal() {
     if (h) c.appendChild(drawFlower(document.createElementNS(NS, "svg"), false));
     c.appendChild(el("span", "dn", String(d)));
     if (day(k).off) c.append(el("span", "offtag", "休"));
-    if (ph) c.append(el("span", "pdot"));
+    if (ph) c.append(el("span", nameCls("pdot", pid)));
     if (!future) c.addEventListener("click", () => { state.sel = k === tk ? null : k; state.tab = "log"; render(); window.scrollTo(0, 0); });
     cal.appendChild(c);
   }
@@ -1214,7 +1239,7 @@ function renderRewards() {
   $("redeemEmpty").hidden = all.length > 0;
   all.reverse().forEach((r) => {
     const li = document.createElement("li");
-    li.append(el("span", "t", (r.at || "").slice(5, 10).replace("-", "/")), el("span", "n", r.kind === "s" ? `${r.n}（一緒）` : r.n), el("span", "p minus", `−${r.p}`),
+    li.append(el("span", "t", (r.at || "").slice(5, 10).replace("-", "/")), el("span", "n", r.kind === "s" ? `${r.n}（ふたり）` : r.n), el("span", "p minus", `−${r.p}`),
       button("btn sm", "取り消し", () => {
         if (r.kind === "s") { state.couple.redeems = state.couple.redeems.filter((z) => z.id !== r.id); saveShared(); }
         else { state.prefs.redeems = state.prefs.redeems.filter((z) => z.id !== r.id); savePrefs(); }
@@ -1330,6 +1355,15 @@ $("authReset").addEventListener("click", async () => {
   try { await fb.sendPasswordResetEmail(auth, email); authError(""); toast("パスワード再設定のメールを送りました"); }
   catch (e) { authError(AUTH_ERR[e && e.code] || "メールを送れませんでした"); }
 });
+function setMyColor(c) {
+  if (!paired()) return;
+  const me = state.me.uid, pid = partnerId(), other = c === "pink" ? "green" : "pink";
+  state.couple.colors = { ...(state.couple.colors || {}), [me]: c, [pid]: other };
+  fb.updateDoc(coupleRef(state.profile.coupleId), { [`colors.${me}`]: c, [`colors.${pid}`]: other }).catch(fail);
+  render();
+}
+$("colPink").addEventListener("click", () => setMyColor("pink"));
+$("colGreen").addEventListener("click", () => setMyColor("green"));
 $("createCouple").addEventListener("click", createCouple);
 $("joinBtn").addEventListener("click", joinCouple);
 $("copyCode").addEventListener("click", async () => {
@@ -1338,6 +1372,20 @@ $("copyCode").addEventListener("click", async () => {
 });
 $("logoutBtn").addEventListener("click", () => { if (auth) fb.signOut(auth); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+
+// ---------- 数字を全角で表示 ----------
+// 画面の文字が変わるたびに、半角の数字を全角に置きかえる（置きかえ後は半角が残らないので、繰り返しは止まる）
+const toZen = (t) => t.replace(/[0-9]/g, (d) => String.fromCharCode(d.charCodeAt(0) + 0xFEE0));
+const skipZen = (n) => { for (let p = n.parentNode; p && p !== document; p = p.parentNode) { if (p.nodeName === "SCRIPT" || p.nodeName === "STYLE" || p.nodeName === "TEXTAREA" || (p.hasAttribute && p.hasAttribute("data-hankaku"))) return true; } return false; };
+const zenText = (n) => { if (/[0-9]/.test(n.nodeValue) && !skipZen(n)) n.nodeValue = toZen(n.nodeValue); };
+const zenTree = (root) => {
+  if (root.nodeType === 3) { zenText(root); return; }
+  if (root.nodeType !== 1) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) zenText(n);
+};
+new MutationObserver((ms) => { for (const m of ms) { if (m.type === "characterData") zenText(m.target); else m.addedNodes.forEach(zenTree); } })
+  .observe(document.body, { childList: true, subtree: true, characterData: true });
+zenTree(document.body);
 
 // ---------- 起動 ----------
 {
