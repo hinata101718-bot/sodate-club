@@ -27,9 +27,9 @@
   --line: #d8d3c1;
   --btn: #ffffff;
   --btn-line: #cfc9b4;
-  /* 名前の色（ピンク・グリーン・ブルー・イエロー・パープル・オレンジ） */
+  /* マイカラー（ピンク・グリーン・ブルー・イエロー・パープル・オレンジ） */
   --pink: #b8577a; --pink-soft: #f6e3ea; --green: #557a3f; --green-soft: #e2ead4; --blue: #3f70a3; --blue-soft: #dfe8f3; --yellow: #8f7212; --yellow-soft: #f3ebcc; --purple: #7a5aa6; --purple-soft: #ebe3f4; --orange: #b8602a; --orange-soft: #f8e4d6;
-  --accent: var(--green); --accent-soft: var(--green-soft);   /* 自分の色（下で切りかえ） */
+  --accent: var(--green); --accent-soft: var(--green-soft);   /* マイカラー（下で切りかえ） */
   --base-soft: #e9e6dc;   /* タブなど、色をつけない下地 */
   --on-accent: #ffffff;
   --beni: #b0574a;
@@ -56,7 +56,7 @@
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   color-scheme: dark;
 }
-/* 自分の色：ボタンや点数など、自分が操作するところは自分の色になる */
+/* マイカラー：ボタンや点数など、自分が操作するところは自分の色になる */
 :root[data-me="pink"] { --accent: var(--pink); --accent-soft: var(--pink-soft); }
 :root[data-me="blue"] { --accent: var(--blue); --accent-soft: var(--blue-soft); }
 :root[data-me="yellow"] { --accent: var(--yellow); --accent-soft: var(--yellow-soft); }
@@ -503,7 +503,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
       <h2>パートナーと共有</h2>
       <div id="pairDone" class="settings" hidden>
         <p class="hint" id="pairDoneText" style="margin:0"></p>
-        <h3 class="subh">自分の色</h3>
+        <h3 class="subh">マイカラー</h3>
         <div class="colorpick" id="colorPick"></div>
         <p class="small" id="colorNote" style="margin:0"></p>
       </div>
@@ -650,7 +650,7 @@ const paired = () => !!(state.couple && state.couple.members && state.couple.mem
 const partnerId = () => paired() ? state.couple.members.find((u) => u !== state.me.uid) : null;
 const nameOf = (uid) => (state.couple && state.couple.names && state.couple.names[uid]) || (uid === state.me?.uid ? "自分" : "パートナー");
 const cday = (k) => state.cdays[k] || {};
-// 名前の色（ふたりの帳面に保存。未設定なら色分けしない）
+// マイカラー（ふたりの帳面に保存。未設定なら色分けしない）
 const COLORS = [["pink", "ピンク"], ["green", "グリーン"], ["blue", "ブルー"], ["yellow", "イエロー"], ["purple", "パープル"], ["orange", "オレンジ"]];
 const isColor = (c) => COLORS.some(([n]) => n === c);
 const setColorOf = (uid) => { const c = state.couple && state.couple.colors && state.couple.colors[uid]; return isColor(c) ? c : ""; };
@@ -1144,7 +1144,7 @@ function renderSettings() {
     const box = $("colorPick"); box.textContent = "";
     COLORS.forEach(([n, label]) => {
       const taken = n === pc;
-      const b = button("btn sm c-" + n, taken ? "相手の色" : label, () => setMyColor(n), `自分の色を${label}にする`);
+      const b = button("btn sm c-" + n, taken ? "相手の色" : label, () => setMyColor(n), `マイカラーを${label}にする`);
       b.setAttribute("aria-pressed", String(n === mc)); b.disabled = taken;
       box.appendChild(b);
     });
