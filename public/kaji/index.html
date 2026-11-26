@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>家事ポイント帳</title>
+<title>家事してごほうび！</title>
 <meta name="description" content="家事や仕事でポイントを貯めて、毎日の目標を目指す記録帳">
 <meta name="theme-color" content="#f3f1e7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b1c19" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="家事ポイント">
+<meta name="apple-mobile-web-app-title" content="家事してごほうび！">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -85,7 +85,7 @@ button { font: inherit; color: inherit; }
 .linkbtn { border: none; background: none; color: var(--accent); cursor: pointer; padding: 6px 2px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 
 header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-header h1 { white-space: nowrap; min-width: 0; font-size: clamp(1.1rem, 5.2vw, 1.4rem); }
+header h1 { white-space: nowrap; min-width: 0; font-size: clamp(.95rem, 4vw, 1.4rem); }
 .head-right { display: flex; align-items: center; gap: 6px; flex: none; }
 .head-right .btn { white-space: nowrap; }
 .wallet { font-size: .92rem; color: var(--sub); white-space: nowrap; }
@@ -296,7 +296,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .quote-veil:f
 <body>
 <div class="wrap">
   <header>
-    <h1>家事ポイント帳</h1>
+    <h1>家事してごほうび！</h1>
     <div class="head-right">
       <div class="wallet" id="wallet" hidden>ポイント<b id="balance">0</b></div>
       <button class="btn sm iconbtn" type="button" id="calBtn" aria-label="カレンダー" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="8.5" cy="14.5" r="1.1"/><circle cx="12" cy="14.5" r="1.1"/><circle cx="15.5" cy="14.5" r="1.1"/></svg></button>
@@ -1248,7 +1248,7 @@ async function exportBackup() {
   try {
     const file = new File([blob], name, { type: "application/json" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: "家事ポイント帳のバックアップ" });
+      await navigator.share({ files: [file], title: "家事してごほうび！のバックアップ" });
     } else {
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);

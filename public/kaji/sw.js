@@ -1,8 +1,8 @@
-/* 家事ポイント帳：電波がなくても開けるようにするための保存係。
+/* 家事してごほうび！：電波がなくても開けるようにするための保存係。
    画面（HTML）はネット優先で取りに行き、だめなら保存しておいたものを出す。
    設定やアイコンなどは保存したものをすぐ出しつつ、裏で新しいものに入れ替える。
    フォントは保存したものを優先して出す。 */
-const CACHE = "kaji-v10";
+const CACHE = "kaji-v11";
 const CORE = [
   "./", "./index.html", "./manifest.webmanifest", "./firebase-config.js", "./vendor/firebase-10.14.1.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png",
