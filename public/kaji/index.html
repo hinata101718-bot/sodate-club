@@ -258,9 +258,9 @@ textarea { font: inherit; color: var(--sumi); background: var(--btn); border: 1p
 .quote-veil .flower { width: 44px; height: 44px; animation: rise 1.2s .5s ease both; }
 .quote-veil .flower .petal { fill: var(--beni-soft); stroke: var(--beni); stroke-width: 1.2; }
 .quote-veil .flower .core { fill: var(--beni); }
-.vbox { display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 20px; max-width: 100%; animation: rise 1.6s .7s ease both; }
-.vq { writing-mode: vertical-rl; font-family: var(--mincho); font-size: 1.35rem; line-height: 2; letter-spacing: .08em; max-height: 42vh; max-height: 42dvh; margin: 0; }
-.vby { writing-mode: vertical-rl; font-family: var(--mincho); font-size: .95rem; color: var(--sub); letter-spacing: .08em; align-self: flex-end; margin: 0; }
+.vbox { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 24em; width: 100%; animation: rise 1.6s .7s ease both; }
+.vq { font-family: var(--mincho); font-size: 1.35rem; line-height: 1.9; margin: 0; text-align: center; text-wrap: balance; overflow-wrap: anywhere; }
+.vby { font-family: var(--mincho); font-size: .95rem; color: var(--sub); margin: 0; text-align: center; }
 .vexp { max-width: 24em; margin: 0; font-size: .95rem; line-height: 1.8; color: var(--sumi); background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; animation: rise 1.4s 1.2s ease both; }
 .quote-veil .close { font-size: .88rem; color: var(--sub); animation: rise 1.2s 1.6s ease both; }
 @keyframes veil { from { opacity: 0; } to { opacity: 1; } }
@@ -839,7 +839,7 @@ let lastFocus = null;
 function showQuote(k, achievedNow) {
   const qt = quoteOf(k);
   $("vq").textContent = qt.q;
-  $("vby").textContent = byline(qt);
+  $("vby").textContent = "― " + byline(qt);
   $("vexp").textContent = qt.e || "";
   $("veilLead").textContent = achievedNow ? "今日の目標達成！" : `${md(k)}の名言`;
   const v = $("veil"); v.classList.remove("leaving"); v.hidden = false;
