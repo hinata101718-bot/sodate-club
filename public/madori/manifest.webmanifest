@@ -1,0 +1,18 @@
+{
+  "name": "ゆめのおうち",
+  "short_name": "ゆめのおうち",
+  "description": "土地に合わせて間取りを描き、そのまま3Dで家の外観を回して見られる家づくりの道具",
+  "lang": "ja",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f1e7",
+  "theme_color": "#f3f1e7",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
