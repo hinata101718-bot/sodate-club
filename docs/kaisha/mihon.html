@@ -52,9 +52,9 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .ov{position:absolute;transform:translate(-50%,-100%);pointer-events:none;white-space:nowrap}
 .bub{background:var(--white);border:2px solid var(--navy);font-size:11px;padding:2px 7px;box-shadow:2px 2px 0 rgba(29,53,87,.2)}
 .bub:after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-4px;border:4px solid transparent;border-top-color:var(--navy)}
-.pop{font-family:var(--dot);font-size:13px;color:var(--green);text-shadow:1px 0 var(--white),-1px 0 var(--white),0 1px var(--white),0 -1px var(--white)}
+.pop{animation:rise 1.8s steps(6) infinite;font-family:var(--dot);font-size:13px;color:var(--green);text-shadow:1px 0 var(--white),-1px 0 var(--white),0 1px var(--white),0 -1px var(--white)}
 .pop.b{color:var(--blue)}
-.zz{font-family:var(--dot);font-size:12px;color:var(--muted)}
+.zz{animation:rise 2.4s steps(4) infinite;font-family:var(--dot);font-size:12px;color:var(--muted)}
 .place{position:absolute;left:8px;bottom:8px;font-size:10px;background:var(--white);border:2px solid var(--navy);padding:1px 6px;font-weight:500}
 .place .dot{color:var(--blue)}
 /* 下のメニュー */
@@ -77,7 +77,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .steps span{flex:1;text-align:center;border:2px solid var(--line);padding:2px 0;color:var(--muted)}
 .steps .on{border-color:var(--navy);background:var(--navy);color:var(--white)}
 .planner{display:flex;gap:8px;align-items:center;font-size:12px;line-height:1.5;background:var(--sky);padding:6px 8px}
-.planner canvas{width:36px;height:36px;border:2px solid var(--navy);background:var(--white);flex:none}
+.planner canvas{width:48px;height:48px;border:2px solid var(--navy);background:var(--white);flex:none}
 .idea{border:2px solid var(--line);padding:8px 10px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;margin-bottom:6px}
 .idea .g{font-family:var(--dot);font-size:16px}
 .idea .m{font-size:11px;color:var(--muted)}
@@ -99,7 +99,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .next{margin-top:12px;display:block;text-align:center;background:var(--green);color:var(--white);border:2px solid var(--navy);padding:9px;font-weight:700;font-size:14px;box-shadow:3px 3px 0 var(--navy)}
 /* 社員カード */
 .who{display:flex;gap:12px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--line)}
-.who canvas{width:60px;height:60px;background:var(--sky);border:2px solid var(--navy);flex:none}
+.who canvas{width:48px;height:48px;background:var(--sky);border:2px solid var(--navy);flex:none}
 .who .nm{font-weight:700;font-size:16px}
 .who .meta{font-size:11px;color:var(--muted);line-height:1.6}
 .tag{display:inline-block;font-size:10px;border:1px solid var(--navy);padding:0 4px;margin-right:3px;color:var(--navy);background:var(--white)}
@@ -135,8 +135,8 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .row:before{content:"";position:absolute;top:0;left:var(--l,20%);right:var(--r,20%);height:2px;background:var(--navy)}
 .col{display:flex;flex-direction:column;align-items:center;position:relative}
 .col:before{content:"";position:absolute;top:-12px;left:50%;width:2px;height:12px;background:var(--navy)}
-.faces{display:grid;grid-template-columns:repeat(3,22px);gap:2px;justify-content:center}
-.faces canvas,.lead canvas{width:22px;height:22px;background:var(--sky);border:1px solid var(--line)}
+.faces{display:grid;grid-template-columns:repeat(3,24px);gap:2px;justify-content:center}
+.faces canvas,.lead canvas{width:24px;height:24px;background:var(--sky);border:1px solid var(--line)}
 .lead{display:flex;align-items:center;gap:4px;font-size:10px}
 .lead.none{border:2px dashed var(--blue);padding:1px 5px;color:var(--blue);font-weight:500}
 .info{font-size:9px;color:var(--muted)}
@@ -152,7 +152,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .pips{display:flex;gap:3px}.pips i{width:8px;height:8px;border:1px solid var(--navy)}.pips i.f{background:var(--navy)}
 .modal h3{font-family:var(--dot);font-weight:400;font-size:18px;margin:0}
 .modal .from{display:flex;gap:8px;align-items:center;font-size:12px;line-height:1.6}
-.modal .from canvas{width:36px;height:36px;background:var(--sky);border:2px solid var(--navy);flex:none}
+.modal .from canvas{width:48px;height:48px;background:var(--sky);border:2px solid var(--navy);flex:none}
 .now3{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:10px;text-align:center;color:var(--muted)}
 .now3 b{display:block;font-family:var(--dot);font-weight:400;font-size:15px;color:var(--navy)}
 .choice{border:2px solid var(--navy);padding:8px 10px;font-size:13px;font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:8px;box-shadow:2px 2px 0 var(--line)}
@@ -167,7 +167,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .pkg .sub{font-size:11px;color:var(--line);line-height:1.7}
 .critics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%}
 .critic{display:flex;flex-direction:column;align-items:center;gap:5px}
-.critic canvas{width:100%;max-width:66px;aspect-ratio:1;background:#28476f;border:2px solid #4a6a92}
+.critic canvas{width:48px;height:48px;background:#28476f;border:2px solid #4a6a92}
 .critic.now canvas{border-color:var(--gold);box-shadow:0 0 0 2px var(--navy),0 0 0 4px var(--gold)}
 .score{font-family:var(--dot);font-size:34px;line-height:1;height:36px}
 .score.q{color:#56739a}
@@ -184,6 +184,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .total{font-family:var(--dot);font-size:18px}
 .total span{font-size:40px;color:var(--gold)}
 .tap{font-size:11px;color:var(--line);animation:blink 1.2s steps(2) infinite}
+@keyframes rise{0%{transform:translate(-50%,-100%);opacity:1}80%{opacity:1}100%{transform:translate(-50%,-160%);opacity:0}}
 @keyframes blink{50%{opacity:.35}}
 /* 覚醒 */
 .awake{flex:1;position:relative;background:var(--navy);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--white)}
@@ -196,14 +197,14 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 .awake .gain .dot{font-size:22px}
 .awake .gain .to{color:var(--gold)}
 .awake .gain .plus{color:var(--green);font-size:15px}
-@media (prefers-reduced-motion:reduce){.tap,.paused,.awake h2{animation:none}}
+@media (prefers-reduced-motion:reduce){.tap,.paused,.awake h2,.pop,.zz{animation:none}}
 .note{max-width:760px;margin:36px auto 0;font-size:13px;line-height:1.8;color:var(--muted)}
 .note b{color:var(--navy)}
 </style>
 
 <div class="intro">
   <h1>PRESS START</h1>
-  <p>動かない見本の画面です（2つ目の版）。色と配置、箱庭の見え方を確かめるためのものです。社名・社員・作品名・機種・数字はすべて例です。</p>
+  <p>見本の画面です（3つ目の版）。箱庭の社員だけ動きます（キーボードを打つ・歩く・まばたき・寝息）。ボタンは押せません。色と配置、箱庭の見え方を確かめるためのものです。社名・社員・作品名・機種・数字はすべて例です。</p>
 </div>
 
 <div class="wall">
@@ -221,10 +222,10 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
     </div>
     <div class="garden" data-scene="office">
       <canvas></canvas>
-      <div class="ov bub" data-at="2,3,0,-17">佐藤がひらめいた！ 💡</div>
-      <div class="ov pop" data-at="4,1,2,-18">面白さ+2</div>
-      <div class="ov pop b" data-at="4,3,10,-16">絵+3</div>
-      <div class="ov zz" data-at="5,6,2,-9">Zzz</div>
+      <div class="ov bub" data-at="2,3,0,-23">佐藤がひらめいた！ 💡</div>
+      <div class="ov pop" data-at="4,1,3,-23">面白さ+2</div>
+      <div class="ov pop b" data-at="4,3,16,-17">絵+3</div>
+      <div class="ov zz" data-at="5,6,11,-13">Zzz</div>
       <div class="place">③ 雑居ビルの事務所　<span class="dot">6／8</span>人</div>
     </div>
     <div class="nav" data-nav="-1"></div>
@@ -243,7 +244,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
       <div class="sh"><h2>新しいゲームを作る</h2></div>
       <div class="steps"><span class="on">1 企画と規模</span><span>2 担当を決める</span></div>
       <div class="scroll">
-        <div class="planner"><canvas width="12" height="12" data-face="4"></canvas><div>プランナーの田中が、企画を3つ持ってきました。<br><small style="color:var(--muted)">◎○△は田中の見立て。腕がいいほど当たる</small></div></div>
+        <div class="planner"><canvas width="24" height="24" data-face="tanaka"></canvas><div>プランナーの田中が、企画を3つ持ってきました。<br><small style="color:var(--muted)">◎○△は田中の見立て。腕がいいほど当たる</small></div></div>
         <div class="lbl">企画</div>
         <div class="idea sel"><span class="g">RPG × 宇宙</span><span class="fit"><b>◎</b>見立て</span><span class="m">「星をめぐる冒険。いま流行りかけです」</span></div>
         <div class="idea"><span class="g">パズル × 猫</span><span class="fit"><b>○</b>見立て</span><span class="m">「小さく作れて、手堅いです」</span></div>
@@ -277,7 +278,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
         <div class="step"><span class="pips"><i class="f"></i><i class="f"></i><i></i></span>分かれ道 2／3・開発の中ごろ</div>
         <h3>コスモクエスト</h3>
         <div class="now3"><span>面白さ<b>38</b></span><span>絵<b>24</b></span><span>音<b>12</b></span><span>のこり<b>11週</b></span></div>
-        <div class="from"><canvas width="12" height="12" data-face="4"></canvas><div>田中「ここからどこに力を入れましょう？」</div></div>
+        <div class="from"><canvas width="24" height="24" data-face="tanaka"></canvas><div>田中「ここからどこに力を入れましょう？」</div></div>
         <div class="choice">絵に力を入れる<small><span class="up">絵↑</span><span class="dn">＋1週</span></small></div>
         <div class="choice">音楽に力を入れる<small><span class="up">音↑</span><span class="dn">＋1週</span></small></div>
         <div class="choice">早く仕上げる<small><span class="up">−2週</span><span class="dn">面白さ↓</span></small></div>
@@ -293,10 +294,10 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
       <div class="ttl">レビュー発表</div>
       <div class="pkg"><canvas width="24" height="30" data-pkg></canvas><div><div class="game">コスモクエスト</div><div class="sub">RPG × 宇宙・ふつう<br>ピコステーション<br>1983年 1月 発売</div></div></div>
       <div class="critics">
-        <div class="critic"><canvas width="16" height="16" data-critic="0"></canvas><div class="score">8</div><small>星野</small></div>
-        <div class="critic"><canvas width="16" height="16" data-critic="1"></canvas><div class="score hi">9</div><small>岩田</small></div>
-        <div class="critic now"><canvas width="16" height="16" data-critic="2"></canvas><div class="score q">?</div><small>松本</small></div>
-        <div class="critic"><canvas width="16" height="16" data-critic="3"></canvas><div class="score q">?</div><small>大野</small></div>
+        <div class="critic"><canvas width="24" height="24" data-critic="0"></canvas><div class="score">8</div><small>星野</small></div>
+        <div class="critic"><canvas width="24" height="24" data-critic="1"></canvas><div class="score hi">9</div><small>岩田</small></div>
+        <div class="critic now"><canvas width="24" height="24" data-critic="2"></canvas><div class="score q">?</div><small>松本</small></div>
+        <div class="critic"><canvas width="24" height="24" data-critic="3"></canvas><div class="score q">?</div><small>大野</small></div>
       </div>
       <div class="comment"><b>松本</b>「宇宙の広さがよく出ている。戦闘の音がもう少しほしい」</div>
       <div class="pre"><span>発売前の期待度<b class="dot">★★★★☆</b></span><span>予約<b class="dot">3.2万本</b></span></div>
@@ -313,7 +314,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
     <div class="awake">
       <canvas class="rays" data-rays></canvas>
       <h2>覚醒！！</h2>
-      <canvas class="hero" width="12" height="12" data-face="0"></canvas>
+      <canvas class="hero" width="24" height="24" data-face="satoWow"></canvas>
       <div class="nm">佐藤 陽太（デザイナー・24歳）</div>
       <div class="gain">デザイン <span class="dot">58</span> → <span class="dot to">71</span> <span class="dot plus">+13</span></div>
       <div class="tap" style="position:relative">タップでもどる</div>
@@ -332,7 +333,7 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
       <div class="grip"></div>
       <div class="scroll">
         <div class="who">
-          <canvas width="12" height="12" data-face="0"></canvas>
+          <canvas width="24" height="24" data-face="sato"></canvas>
           <div><div class="nm">佐藤 陽太</div><div class="meta"><span class="tag role">デザイナー</span><span class="tag">主任</span><span class="tag">24歳</span><span class="tag">夜型</span><br>第1チーム・給料 月¥18万</div></div>
         </div>
         <div class="say">「今日は筆がのる！」</div>
@@ -360,19 +361,19 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
       <div class="sh"><h2>組織図</h2><small>社員 34人・4部</small></div>
       <div class="scroll orgwrap">
         <div class="org">
-          <div class="node boss"><canvas width="12" height="12" data-face="9"></canvas><div><b>社長</b><br><small>ヒナタ</small></div></div>
+          <div class="node boss"><canvas width="24" height="24" data-face="boss"></canvas><div><b>社長</b><br><small>ヒナタ</small></div></div>
           <div class="vl"></div>
           <div class="row" style="--l:30%;--r:16%">
             <div class="col">
-              <div class="node dept"><b>開発部</b><span class="lead"><canvas width="12" height="12" data-face="1"></canvas>部長 鈴木</span><span class="info">22人・2チーム</span></div>
+              <div class="node dept"><b>開発部</b><span class="lead"><canvas width="24" height="24" data-face="suzuki"></canvas>部長 鈴木</span><span class="info">22人・2チーム</span></div>
               <div class="vl"></div>
               <div class="row" style="--l:25%;--r:25%">
-                <div class="col"><div class="node"><b>第1チーム</b><span class="lead"><canvas width="12" height="12" data-face="2"></canvas>課長 高橋</span><span class="info">開発中 62%</span><div class="faces" data-faces="6"></div></div></div>
+                <div class="col"><div class="node"><b>第1チーム</b><span class="lead"><canvas width="24" height="24" data-face="takahashi"></canvas>課長 高橋</span><span class="info">開発中 62%</span><div class="faces" data-faces="6"></div></div></div>
                 <div class="col"><div class="node"><b>第2チーム</b><span class="lead none">＋ リーダーを任命</span><span class="info">企画待ち</span><div class="faces" data-faces="5"></div></div></div>
               </div>
             </div>
             <div class="col">
-              <div class="node dept"><b>営業部</b><span class="lead"><canvas width="12" height="12" data-face="7"></canvas>課長 森</span><div class="faces" data-faces="3"></div></div>
+              <div class="node dept"><b>営業部</b><span class="lead"><canvas width="24" height="24" data-face="mori"></canvas>課長 森</span><div class="faces" data-faces="3"></div></div>
               <div class="vl"></div>
               <div class="folded"><b>広報部・人事部</b><small>▼ ひらく（6人）</small></div>
             </div>
@@ -392,84 +393,230 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
 <script>
 (function(){
   const C={sky:"#cfe8f8",cloud:"#ffffff",slab:"#9cc3df",slabD:"#7aa9cc",floorA:"#eef5fa",floorB:"#dbe9f3",rugA:"#cfe3f4",rugB:"#bcd7ee",
-    wall:"#ffffff",wallS:"#e2eef7",wallE:"#7aa9cc",base:"#b7d6ec",desk:"#d4e3ee",deskF:"#8fadc4",deskD:"#6f8fa8",mon:"#2c3e50",scr:"#7fd0ff",scr2:"#35a565",
-    skin:"#f3c9a4",skinS:"#d9a882",navy:"#1d3557",green:"#35a565",plant:"#2f8f55",plantL:"#58c27d",pot:"#e0e8ef",potD:"#9fb6c8",win:"#a9dcf7",
-    board:"#ffffff",shadow:"rgba(29,53,87,.18)",sofa:"#2f7fc1",sofaD:"#1f5f99",book:["#e86a6a","#f2b33d","#35a565","#2f7fc1","#7a5cc2"],wood:"#c79a6b",woodD:"#9b7148",gold:"#e0a21b"};
-  const HAIR=["#3b2a20","#e0a21b","#1d1d1d","#8a4b2a","#5b3a8a","#c2410c","#6b6b6b","#1d1d1d","#3b2a20","#2b2b2b"];
-  const SHIRT=["#2f7fc1","#35a565","#e86a6a","#f2b33d","#7a5cc2","#4fb3bf"];
+    wall:"#ffffff",wallS:"#e2eef7",wallE:"#7aa9cc",base:"#b7d6ec",desk:"#dbe7f0",deskE:"#ffffff",deskF:"#9bb6cb",deskD:"#6f8fa8",mon:"#2c3e50",monL:"#4a5d70",scr:"#7fd0ff",scrL:"#c4ecff",scr2:"#35a565",
+    navy:"#1d3557",green:"#35a565",plant:"#2f8f55",plantL:"#58c27d",pot:"#e0e8ef",potD:"#9fb6c8",win:"#a9dcf7",winL:"#d6f0fd",
+    board:"#ffffff",shadow:"rgba(29,53,87,.16)",sofa:"#2f7fc1",sofaL:"#5b9fd6",sofaD:"#1f5f99",book:["#e86a6a","#f2b33d","#35a565","#2f7fc1","#7a5cc2"],wood:"#c79a6b",woodD:"#9b7148",gold:"#e0a21b",
+    mouth:"#b5524a",blush:"#f29a9a",white:"#ffffff",chair:"#4a6a8a",chairL:"#6a8aaa",pants:"#33415c",pantsD:"#242f45",shoe:"#2b2b2b"};
+  const SKIN=[["#f6d2b3","#e2b08c"],["#efc09a","#d49c74"],["#d9a37b","#b98059"]];
+  const HAIR=[["#4a3426","#2e1f16","#6b4e3a"],["#e2a83a","#b9821c","#f3cf6e"],["#26262e","#121216","#4a4a58"],["#9a5530","#6e3a1e","#c27a4c"],["#5b3a8a","#3d2560","#8a64b8"],["#c2410c","#8a2c06","#e86a3a"],["#9a9aa2","#6e6e76","#c8c8d0"]];
+  const SHIRT=[["#2f7fc1","#1f5f99"],["#35a565","#257a49"],["#e86a6a","#c04848"],["#f2b33d","#c98d1f"],["#7a5cc2","#5a3f98"],["#4fb3bf","#338893"],["#ffffff","#c9d8e4"]];
   const px=(c,x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)};
-  const SC=3,N=7;
-  function setup(cv,cw,ch){cv.width=Math.floor(cw/SC);cv.height=Math.floor(ch/SC);cv.style.width=cv.width*SC+"px";cv.style.height=cv.height*SC+"px";cv.style.left=Math.floor((cw-cv.width*SC)/2)+"px";cv.style.top=Math.floor((ch-cv.height*SC)/2)+"px";const c=cv.getContext("2d");c.imageSmoothingEnabled=false;return c}
-  function diamond(c,cx,top,col){for(let r=0;r<8;r++){const h=r<4?(r+1)*2:(8-r)*2;px(c,cx-h,top+r,h*2,1,col)}}
-  function person(c,x,y,p){
-    const hair=HAIR[p.h%HAIR.length],sh=SHIRT[p.s%SHIRT.length];
-    px(c,x-4,y-1,8,2,C.shadow);
-    if(p.walk){px(c,x-3,y-4,2,4,C.navy);px(c,x+1,y-5,2,4,C.navy)}else{px(c,x-2,y-4,2,4,C.navy);px(c,x+1,y-4,2,4,C.navy)}
-    px(c,x-3,y-9,6,5,sh);px(c,x-3,y-9,1,5,"rgba(0,0,0,.18)");
-    if(p.cup){px(c,x+3,y-8,2,3,"#ffffff");px(c,x+3,y-8,2,1,"#8a4b2a")}
-    px(c,x-2,y-13,5,4,C.skin);px(c,x-1,y-11,1,1,C.navy);px(c,x+1,y-11,1,1,C.navy);
-    px(c,x-2,y-14,5,2,hair);
-    if(p.style===1){px(c,x-3,y-13,1,4,hair);px(c,x+3,y-13,1,4,hair)}
-    else if(p.style===2){px(c,x,y-16,2,2,hair);px(c,x-3,y-13,1,2,hair)}
-    else px(c,x-3,y-13,1,2,hair);
+  const span=(c,y,x0,x1,col)=>px(c,x0,y,x1-x0+1,1,col);
+
+  /* ===== 箱庭の社員（12×22ドット） ===== */
+  // p: {skin,hair,shirt,style}  pose: "stand"|"walk0"|"walk1"|"sit"  blink: bool
+  function sprite(c,x0,y0,p,pose,blink,cup){
+    const [sk,skD]=SKIN[p.skin],[h,hD,hL]=HAIR[p.hair],[sh,shD]=SHIRT[p.shirt];
+    const X=x=>x0+x,Y=y=>y0+y;
+    if(p.style===1){for(let y=5;y<=12;y++){px(c,X(1),Y(y),1,1,hD);px(c,X(10),Y(y),1,1,hD)}}
+    // 頭
+    const hw=[3,4,5,5,5,5,5,4,3];
+    hw.forEach((w,k)=>span(c,Y(2+k),X(6-w),X(5+w),sk));
+    hw.forEach((w,k)=>px(c,X(5+w),Y(2+k),1,1,skD));
+    // 目・口・ほお
+    if(blink){span(c,Y(7),X(4),X(4),C.navy);span(c,Y(7),X(7),X(7),C.navy)}
+    else{px(c,X(4),Y(6),1,2,C.navy);px(c,X(7),Y(6),1,2,C.navy);px(c,X(4),Y(6),1,1,"#3c5a85");px(c,X(7),Y(6),1,1,"#3c5a85")}
+    px(c,X(3),Y(8),1,1,C.blush);px(c,X(8),Y(8),1,1,C.blush);
+    px(c,X(5),Y(9),2,1,C.mouth);
+    // 髪
+    span(c,Y(1),X(3),X(8),h);span(c,Y(2),X(2),X(9),h);span(c,Y(3),X(1),X(10),h);
+    span(c,Y(4),X(1),X(2),h);span(c,Y(4),X(4),X(6),h);span(c,Y(4),X(9),X(10),h);
+    px(c,X(1),Y(5),1,2,h);px(c,X(10),Y(5),1,2,h);
+    span(c,Y(2),X(4),X(5),hL);px(c,X(9),Y(3),2,1,hD);
+    if(p.style===2){span(c,Y(-1),X(5),X(6),h);span(c,Y(0),X(4),X(7),h);px(c,X(5),Y(-1),1,1,hL)}
+    if(p.style===3){px(c,X(3),Y(0),1,1,h);px(c,X(6),Y(0),1,1,h);px(c,X(8),Y(0),1,1,h);px(c,X(5),Y(4),1,1,sk)}
+    if(p.style===1){span(c,Y(4),X(3),X(3),h)}
+    // 首・体
+    px(c,X(5),Y(11),2,1,skD);
+    span(c,Y(12),X(3),X(8),sh);px(c,X(5),Y(12),2,1,C.white);px(c,X(4),Y(12),1,1,C.white);px(c,X(7),Y(12),1,1,C.white);
+    for(let y=13;y<=17;y++){span(c,Y(y),X(2),X(9),sh);px(c,X(9),Y(y),1,1,shD)}
+    px(c,X(5),Y(13),2,1,C.white);
+    // 腕
+    if(pose==="sit"){px(c,X(1),Y(13),1,3,sh);px(c,X(10),Y(13),1,3,shD)}
+    else if(pose==="walk0"){px(c,X(1),Y(13),1,3,sh);px(c,X(1),Y(16),1,1,sk);px(c,X(10),Y(12),1,3,shD);px(c,X(10),Y(15),1,1,sk)}
+    else if(pose==="walk1"){px(c,X(1),Y(12),1,3,sh);px(c,X(1),Y(15),1,1,sk);px(c,X(10),Y(13),1,3,shD);px(c,X(10),Y(16),1,1,sk)}
+    else{px(c,X(1),Y(13),1,4,sh);px(c,X(1),Y(17),1,1,sk);px(c,X(10),Y(13),1,4,shD);px(c,X(10),Y(17),1,1,sk)}
+    if(cup){px(c,X(10),Y(14),2,3,C.white);px(c,X(10),Y(14),2,1,"#8a4b2a");px(c,X(12),Y(15),1,1,C.white)}
+    if(pose==="sit")return;
+    // 足
+    span(c,Y(18),X(3),X(8),C.pants);
+    if(pose==="walk0"){px(c,X(3),Y(19),2,2,C.pants);px(c,X(7),Y(19),2,1,C.pantsD);px(c,X(3),Y(21),2,1,C.shoe);px(c,X(7),Y(20),2,1,C.shoe)}
+    else if(pose==="walk1"){px(c,X(3),Y(19),2,1,C.pantsD);px(c,X(7),Y(19),2,2,C.pants);px(c,X(3),Y(20),2,1,C.shoe);px(c,X(7),Y(21),2,1,C.shoe)}
+    else{px(c,X(3),Y(19),2,2,C.pants);px(c,X(7),Y(19),2,2,C.pantsD);px(c,X(3),Y(21),2,1,C.shoe);px(c,X(7),Y(21),2,1,C.shoe)}
   }
-  function chair(c,x,y){px(c,x-3,y-7,6,3,C.deskD);px(c,x-1,y-4,2,3,C.deskD)}
-  function desk(c,cx,cy,p,scr){
-    chair(c,cx+2,cy+1);
-    if(p) person(c,cx+2,cy+1,p);
-    px(c,cx-8,cy+5,16,1,C.shadow);
-    px(c,cx-8,cy-2,16,3,C.desk);px(c,cx-8,cy+1,16,3,C.deskF);px(c,cx-8,cy+4,1,2,C.deskD);px(c,cx+7,cy+4,1,2,C.deskD);
-    px(c,cx-7,cy-9,7,7,C.mon);px(c,cx-6,cy-8,5,5,scr||C.scr);px(c,cx-5,cy-7,1,1,"#ffffff");px(c,cx-5,cy-2,3,1,C.mon);
-    px(c,cx+2,cy-3,3,1,"#ffffff");
+
+  /* ===== 顔（24×24ドット） ===== */
+  // o: {skin,hair,shirt,style,face:"smile|neutral|serious|wow|sparkle|sleepy",glasses,beard,brow}
+  function face(c,o,ox=0,oy=0){
+    const [sk,skD]=SKIN[o.skin||0],[h,hD,hL]=HAIR[o.hair||0],[sh,shD]=SHIRT[o.shirt||0];
+    const P=(x,y,w,hh,col)=>px(c,ox+x,oy+y,w,hh,col),S=(y,a,b,col)=>P(a,y,b-a+1,1,col);
+    // 長い髪（後ろ）
+    if(o.style===1){for(let y=8;y<=21;y++){S(y,3,5,hD);S(y,18,20,hD)}}
+    // 服
+    S(19,6,17,sh);for(let y=20;y<24;y++)S(y,3,20,sh);for(let y=20;y<24;y++)P(18,y,3,1,shD);
+    P(10,19,4,1,C.white);P(9,20,2,1,C.white);P(13,20,2,1,C.white);P(11,20,2,3,skD);P(11,22,2,1,shD);
+    if(o.tie){P(11,21,2,3,o.tie)}
+    // 首
+    P(10,17,4,2,skD);
+    // 頭
+    const hw=[4,6,7,7,8,8,8,8,8,8,7,7,6,4];
+    hw.forEach((w,k)=>S(4+k,12-w,11+w,sk));
+    hw.forEach((w,k)=>P(11+w,4+k,1,1,skD));S(17,10,13,skD);
+    P(3,10,1,3,sk);P(20,10,1,3,skD);P(3,11,1,1,skD);
+    // 目
+    const eyes=(x)=>{
+      if(o.face==="sleepy"){S(11,x,x+2,C.navy);return}
+      if(o.face==="smileeye"){P(x,11,1,1,C.navy);P(x+1,10,1,1,C.navy);P(x+2,11,1,1,C.navy);return}
+      P(x,10,2,3,C.navy);P(x,10,1,1,C.white);if(o.face==="sparkle"){P(x+1,12,1,1,C.white);P(x,10,2,1,"#ffe9a8")}
+      if(o.face==="wow"){P(x,9,2,1,C.navy)}
+    };
+    eyes(7);eyes(15);
+    // 眉
+    const bc=o.style===6?hD:hD;
+    if(o.face==="serious"){S(8,6,9,bc);S(8,14,17,bc);P(9,9,1,1,bc);P(14,9,1,1,bc)}
+    else if(o.face==="wow"){S(7,7,9,bc);S(7,14,16,bc)}
+    else{S(8,7,9,bc);S(8,14,16,bc)}
+    // ほお
+    if(o.face!=="serious"){P(5,13,2,1,C.blush);P(17,13,2,1,C.blush)}
+    // 口
+    if(o.face==="wow"||o.face==="sparkle"){S(14,10,13,C.mouth);S(15,10,13,"#7a2e2a");P(11,15,2,1,"#e8857c");S(16,11,12,C.mouth)}
+    else if(o.face==="serious"){S(15,10,13,C.mouth)}
+    else if(o.face==="sleepy"){P(11,15,2,1,C.mouth)}
+    else{P(9,14,1,1,C.mouth);S(15,10,13,C.mouth);P(14,14,1,1,C.mouth)}
+    // ひげ・メガネ
+    if(o.beard){S(16,8,15,h);S(15,8,9,h);S(15,14,15,h);S(17,10,13,h);S(14,9,14,h);P(10,15,4,1,C.mouth)}
+    if(o.glasses){const g=C.navy;[6,14].forEach(x=>{S(9,x,x+3,g);S(13,x,x+3,g);P(x,9,1,5,g);P(x+3,9,1,5,g)});S(10,10,13,g)}
+    // 髪
+    const top=()=>{S(1,9,14,h);S(2,7,16,h);S(3,5,18,h);S(4,4,19,h);S(5,4,19,h);S(6,4,19,h);S(7,4,19,h)};
+    if(o.style===4){ // ほぼ短髪（年配）
+      S(3,8,15,h);S(4,6,17,h);P(4,5,2,4,h);P(18,5,2,4,h);S(3,9,11,hL);return;}
+    top();
+    // 前髪
+    if(o.style===5){S(8,4,19,h);S(9,4,7,h);S(9,16,19,h);P(11,8,1,1,sk)} // ぱっつん
+    else{S(8,4,6,h);S(8,8,12,h);S(8,17,19,h);P(9,8,2,1,h);P(4,9,2,3,h);P(18,9,2,3,h);P(13,8,2,1,hD)}
+    if(o.style===1){for(let y=9;y<=15;y++){P(3,y,2,1,h);P(19,y,2,1,h)}}
+    if(o.style===2){S(-1+1,10,13,h);P(9,0,6,2,h);P(10,0,2,1,hL)} // おだんご
+    if(o.style===3){P(6,1,2,2,h);P(11,0,2,2,h);P(16,1,2,2,h);P(8,0,1,1,h)} // つんつん
+    // つや
+    S(3,8,11,hL);S(4,7,8,hL);P(17,4,2,3,hD);
   }
-  function plant(c,cx,cy){px(c,cx-4,cy+1,8,1,C.shadow);px(c,cx-2,cy-3,5,4,C.pot);px(c,cx-2,cy,5,1,C.potD);px(c,cx-3,cy-9,7,6,C.plant);px(c,cx-1,cy-12,3,3,C.plant);px(c,cx+1,cy-8,1,1,C.plantL);px(c,cx-2,cy-6,1,1,C.plantL);px(c,cx,cy-11,1,1,C.plantL)}
-  function coffee(c,cx,cy){px(c,cx-4,cy+1,8,1,C.shadow);px(c,cx-3,cy-6,7,7,C.wood);px(c,cx-3,cy-6,7,1,C.woodD);px(c,cx-2,cy-13,5,7,"#3d4a59");px(c,cx-1,cy-12,3,2,C.scr);px(c,cx,cy-8,1,2,"#ffffff")}
-  function sofa(c,cx,cy){px(c,cx-10,cy+3,20,1,C.shadow);px(c,cx-10,cy-6,20,4,C.sofaD);px(c,cx-10,cy-2,20,5,C.sofa);px(c,cx-11,cy-4,2,7,C.sofaD);px(c,cx+9,cy-4,2,7,C.sofaD)}
-  function sleeper(c,cx,cy){px(c,cx-6,cy-5,10,3,SHIRT[5]);px(c,cx+4,cy-6,4,4,C.skin);px(c,cx+4,cy-7,4,2,HAIR[6]);px(c,cx+5,cy-4,2,1,C.navy);px(c,cx-8,cy-5,2,3,C.navy)}
-  function cloud(c,x,y){px(c,x,y,12,3,C.cloud);px(c,x+3,y-2,6,2,C.cloud);px(c,x-2,y+1,16,2,C.cloud)}
+
+  /* ===== 部屋（タイル 24×12、2倍で表示） ===== */
+  const SC=2,N=7,TW=12,TH=6,WH=44;
+  function setup(cv,cw,ch,sc){cv.width=Math.floor(cw/sc);cv.height=Math.floor(ch/sc);cv.style.width=cv.width*sc+"px";cv.style.height=cv.height*sc+"px";cv.style.left=Math.floor((cw-cv.width*sc)/2)+"px";cv.style.top=Math.floor((ch-cv.height*sc)/2)+"px";const c=cv.getContext("2d");c.imageSmoothingEnabled=false;return c}
+  function diamond(c,cx,top,col){for(let r=0;r<12;r++){const h=r<6?(r+1)*2:(12-r)*2;px(c,cx-h,top+r,h*2,1,col)}}
+  function cloud(c,x,y){px(c,x,y,16,4,C.cloud);px(c,x+4,y-3,8,3,C.cloud);px(c,x-3,y+2,22,3,C.cloud)}
+  function plant(c,cx,cy){px(c,cx-6,cy+1,12,2,C.shadow);px(c,cx-4,cy-6,9,7,C.pot);px(c,cx-4,cy-1,9,2,C.potD);px(c,cx-5,cy-7,11,2,C.potD);
+    for(const [x,y,w,hh] of [[-6,-17,13,10],[-3,-22,7,5],[-8,-13,4,4],[5,-14,4,4]])px(c,cx+x,cy+y,w,hh,C.plant);
+    for(const [x,y] of [[-3,-16],[2,-19],[0,-12],[-6,-12],[4,-15],[-1,-21]])px(c,cx+x,cy+y,2,1,C.plantL)}
+  function coffee(c,cx,cy){px(c,cx-7,cy+1,14,2,C.shadow);px(c,cx-6,cy-10,12,11,C.wood);px(c,cx-6,cy-10,12,2,C.woodD);px(c,cx-5,cy-5,10,1,C.woodD);
+    px(c,cx-4,cy-21,8,11,"#3d4a59");px(c,cx-3,cy-20,6,3,C.scr);px(c,cx-1,cy-15,2,3,"#8a4b2a");px(c,cx-2,cy-12,4,2,C.white)}
+  function sofa(c,cx,cy){px(c,cx-15,cy+4,30,2,C.shadow);px(c,cx-15,cy-9,30,6,C.sofaD);px(c,cx-15,cy-3,30,7,C.sofa);px(c,cx-15,cy-3,30,1,C.sofaL);px(c,cx-17,cy-6,3,10,C.sofaD);px(c,cx+14,cy-6,3,10,C.sofaD)}
+  function sleeper(c,cx,cy,t){ // ソファで寝る社員（横向き）
+    const sk=SKIN[0],[h,hD]=HAIR[6];
+    px(c,cx-11,cy-7,18,4,"#4fb3bf");px(c,cx-11,cy-7,18,1,"#7fd3dc");px(c,cx-13,cy-7,2,3,C.pants);
+    const hy=cy-10+(t%2);
+    px(c,cx+7,hy,6,6,sk[0]);px(c,cx+12,hy+1,1,5,sk[1]);px(c,cx+7,hy-1,6,2,h);px(c,cx+6,hy,1,4,h);px(c,cx+12,hy,1,2,hD);
+    px(c,cx+8,hy+3,2,1,C.navy);px(c,cx+11,hy+3,1,1,C.navy);px(c,cx+9,hy+5,1,1,C.mouth)}
+  function chair(c,x,y){px(c,x-5,y-14,10,8,C.chair);px(c,x-5,y-14,10,1,C.chairL);px(c,x-1,y-6,2,3,C.deskD)}
+  function desk(c,cx,cy,who,t,scr){
+    // cy＝タイルの中心。机の天板は cy-4〜cy-1
+    chair(c,cx+3,cy-2);
+    if(who){const sitY=cy-4-15;sprite(c,cx-3,sitY,who.p,"sit",who.blinkAt===t%who.blinkEvery)}
+    px(c,cx-13,cy+6,26,2,C.shadow);
+    px(c,cx-12,cy-4,24,4,C.desk);px(c,cx-12,cy-4,24,1,C.deskE);px(c,cx-12,cy,24,5,C.deskF);px(c,cx-12,cy+5,2,3,C.deskD);px(c,cx+10,cy+5,2,3,C.deskD);
+    // モニター（左）
+    px(c,cx-11,cy-15,11,10,C.mon);px(c,cx-11,cy-15,11,1,C.monL);
+    const sc=scr||C.scr;px(c,cx-10,cy-14,9,7,sc);
+    if(who){for(let k=0;k<3;k++){const w=2+((t+k*3+who.seed)%5);px(c,cx-9,cy-13+k*2,w,1,C.scrL)}}
+    px(c,cx-7,cy-5,3,1,C.mon);
+    // キーボードと手
+    px(c,cx-1,cy-3,8,2,"#b9c9d6");px(c,cx-1,cy-3,8,1,C.white);
+    if(who){const [sk]=SKIN[who.p.skin];const a=(t+who.seed)%2;px(c,cx-2+a,cy-4+a,2,1,sk);px(c,cx+5-a,cy-4+(1-a),2,1,sk)}
+    // マグカップ
+    px(c,cx+8,cy-6,3,3,C.white);px(c,cx+8,cy-6,3,1,"#8a4b2a");
+  }
+  const STAFF=[
+    {i:2,j:1,p:{skin:0,hair:0,shirt:1,style:0},seed:0,blinkEvery:9,blinkAt:3},
+    {i:2,j:3,p:{skin:1,hair:1,shirt:3,style:1},seed:2,blinkEvery:11,blinkAt:6},
+    {i:4,j:1,p:{skin:0,hair:2,shirt:0,style:3},seed:1,blinkEvery:7,blinkAt:2},
+    {i:4,j:3,p:{skin:2,hair:3,shirt:2,style:2},seed:3,blinkEvery:10,blinkAt:8,scr:C.scr2}
+  ];
+  const WALKER={p:{skin:1,hair:5,shirt:5,style:0},path:[[0.9,5.2],[3.2,5.2],[3.2,3.9],[3.2,5.2]]};
   function office(cv){
-    const g=cv.parentElement,c=setup(cv,g.clientWidth,g.clientHeight),W=cv.width,H=cv.height;
-    px(c,0,0,W,H,C.sky);
-    for(let y=0;y<H;y+=6)for(let x=(y/6)%2?3:0;x<W;x+=6)px(c,x,y,1,1,"rgba(255,255,255,.55)");
-    cloud(c,8,10);cloud(c,W-30,22);cloud(c,W*0.45,H-14);
-    const cx=Math.floor(W/2),WH=30,oy=g.classList.contains("peek")?Math.floor(H/2)-18:Math.max(WH+2,Math.floor((H-(WH+N*8+6))/2)+WH);
-    const tile=(i,j)=>[cx+(i-j)*8,oy+(i+j)*4];
-    // 床の厚み（建物の断面）
-    for(let x=cx-N*8;x<=cx+N*8;x++){const y=oy+N*8-Math.abs(cx-x)/2;px(c,x,y,1,6,x<cx?C.slab:C.slabD)}
-    // 壁
-    for(let x=cx-N*8;x<=cx;x++){const y=oy+(cx-x)/2;px(c,x,y-WH,1,WH,C.wallS);px(c,x,y-3,1,3,C.base)}
-    for(let x=cx;x<=cx+N*8;x++){const y=oy+(x-cx)/2;px(c,x,y-WH,1,WH,C.wall);px(c,x,y-3,1,3,C.base)}
-    for(let x=cx-N*8;x<=cx+N*8;x++){const y=oy+Math.abs(cx-x)/2;px(c,x,y-WH-2,1,2,C.wallE)}
-    px(c,cx-N*8,oy+N*4-WH-2,1,WH+2,C.wallE);px(c,cx+N*8,oy+N*4-WH-2,1,WH+2,C.wallE);
-    // 左の壁：窓と本棚
-    for(let x=cx-50;x<=cx-30;x++){const y=oy+(cx-x)/2;px(c,x,y-24,1,13,C.wallE);if(x>cx-50&&x<cx-30){px(c,x,y-23,1,11,C.win);if((x-cx+50)%7===0)px(c,x,y-23,1,11,C.wallE)}}
-    for(let x=cx-46;x<=cx-41;x++){const y=oy+(cx-x)/2;px(c,x,y-20,1,2,"#ffffff")}
-    for(let x=cx-24;x<=cx-10;x++){const y=oy+(cx-x)/2;px(c,x,y-22,1,20,C.woodD);if(x>cx-24&&x<cx-10){for(const s of [-21,-14,-7]){const k=((x+s)%5+5)%5;px(c,x,y+s,1,5,C.book[k])}}}
-    // 右の壁：ホワイトボード（進み具合）とポスター
-    for(let x=cx+10;x<=cx+36;x++){const y=oy+(x-cx)/2;px(c,x,y-24,1,14,C.navy);if(x>cx+10&&x<cx+36)px(c,x,y-23,1,12,C.board)}
-    for(let x=cx+13;x<=cx+33;x++){const y=oy+(x-cx)/2;px(c,x,y-20,1,2,C.navy);px(c,x,y-15,1,3,x<cx+13+13?C.green:C.floorB)}
-    for(let x=cx+42;x<=cx+50;x++){const y=oy+(x-cx)/2;px(c,x,y-26,1,14,"#1d3557");if(x>cx+42&&x<cx+50){px(c,x,y-25,1,12,"#2a4a7a");if(x===cx+46)px(c,x,y-21,1,3,C.gold);if(x===cx+44)px(c,x,y-24,1,1,"#ffffff")}}
-    // 床（机のまわりはじゅうたん）
-    for(let i=0;i<N;i++)for(let j=0;j<N;j++){const [x,y]=tile(i,j);const rug=i>=1&&i<=5&&j>=0&&j<=4;diamond(c,x,y,rug?((i+j)%2?C.rugB:C.rugA):((i+j)%2?C.floorB:C.floorA))}
-    const items=[
-      {t:"d",i:2,j:1,p:{h:0,s:1,style:0}},{t:"d",i:2,j:3,p:{h:1,s:3,style:1}},
-      {t:"d",i:4,j:1,p:{h:2,s:0,style:0}},{t:"d",i:4,j:3,p:{h:3,s:2,style:2},scr:C.scr2},
-      {t:"p",i:0,j:0},{t:"p",i:6,j:0},{t:"c",i:0,j:6},
-      {t:"w",i:3,j:5,p:{h:5,s:5,style:0,walk:1,cup:1}},{t:"s",i:5,j:6}
-    ].sort((a,b)=>(a.i+a.j)-(b.i+b.j));
-    for(const it of items){const [x,y]=tile(it.i,it.j);const cy=y+4;
-      if(it.t==="d")desk(c,x,cy,it.p,it.scr);else if(it.t==="p")plant(c,x,cy);else if(it.t==="c")coffee(c,x,cy);
-      else if(it.t==="s"){sofa(c,x,cy);sleeper(c,x,cy)}else person(c,x,cy+2,it.p)}
+    const g=cv.parentElement,c=setup(cv,g.clientWidth,g.clientHeight,SC),W=cv.width,H=cv.height;
+    const cx=Math.floor(W/2),peek=g.classList.contains("peek");
+    const oy=peek?Math.floor(H/2)-26:Math.max(WH+4,Math.floor((H-(WH+N*TH*2+8))/2)+WH);
+    const tile=(i,j)=>[cx+(i-j)*TW,oy+(i+j)*TH];
+    // 部屋の動かない部分を下書きに描く
+    const bg=document.createElement("canvas");bg.width=W;bg.height=H;const b=bg.getContext("2d");
+    px(b,0,0,W,H,C.sky);
+    for(let y=0;y<H;y+=8)for(let x=(y/8)%2?4:0;x<W;x+=8)px(b,x,y,1,1,"rgba(255,255,255,.6)");
+    cloud(b,10,14);cloud(b,W-40,30);cloud(b,Math.floor(W*0.42),H-18);
+    for(let x=cx-N*TW;x<=cx+N*TW;x++){const y=oy+N*TH*2-Math.abs(cx-x)/2;px(b,x,y,1,8,x<cx?C.slab:C.slabD)}
+    for(let x=cx-N*TW;x<=cx;x++){const y=oy+(cx-x)/2;px(b,x,y-WH,1,WH,C.wallS);px(b,x,y-4,1,4,C.base)}
+    for(let x=cx;x<=cx+N*TW;x++){const y=oy+(x-cx)/2;px(b,x,y-WH,1,WH,C.wall);px(b,x,y-4,1,4,C.base)}
+    for(let x=cx-N*TW;x<=cx+N*TW;x++){const y=oy+Math.abs(cx-x)/2;px(b,x,y-WH-3,1,3,C.wallE)}
+    px(b,cx-N*TW,oy+N*TH-WH-3,1,WH+3,C.wallE);px(b,cx+N*TW,oy+N*TH-WH-3,1,WH+3,C.wallE);px(b,cx,oy-WH-3,1,WH+3,"#c5dcec");
+    // 窓
+    for(let x=cx-76;x<=cx-46;x++){const y=oy+(cx-x)/2;px(b,x,y-36,1,20,C.wallE);if(x>cx-76&&x<cx-46){px(b,x,y-35,1,18,C.win);if(x<cx-66)px(b,x,y-33+((x+cx)%3),1,2,C.winL);if((x-cx+76)%10===0)px(b,x,y-35,1,18,C.wallE)}}
+    for(let x=cx-72;x<=cx-62;x++){const y=oy+(cx-x)/2;px(b,x,y-30,1,3,C.white)}
+    // 本棚
+    for(let x=cx-38;x<=cx-16;x++){const y=oy+(cx-x)/2;px(b,x,y-34,1,32,C.woodD);if(x>cx-38&&x<cx-16){for(const s of [-33,-23,-13]){const k=((Math.floor((x+s)/2))%5+5)%5;px(b,x,y+s,1,8,C.book[k]);px(b,x,y+s,1,1,"rgba(255,255,255,.35)")}}}
+    // ホワイトボード（進み具合）
+    for(let x=cx+14;x<=cx+54;x++){const y=oy+(x-cx)/2;px(b,x,y-38,1,22,C.navy);if(x>cx+14&&x<cx+54)px(b,x,y-37,1,20,C.board)}
+    for(let x=cx+18;x<=cx+50;x++){const y=oy+(x-cx)/2;if(x<cx+38)px(b,x,y-34,1,1,C.navy);if((x-cx)%6<3)px(b,x,y-30,1,1,"#9fb6c8");px(b,x,y-25,1,5,x<cx+18+20?C.green:C.floorB)}
+    // ポスター
+    for(let x=cx+62;x<=cx+76;x++){const y=oy+(x-cx)/2;px(b,x,y-40,1,22,C.navy);if(x>cx+62&&x<cx+76){px(b,x,y-39,1,20,"#2a4a7a");if(x>cx+66&&x<cx+72)px(b,x,y-33,1,5,"#2f7fc1");if(x===cx+68)px(b,x,y-34,1,1,C.white);if(x===cx+65||x===cx+73)px(b,x,y-37,1,1,C.white);px(b,x,y-23,1,3,C.gold)}}
+    // 床
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++){const [x,y]=tile(i,j);const rug=i>=1&&i<=5&&j>=0&&j<=4;diamond(b,x,y,rug?((i+j)%2?C.rugB:C.rugA):((i+j)%2?C.floorB:C.floorA))}
+    // 動く部分を毎回描く
+    let t=0;
+    function frame(){
+      c.drawImage(bg,0,0);
+      const items=[];
+      STAFF.forEach(s=>items.push({d:s.i+s.j,f:()=>{const [x,y]=tile(s.i,s.j);desk(c,x,y+TH,s,t,s.scr)}}));
+      [[0,0],[6,0]].forEach(([i,j])=>items.push({d:i+j,f:()=>{const [x,y]=tile(i,j);plant(c,x,y+TH)}}));
+      items.push({d:6,f:()=>{const [x,y]=tile(0,6);coffee(c,x,y+TH)}});
+      items.push({d:11,f:()=>{const [x,y]=tile(5,6);sofa(c,x,y+TH);sleeper(c,x,y+TH,Math.floor(t/4))}});
+      // 歩く社員：コーヒーと机のあいだを行き来する
+      const L=WALKER.path,seg=Math.floor(t/12)%L.length,f=(t%12)/12,[a,bb]=L[seg],[a2,b2]=L[(seg+1)%L.length];
+      const wi=a+(a2-a)*f,wj=bb+(b2-bb)*f;
+      items.push({d:wi+wj+0.5,f:()=>{const [x,y]=tile(wi,wj);px(c,x-5,y+TH+4,10,2,C.shadow);sprite(c,x-6,y+TH+5-21,WALKER.p,t%2?"walk0":"walk1",false,seg<2)}});
+      items.sort((p,q)=>p.d-q.d).forEach(it=>it.f());
+      t++;
+    }
+    frame();
     g.querySelectorAll("[data-at]").forEach(el=>{const [i,j,dx,dy]=el.dataset.at.split(",").map(Number);const [x,y]=tile(i,j);
-      el.style.left=(parseFloat(cv.style.left)+(x+dx)*SC)+"px";el.style.top=(parseFloat(cv.style.top)+(y+4+dy)*SC)+"px"});
+      el.style.left=(parseFloat(cv.style.left)+(x+dx)*SC)+"px";el.style.top=(parseFloat(cv.style.top)+(y+TH+dy)*SC)+"px"});
+    return frame;
   }
-  function face(cv,n){
-    const c=cv.getContext("2d");c.imageSmoothingEnabled=false;
-    const hair=HAIR[n%HAIR.length],sh=SHIRT[(n*2+1)%SHIRT.length];
-    px(c,2,9,8,3,sh);px(c,5,9,2,1,"#ffffff");px(c,3,3,6,6,C.skin);px(c,4,5,1,2,C.navy);px(c,7,5,1,2,C.navy);px(c,5,7,2,1,C.skinS);
-    px(c,3,2,6,2,hair);px(c,2,3,1,n%3===1?5:2,hair);px(c,9,3,1,n%3===1?5:2,hair);if(n%3===2)px(c,5,0,2,2,hair);
-    if(n===9){px(c,3,5,2,1,C.navy);px(c,7,5,2,1,C.navy);px(c,5,5,2,1,C.navy)}
-  }
+
+  /* ===== 顔の人たち ===== */
+  const FACES={
+    sato:{skin:0,hair:0,shirt:1,style:0,face:"smile"},
+    satoWow:{skin:0,hair:0,shirt:1,style:0,face:"sparkle"},
+    suzuki:{skin:1,hair:2,shirt:6,style:4,face:"neutral",glasses:1,tie:"#2f7fc1"},
+    takahashi:{skin:0,hair:3,shirt:0,style:3,face:"smile"},
+    tanaka:{skin:0,hair:4,shirt:3,style:5,face:"smile"},
+    mori:{skin:2,hair:2,shirt:6,style:0,face:"neutral",tie:"#e86a6a"},
+    boss:{skin:0,hair:1,shirt:0,style:1,face:"smileeye"}
+  };
+  const CROWD=[
+    {skin:1,hair:1,shirt:3,style:1,face:"smile"},{skin:0,hair:2,shirt:0,style:3,face:"neutral"},{skin:2,hair:3,shirt:2,style:2,face:"smile"},
+    {skin:1,hair:5,shirt:5,style:0,face:"smileeye"},{skin:0,hair:0,shirt:4,style:5,face:"neutral"},{skin:2,hair:2,shirt:1,style:0,face:"smile",glasses:1},
+    {skin:0,hair:4,shirt:2,style:1,face:"smileeye"},{skin:1,hair:6,shirt:6,style:4,face:"neutral",glasses:1},{skin:0,hair:3,shirt:3,style:0,face:"sleepy"}];
+  const CRITICS=[
+    {skin:0,hair:6,shirt:2,style:4,face:"neutral",glasses:1,tie:"#ffffff"},
+    {skin:1,hair:2,shirt:0,style:0,face:"serious"},
+    {skin:0,hair:3,shirt:1,style:1,face:"smile"},
+    {skin:2,hair:0,shirt:3,style:3,face:"neutral",beard:1}];
+  const drawFace=(cv,o)=>{const c=cv.getContext("2d");c.imageSmoothingEnabled=false;c.clearRect(0,0,24,24);face(c,o)};
+  document.querySelectorAll("[data-face]").forEach(cv=>drawFace(cv,FACES[cv.dataset.face]||CROWD[0]));
+  document.querySelectorAll("[data-faces]").forEach((box,k)=>{for(let n=0;n<+box.dataset.faces;n++){const cv=document.createElement("canvas");cv.width=24;cv.height=24;drawFace(cv,CROWD[(n+k*4)%CROWD.length]);box.appendChild(cv)}});
+  document.querySelectorAll("[data-critic]").forEach(cv=>drawFace(cv,CRITICS[+cv.dataset.critic]));
+
+  /* ===== メニューの絵・小物（前の版のまま） ===== */
   function icon(cv,rows,col){const c=cv.getContext("2d");rows.forEach((r,y)=>[...r].forEach((ch,x)=>{if(ch!==".")px(c,x,y,1,1,ch==="#"?col:ch==="o"?"#35a565":"#e0a21b")}))}
   const ICONS=[
     ["#########","#ooooooo#","#ooooooo#","#ooooooo#","#########","....#....","..#####..",".........","........."],
@@ -479,8 +626,6 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
     ["#*******#","#*******#",".#*****#.","..#***#..","...#*#...","....#....","...###...","..#####..","........."]];
   const NAMES=["開発","社員","組織","経営","業界"];
   document.querySelectorAll("[data-nav]").forEach(n=>{const on=+n.dataset.nav;NAMES.forEach((nm,k)=>{const s=document.createElement("span");if(k===on)s.className="on";const cv=document.createElement("canvas");cv.width=9;cv.height=9;icon(cv,ICONS[k],k===on?"#ffffff":"#1d3557");s.append(cv,nm);n.appendChild(s)})});
-  document.querySelectorAll("[data-face]").forEach(cv=>face(cv,+cv.dataset.face));
-  document.querySelectorAll("[data-faces]").forEach((box,k)=>{for(let n=0;n<+box.dataset.faces;n++){const cv=document.createElement("canvas");cv.width=12;cv.height=12;face(cv,(n*3+k*5+1)%9);box.appendChild(cv)}});
   document.querySelectorAll("[data-hw]").forEach(cv=>{const c=cv.getContext("2d"),k=+cv.dataset.hw;
     if(k===0){px(c,0,1,10,5,"#e0e8ef");px(c,0,5,10,1,"#9fb6c8");px(c,1,2,3,2,"#1d3557");px(c,7,2,1,1,"#e86a6a");px(c,8,3,1,1,"#2f7fc1")}
     else{px(c,1,0,8,5,"#3d4a59");px(c,2,1,6,3,"#35a565");px(c,0,5,10,2,"#e0e8ef")}});
@@ -488,23 +633,19 @@ figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:
     [[3,4],[19,3],[8,9],[21,12],[4,20],[15,25],[11,2],[2,13]].forEach(([x,y])=>px(c,x,y,1,1,"#ffffff"));
     for(let y=0;y<11;y++)for(let x=0;x<11;x++){const d=(x-5)**2+(y-5)**2;if(d<=26)px(c,7+x,10+y,1,1,d<8?"#7fd0ff":(x+y)%3?"#2f7fc1":"#35a565")}
     px(c,4,15,16,1,"#e0a21b");px(c,0,25,24,5,"#e0a21b");px(c,2,27,20,1,"#13284a")});
-  document.querySelectorAll("[data-critic]").forEach(cv=>{
-    const n=+cv.dataset.critic,c=cv.getContext("2d");
-    const hair=["#d9d9d9","#1d1d1d","#8a4b2a","#3b2a20"][n],sh=["#e86a6a","#2f7fc1","#35a565","#f2b33d"][n];
-    px(c,3,12,10,4,sh);px(c,7,12,2,3,"#ffffff");px(c,4,4,8,8,C.skin);px(c,6,7,1,2,C.navy);px(c,9,7,1,2,C.navy);px(c,7,10,2,1,C.skinS);px(c,4,3,8,2,hair);
-    if(n===0){px(c,3,4,1,4,hair);px(c,12,4,1,4,hair)}
-    if(n===1){px(c,5,6,3,1,C.navy);px(c,8,6,3,1,C.navy)}
-    if(n===2){px(c,3,4,1,7,hair);px(c,12,4,1,7,hair);px(c,4,4,3,1,hair)}
-    if(n===3){px(c,4,2,8,1,hair);px(c,6,1,4,1,hair);px(c,6,11,4,1,"#8a4b2a")}
-  });
-  function rays(cv){const g=cv.parentElement,c=setup(cv,g.clientWidth,g.clientHeight),W=cv.width,H=cv.height,cx=W/2,cy=H*0.42;
+  function rays(cv){const g=cv.parentElement,c=setup(cv,g.clientWidth,g.clientHeight,3),W=cv.width,H=cv.height,cx=W/2,cy=H*0.42;
     px(c,0,0,W,H,"#1d3557");
     for(let y=0;y<H;y++)for(let x=0;x<W;x++){const a=Math.atan2(y-cy,x-cx),k=Math.floor((a+Math.PI)/(Math.PI/10));if(k%2===0)px(c,x,y,1,1,"#24426b")}
     [[0.15,0.15],[0.85,0.2],[0.1,0.7],[0.9,0.75],[0.3,0.9],[0.75,0.08]].forEach(([fx,fy])=>{const x=Math.round(W*fx),y=Math.round(H*fy);px(c,x-1,y,3,1,"#e0a21b");px(c,x,y-1,1,3,"#e0a21b")})}
   const stats=[["企画",32],["デザイン",71,1],["プログラミング",18],["サウンド",25],["営業",12],["採用",9],["広報",20]];
   document.getElementById("stats").innerHTML=stats.map(([k,v,m])=>`<span class="${m?"main":""}">${k}</span><span class="v${v>=70?" hi":""}">${v}</span><span class="sb${v>=70?" hi":""}"><i style="width:${v}%"></i></span>`).join("");
-  function drawAll(){document.querySelectorAll('[data-scene="office"] canvas').forEach(office);document.querySelectorAll("[data-rays]").forEach(rays)}
-  drawAll();let t;addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(drawAll,100)});
+
+  /* ===== 描いて動かす ===== */
+  let frames=[];
+  function drawAll(){frames=[...document.querySelectorAll('[data-scene="office"] canvas')].map(office);document.querySelectorAll("[data-rays]").forEach(rays)}
+  drawAll();let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,120)});
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawAll);
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!still)setInterval(()=>frames.forEach(f=>f()),220);
 })();
 </script>
