@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ゆめのおうち</title>
+<meta name="description" content="土地に合わせて間取りを描き、そのまま3Dで家の外観を回して見られる家づくりの道具">
+<meta name="theme-color" content="#f3f1e7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1c19" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ゆめのおうち">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 和紙の色合いに、読みやすいゴシック体。押せるものは枠と面でボタンに見せる。描く画面は全面を使う */
+:root {
+  --paper: #f3f1e7; --sheet: #fbfaf5; --sumi: #2b2a26; --sub: #5c5950; --line: #d8d3c1;
+  --btn: #ffffff; --btn-line: #cfc9b4; --base-soft: #e9e6dc;
+  --accent: #557a3f; --accent-soft: #e2ead4; --on-accent: #ffffff;
+  --beni: #b0574a; --beni-soft: #f3e0d9;
+  --shadow: 0 1px 2px rgb(0 0 0 / .08), 0 4px 14px rgb(0 0 0 / .08);
+  --gothic: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1b1c19; --sheet: #24261f; --sumi: #efebdf; --sub: #c2bdac; --line: #3d4035;
+    --btn: #2c2f27; --btn-line: #4a4e41; --base-soft: #2c2e28;
+    --accent: #a8c592; --accent-soft: #2f3a28; --on-accent: #1b1c19;
+    --beni: #eaa597; --beni-soft: #432d28;
+    --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 4px 14px rgb(0 0 0 / .3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1b1c19; --sheet: #24261f; --sumi: #efebdf; --sub: #c2bdac; --line: #3d4035;
+  --btn: #2c2f27; --btn-line: #4a4e41; --base-soft: #2c2e28;
+  --accent: #a8c592; --accent-soft: #2f3a28; --on-accent: #1b1c19;
+  --beni: #eaa597; --beni-soft: #432d28;
+  --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 4px 14px rgb(0 0 0 / .3);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+html { -webkit-text-size-adjust: 100%; }
+body { background: var(--paper); color: var(--sumi); font-family: var(--gothic); font-size: 16px; line-height: 1.6; -webkit-tap-highlight-color: transparent; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+.app { position: fixed; inset: 0; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); }
+.top { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)); }
+.planbtn { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; border: none; background: none; padding: 2px 4px; text-align: left; line-height: 1.25; }
+.planbtn .logo { font-size: .72rem; color: var(--sub); font-weight: 700; letter-spacing: .08em; }
+.planbtn .nm { font-weight: 700; font-size: 1.05rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.planbtn .nm::after { content: " ▾"; color: var(--sub); font-size: .8em; }
+.ib { width: 40px; height: 40px; flex: none; border-radius: 10px; border: 1px solid var(--btn-line); background: var(--btn); display: inline-grid; place-items: center; padding: 0; }
+.ib svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ib:disabled { opacity: .35; }
+.ib:active, .btn:active, .chip:active { transform: scale(.97); }
+
+.tabs { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0 max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); background: var(--base-soft); border-radius: 12px; padding: 4px; }
+.tab { border: none; background: none; padding: 7px 2px; border-radius: 9px; color: var(--sub); font-weight: 700; }
+.tab[aria-selected="true"] { background: var(--sheet); color: var(--sumi); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+
+main { flex: 1; min-height: 0; position: relative; }
+.pane { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.stage { flex: 1; min-height: 0; position: relative; overflow: hidden; touch-action: none; background: #f6f3ea; border-top: 1px solid var(--line); }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.ovl { position: absolute; z-index: 2; }
+.ovl.tl { top: 10px; left: 10px; } .ovl.tr { top: 10px; right: 10px; } .ovl.bl { bottom: 10px; left: 10px; } .ovl.br { bottom: 10px; right: 10px; }
+
+.seg { display: inline-flex; background: var(--sheet); border: 1px solid var(--btn-line); border-radius: 10px; padding: 3px; gap: 2px; box-shadow: var(--shadow); }
+.seg button { border: none; background: none; min-height: 34px; padding: 4px 12px; border-radius: 7px; font-weight: 700; color: var(--sub); font-size: .92rem; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.pill { border: 1px solid var(--btn-line); background: var(--sheet); border-radius: 10px; min-height: 40px; padding: 4px 12px; font-weight: 700; font-size: .88rem; box-shadow: var(--shadow); display: inline-flex; align-items: center; gap: 6px; line-height: 1.25; text-align: left; }
+.pill .sm { font-weight: 500; color: var(--sub); font-size: .78rem; display: block; }
+.badge { background: var(--beni); color: #fff; border-radius: 99px; font-size: .75rem; padding: 1px 8px; font-weight: 700; white-space: nowrap; }
+.badge.ok { background: var(--accent); color: var(--on-accent); }
+
+.dock { flex: none; background: var(--sheet); border-top: 1px solid var(--line); padding: 8px max(12px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom, 0px) + 8px) max(12px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 8px; }
+.tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.tool { border: 1px solid transparent; background: none; border-radius: 10px; padding: 4px 0 3px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: .74rem; font-weight: 700; color: var(--sub); }
+.tool svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tool[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--sumi); }
+.tray { min-height: 86px; display: flex; flex-direction: column; gap: 6px; }
+.hint { color: var(--sub); font-size: .84rem; margin: 0; line-height: 1.45; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.chips::-webkit-scrollbar { display: none; }
+.chips.wrap { flex-wrap: wrap; overflow: visible; }
+.chip { flex: none; border: 1px solid var(--btn-line); background: var(--btn); border-radius: 99px; min-height: 36px; padding: 4px 14px; font-size: .9rem; font-weight: 500; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.chip .dot { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgb(0 0 0 / .15); flex: none; }
+.selhead { display: flex; align-items: center; gap: 8px; }
+.selhead b { font-size: 1rem; }
+.selhead .meta { color: var(--sub); font-size: .84rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 6px 14px; border-radius: 10px; border: 1px solid var(--btn-line); background: var(--btn); font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.btn.danger { border-color: var(--beni); color: var(--beni); }
+.btn.sm { min-height: 34px; padding: 3px 12px; font-size: .9rem; border-radius: 8px; }
+.btn.wide { width: 100%; }
+.btn:disabled { opacity: .4; }
+.x { margin-left: auto; }
+input.txt { min-height: 38px; border: 1px solid var(--btn-line); border-radius: 8px; background: var(--btn); padding: 4px 10px; min-width: 0; flex: 1; }
+input.num { width: 84px; min-height: 40px; border: 1px solid var(--btn-line); border-radius: 8px; background: var(--btn); padding: 4px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper b { min-width: 7.5em; text-align: center; font-variant-numeric: tabular-nums; font-size: .92rem; }
+
+/* 土地のページ */
+.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.form { max-width: 560px; margin: 0 auto; padding: 4px max(16px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom, 0px) + 40px) max(16px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 16px; }
+.card { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { margin: 0; font-size: 1rem; }
+.field { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.field label { font-weight: 500; }
+.unit { color: var(--sub); font-size: .9rem; margin-left: 4px; }
+.mini { width: 100%; aspect-ratio: 1.15; border-radius: 10px; border: 1px solid var(--line); display: block; background: #f6f3ea; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: .94rem; }
+.facts dt { color: var(--sub); }
+.facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.over { color: var(--beni); font-weight: 700; }
+.pad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 44px); gap: 6px; justify-content: center; }
+.pad .ib { width: 48px; height: 44px; }
+.pad .u { grid-column: 2; grid-row: 1; } .pad .l { grid-column: 1; grid-row: 2; } .pad .d { grid-column: 2; grid-row: 2; } .pad .r { grid-column: 3; grid-row: 2; }
+.compassPick { display: flex; align-items: center; gap: 14px; }
+.compassPick svg { width: 64px; height: 64px; flex: none; }
+
+/* 外観のページ */
+.stage3d { background: #d3e3ee; }
+.stage3d .gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.compass3d { width: 46px; height: 46px; border-radius: 50%; background: rgb(251 250 245 / .92); border: 1px solid #cfc9b4; display: grid; place-items: center; box-shadow: var(--shadow); color: #2b2a26; }
+.compass3d svg { width: 40px; height: 40px; transition: none; }
+.banner { left: 50%; transform: translateX(-50%); top: 60px; background: rgb(43 42 38 / .86); color: #fff; padding: 6px 14px; border-radius: 99px; font-size: .86rem; font-weight: 700; white-space: nowrap; }
+.sunline { font-size: .86rem; color: var(--sub); font-variant-numeric: tabular-nums; }
+.swatches { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 4px; scrollbar-width: none; }
+.swatches::-webkit-scrollbar { display: none; }
+.sw { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgb(0 0 0 / .18); padding: 0; position: relative; }
+.sw[aria-pressed="true"] { outline: 3px solid var(--accent); outline-offset: 2px; }
+.lbl { font-size: .8rem; color: var(--sub); font-weight: 700; margin: 0; }
+.subtabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.subtabs button { border: none; background: var(--base-soft); border-radius: 8px; min-height: 34px; font-weight: 700; color: var(--sub); font-size: .86rem; }
+.subtabs button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.lookbody { display: flex; flex-direction: column; gap: 6px; max-height: 32vh; overflow-y: auto; }
+.lookbody > *, .tray > * { flex: none; }
+
+/* 重ねて出す画面 */
+.layer { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgb(20 18 14 / .42); }
+.modal { background: var(--sheet); width: min(560px, 100%); max-height: 88dvh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 18px max(16px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom, 0px) + 20px) max(16px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 14px; box-shadow: 0 -4px 24px rgb(0 0 0 / .2); }
+@media (min-width: 640px) { .layer { align-items: center; } .modal { border-radius: 18px; } }
+.modal h2 { margin: 0; font-size: 1.15rem; }
+.mhead { display: flex; align-items: center; gap: 8px; }
+.mhead h2 { flex: 1; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.item { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--btn); }
+.item.cur { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.item .t { font-weight: 700; }
+.item .s { color: var(--sub); font-size: .86rem; }
+.tpl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tplbtn { border: 1px solid var(--btn-line); background: var(--btn); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.tplbtn canvas { width: 100%; aspect-ratio: 1.15; border-radius: 8px; background: #f6f3ea; }
+.tplbtn b { font-size: .95rem; }
+.tplbtn span { color: var(--sub); font-size: .8rem; line-height: 1.4; }
+.warns { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.warns li { background: var(--beni-soft); border-radius: 10px; padding: 8px 12px; font-size: .92rem; }
+.warns li.ok { background: var(--accent-soft); }
+table.rooms { width: 100%; border-collapse: collapse; font-size: .94rem; }
+table.rooms td { padding: 5px 0; border-bottom: 1px solid var(--line); }
+table.rooms td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+table.rooms tr.sum td { font-weight: 700; border-bottom: none; }
+.preview { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.steps { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
+.steps li::before { counter-increment: s; content: counter(s); width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 700; }
+.steps b { display: block; }
+.steps span { color: var(--sub); font-size: .92rem; }
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); transform: translateX(-50%); background: rgb(43 42 38 / .92); color: #fff; padding: 9px 16px; border-radius: 12px; font-size: .9rem; font-weight: 500; z-index: 80; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
+</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three-0.160.0.module.min.js" } }</script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="planbtn" id="planBtn" aria-label="案の一覧をひらく"><span class="logo">ゆめのおうち</span><span class="nm" id="planName">…</span></button>
+    <button class="ib" id="undoBtn" aria-label="もとに戻す"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+    <button class="ib" id="redoBtn" aria-label="やり直す"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    <button class="ib" id="shotBtn" aria-label="画像にする"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg></button>
+    <button class="ib" id="menuBtn" aria-label="メニュー"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="site">土地</button>
+    <button class="tab" role="tab" data-tab="plan">間取り</button>
+    <button class="tab" role="tab" data-tab="look">外観</button>
+  </nav>
+  <main>
+    <section class="pane scroll" id="sitePane" hidden><div class="form" id="siteForm"></div></section>
+    <section class="pane" id="planPane" hidden>
+      <div class="stage" id="planStage">
+        <canvas id="planCanvas"></canvas>
+        <div class="ovl tl" id="floorSeg"></div>
+        <button class="ovl tr pill" id="areaBtn"></button>
+        <button class="ovl br pill" id="fitBtn">全体を見る</button>
+      </div>
+      <div class="dock">
+        <div class="tray" id="tray"></div>
+        <div class="tools" id="tools"></div>
+      </div>
+    </section>
+    <section class="pane" id="lookPane" hidden>
+      <div class="stage stage3d" id="stage3d">
+        <div class="ovl tl seg" id="visSeg"></div>
+        <div class="ovl tr compass3d" id="compass3d" aria-label="方位"><svg viewBox="-20 -20 40 40"><path d="M0-15 5 2H-5z" fill="#b0574a"/><path d="M0 13 4 2H-4z" fill="#9a958a"/><text y="-6" x="0" font-size="0" fill="#2b2a26"></text></svg></div>
+        <div class="ovl banner" id="pickBanner" hidden>アクセントにする外壁をタップ</div>
+        <button class="ovl br pill" id="frontBtn">正面に戻す</button>
+      </div>
+      <div class="dock">
+        <div class="subtabs" id="lookTabs"></div>
+        <div class="lookbody" id="lookBody"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="layer"></div>
+<noscript>このアプリは JavaScript を使います。</noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
