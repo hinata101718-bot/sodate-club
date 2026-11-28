@@ -1,10 +1,10 @@
 /* ゆめのおうち：画面の操作（案の保存・もとに戻す・タブ・間取りを描く指の動き・土地・外観・画像） */
 import {
   CELL, ROOMS, ROOM_ORDER, OPEN, DOOR_KINDS, WIN_KINDS, FIX, FIX_ORDER, EXT, EXT_ORDER,
-  ROOF_SHAPES, WALL_MATS, WALL_COLORS, ROOF_COLORS, SASH_COLORS, DOOR_COLORS, TEMPLATES, uid, fixSize,
+  ROOF_SHAPES, WALL_COLORS, TEMPLATES, uid, fixSize, blankPlan,
 } from './data.js';
-import { dims, walls, areas, warnings, houseBounds, fmt1, mtxt, cm, M2, JO, TSUBO, sideDir, dirName, sunPos } from './model.js';
-import { drawPlan, drawCompass, drawScale, FONT } from './plan2d.js';
+import { dims, walls, areas, houseBounds, fmt1, mtxt, cm, M2, JO, TSUBO } from './model.js';
+import { drawPlan, drawScale, FONT } from './plan2d.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -62,7 +62,7 @@ function changed(opts = {}) {
 
 /* ---------- 画面の状態 ---------- */
 const ui = {
-  tab: 'plan', floor: 1, mode: 'room', roomType: 'western', fixType: 'kitchenI', extType: 'parking',
+  look: false, floor: 1, mode: 'room', roomType: 'western', fixType: 'kitchenI', extType: 'parking',
   sel: null, view: null, vis: 'all', lookTab: 'roof', season: 'winter', hour: 12,
 };
 let dirty3d = true, fit3d = true, view3d = null;
@@ -112,28 +112,11 @@ function refresh(opts = {}) {
   $('#planName').textContent = plan.name;
   $('#undoBtn').disabled = !hist.undo.length;
   $('#redoBtn').disabled = !hist.redo.length;
-  if (ui.tab === 'plan') {
-    drawCanvas();
-    if (!opts.keepTray) renderTray();
-    renderFloorSeg();
-    renderAreaBtn();
-  } else if (ui.tab === 'site') {
-    if (opts.full) renderSite(); else updateSiteDyn();
-  } else if (ui.tab === 'look') {
-    renderLook(opts);
-  }
-}
-
-function setTab(tab) {
-  ui.tab = tab;
-  $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-  $('#sitePane').hidden = tab !== 'site';
-  $('#planPane').hidden = tab !== 'plan';
-  $('#lookPane').hidden = tab !== 'look';
-  if (tab !== 'look') view3d?.stop();
-  if (tab === 'site') renderSite();
-  if (tab === 'plan') { resizeCanvas(); refresh(); }
-  if (tab === 'look') openLook();
+  if (ui.look) { renderLook(opts); return; }
+  drawCanvas();
+  if (!opts.keepTray) renderTray();
+  renderFloorSeg();
+  renderAreaBtn();
 }
 
 /* =========================================================
@@ -152,23 +135,24 @@ function resizeCanvas() {
   if (!ui.view) fitView();
   paint();
 }
-new ResizeObserver(() => { if (ui.tab === 'plan') resizeCanvas(); }).observe(stage);
+new ResizeObserver(() => { if (!ui.look) resizeCanvas(); }).observe(stage);
 
 function fitView() {
   if (!cw || !plan) return;
-  const sw = plan.site.w / CELL, sd = plan.site.d / CELL;
-  const top = 56, bottom = 56;
-  const s = Math.max(6, Math.min((cw - 20) / (sw + 1), (ch - top - bottom) / (sd + 1)));
-  ui.view = { s, ox: (cw - sw * s) / 2, oy: top + (ch - top - bottom - sd * s) / 2 };
+  const { W, H } = dims(plan);
+  let x0 = 0, y0 = 0, x1 = W, y1 = H;
+  if (plan.rooms.some((r) => r.f <= plan.floors)) { const b = houseBounds(plan); x0 = Math.max(0, b.x0 - 3); y0 = Math.max(0, b.y0 - 3); x1 = Math.min(W, b.x1 + 3); y1 = Math.min(H, b.y1 + 3); }
+  const top = 58, bottom = 74;
+  const s = Math.max(6, Math.min((cw - 20) / (x1 - x0), (ch - top - bottom) / (y1 - y0)));
+  ui.view = { s, ox: (cw - (x1 - x0) * s) / 2 - x0 * s, oy: top + (ch - top - bottom - (y1 - y0) * s) / 2 - y0 * s };
 }
 function drawCanvas() { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; paint(); }); }
 function paint() {
   if (!plan || !cw || !ui.view) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cw, ch);
-  drawPlan(ctx, plan, ui.floor, ui.view, { sel: resolveSel(), draft: drag?.draft, accent: CANVAS_ACCENT });
-  drawCompass(ctx, 32, ch - 40, 19, plan.site.north);
-  drawScale(ctx, 64, ch - 20, ui.view.s);
+  drawPlan(ctx, plan, ui.floor, ui.view, { sel: resolveSel(), draft: drag?.draft, accent: CANVAS_ACCENT, plain: true, ext: false });
+  drawScale(ctx, 16, ch - 14, ui.view.s);
 }
 
 const toGrid = (p) => ({ gx: (p.x - ui.view.ox) / ui.view.s, gy: (p.y - ui.view.oy) / ui.view.s });
@@ -293,7 +277,7 @@ function hitObj(sel, g) {
 }
 function hitTest(g, only) {
   const f = ui.floor;
-  const want = (k) => !only || only === k;
+  const want = (k) => k !== 'ext' && (!only || only === k);
   if (want('fix')) for (let i = plan.fixtures.length - 1; i >= 0; i--) { const fx = plan.fixtures[i]; if (fx.f === f && inRect(fixBox(fx), g)) return { kind: 'fix', obj: fx }; }
   if (want('ext') && f === 1) for (let i = plan.ext.length - 1; i >= 0; i--) { const e = plan.ext[i]; if (EXT[e.t].shape !== 'rect' && extHit(e, g)) return { kind: 'ext', obj: e }; }
   if (want('room')) for (let i = plan.rooms.length - 1; i >= 0; i--) { const r = plan.rooms[i]; if (r.f === f && inRect(r, g)) return { kind: 'room', obj: r }; }
@@ -314,12 +298,20 @@ function hitHandle(sel, p) {
   pts.forEach(([gx, gy], i) => { const d = Math.hypot(v.ox + gx * v.s - p.x, v.oy + gy * v.s - p.y); if (d < bd) { bd = d; best = i; } });
   return best;
 }
-function edgeAt(g) {
+function edgeCands(g) {
   const dv = Math.abs(g.gx - Math.round(g.gx)), dh = Math.abs(g.gy - Math.round(g.gy));
   const tol = Math.max(0.3, Math.min(0.45, 14 / ui.view.s));
-  if (Math.min(dv, dh) > tol) return null;
-  if (dh <= dv) return { o: 'h', x: Math.floor(g.gx), y: Math.round(g.gy) };
-  return { o: 'v', x: Math.round(g.gx), y: Math.floor(g.gy) };
+  const c = [];
+  if (dh <= tol) c.push({ d: dh, o: 'h', x: Math.floor(g.gx), y: Math.round(g.gy) });
+  if (dv <= tol) c.push({ d: dv, o: 'v', x: Math.round(g.gx), y: Math.floor(g.gy) });
+  return c.sort((a, b) => a.d - b.d);
+}
+/* 角の近くでは、ドア・窓や壁がある方をえらぶ */
+function edgeAt(g) {
+  const c = edgeCands(g);
+  if (!c.length) return null;
+  const wl = walls(plan, ui.floor);
+  return c.find((e) => openingAt(e)) || c.find((e) => wl.has(e.o === 'h' ? `h${e.x},${e.y}` : `v${e.x},${e.y}`)) || c[0];
 }
 function openingAt(e) {
   return plan.openings.find((op) => op.f === ui.floor && op.o === e.o &&
@@ -439,7 +431,6 @@ const TOOLS = [
   ['room', '部屋', '<rect x="3.5" y="4" width="17" height="16" rx="1"/><path d="M3.5 12h9M12.5 4v16"/>'],
   ['open', 'ドア・窓', '<path d="M6.5 20.5V4h10v16.5M3.5 20.5h17"/><path d="M13.5 12.5h.01"/>'],
   ['fix', '設備', '<path d="M3.5 12.5h17v2.5a4 4 0 0 1-4 4h-9a4 4 0 0 1-4-4z"/><path d="M6.5 12.5V6a2 2 0 0 1 4 0v.5"/><path d="M7 19l-1 1.5M17 19l1 1.5"/>'],
-  ['ext', '外構', '<path d="M12 21v-5.5"/><path d="M12 3.5a5 5 0 0 0-5 5 3.8 3.8 0 0 0 .6 7h8.8a3.8 3.8 0 0 0 .6-7 5 5 0 0 0-5-5z"/>'],
 ];
 function renderTools() {
   $('#tools').innerHTML = TOOLS.map(([k, label, svg]) => `<button class="tool" data-mode="${k}" aria-pressed="${ui.mode === k}"><svg viewBox="0 0 24 24">${svg}</svg>${label}</button>`).join('');
@@ -463,8 +454,8 @@ function renderTray() {
   tray.onclick = null;
   if (sel) { tray.innerHTML = selHTML(sel); bindSel(tray, sel); keepChipInView(tray); return; }
   const hints = {
-    select: '部屋・設備・外構をタップしてえらび、そのまま引っぱると動きます。何もないところをなぞると画面が動き、2本指で拡大できます。',
-    room: '部屋の種類をえらんで、マス目を指でなぞると部屋ができます（1マス＝91cm）。',
+    select: '部屋や設備をタップしてえらび、そのまま引っぱると動きます。何もないところをなぞると画面が動き、2本指で拡大できます。',
+    room: '部屋の種類をえらんで、マス目を指でなぞると部屋ができます（1マス＝91cm）。できたら右下の「3Dで見る」へ。',
     open: '壁（部屋のさかいめの線）をタップすると、ドアや窓がつきます。もう一度タップすると種類や幅を変えられます。',
     fix: '設備をえらんで、置きたいところをタップします。置いたあとは引っぱって動かせます。',
     ext: EXT[ui.extType].shape === 'point' ? 'えらんだものを、置きたいところにタップします。' : EXT[ui.extType].shape === 'line' ? 'フェンスを立てたいところを、まっすぐなぞります。' : '置きたいところを指でなぞって四角を描きます。',
@@ -572,15 +563,15 @@ $('#floorSeg').addEventListener('click', (e) => {
 });
 
 function renderAreaBtn() {
-  const ar = areas(plan), ws = warnings(plan, ar);
-  const per = plan.floors === 2 ? `1階 ${fmt1(ar.floors[1].area)}・2階 ${fmt1(ar.floors[2].area)}㎡` : `建ぺい率 ${fmt1(ar.bcr)}％`;
-  $('#areaBtn').innerHTML = `<span>延床 ${fmt1(ar.total)}㎡（${tsubo(ar.total)}坪）<span class="sm">${per}</span></span>${ws.length ? `<span class="badge">気づき ${ws.length}</span>` : '<span class="badge ok">OK</span>'}`;
+  const ar = areas(plan);
+  const per = plan.floors === 2 ? `<span class="sm">1階 ${fmt1(ar.floors[1].area)}㎡・2階 ${fmt1(ar.floors[2].area)}㎡</span>` : '';
+  $('#areaBtn').innerHTML = `<span>延床 ${fmt1(ar.total)}㎡（${tsubo(ar.total)}坪）${per}</span>`;
 }
 $('#areaBtn').addEventListener('click', () => openAreaModal());
 $('#fitBtn').addEventListener('click', () => { fitView(); drawCanvas(); });
 
 function openAreaModal() {
-  const ar = areas(plan), ws = warnings(plan, ar);
+  const ar = areas(plan);
   const floorTable = (f) => {
     const fa = ar.floors[f]; if (!fa) return '';
     const rows = fa.groups.map((g) => {
@@ -590,248 +581,71 @@ function openAreaModal() {
     return `<h2>${f}階</h2><table class="rooms">${rows || '<tr><td>まだ部屋がありません</td><td></td></tr>'}<tr class="sum"><td>${f}階の床面積</td><td>${fmt1(fa.area)}㎡（${tsubo(fa.area)}坪）</td></tr></table>`;
   };
   const over = (v, lim) => (lim && v > lim ? ' class="over"' : '');
-  modal(`<div class="mhead"><h2>広さと気づき</h2><button class="btn sm" data-close>とじる</button></div>
-    <ul class="warns">${ws.length ? ws.map((w) => `<li>${esc(w.t)}</li>`).join('') : '<li class="ok">気になるところは見つかりませんでした</li>'}</ul>
-    <dl class="facts">
-      <dt>延床面積</dt><dd>${fmt1(ar.total)}㎡（${tsubo(ar.total)}坪）</dd>
-      <dt>建築面積</dt><dd>${fmt1(ar.building)}㎡（${tsubo(ar.building)}坪）</dd>
-      <dt>敷地面積</dt><dd>${fmt1(ar.site)}㎡（${tsubo(ar.site)}坪）</dd>
-      <dt>建ぺい率</dt><dd${over(ar.bcr, plan.site.bcr)}>${fmt1(ar.bcr)}％（上限 ${plan.site.bcr || '—'}％）</dd>
-      <dt>容積率</dt><dd${over(ar.far, plan.site.far)}>${fmt1(ar.far)}％（上限 ${plan.site.far || '—'}％）</dd>
-    </dl>
+  modal(`<div class="mhead"><h2>広さ</h2><button class="btn sm" data-close>とじる</button></div>
+    <dl class="facts"><dt>延床面積</dt><dd>${fmt1(ar.total)}㎡（${tsubo(ar.total)}坪）</dd></dl>
     ${floorTable(1)}${plan.floors === 2 ? floorTable(2) : ''}
-    <p class="hint">1マス＝91cm×91cm（0.83㎡）、1帖＝1.62㎡、1坪＝3.31㎡で計算しています。建築面積は、1階と2階の部屋を真上から見た広さです。バルコニー・ウッドデッキ・駐車場は入れていません。正確な面積は、設計する方に確かめてください。</p>`);
+    <p class="hint">1マス＝91cm×91cm（0.83㎡）、1帖＝1.62㎡、1坪＝3.31㎡で計算しています。バルコニーは床面積に入れていません。</p>`);
 }
 
 /* =========================================================
-   土地
+   3Dで見る
    ========================================================= */
-const SIDES = [['up', '上'], ['right', '右'], ['down', '下'], ['left', '左']];
-function renderSite() {
-  const s = plan.site;
-  const { W, H } = dims(plan);
-  $('#siteForm').innerHTML = `
-    <div class="card"><h2>土地の大きさ</h2>
-      <div class="field"><label for="sw">間口（横）</label><span><input class="num" id="sw" type="number" inputmode="decimal" step="0.1" min="4" max="60" value="${s.w}"><span class="unit">m</span></span></div>
-      <div class="field"><label for="sd">奥行き（縦）</label><span><input class="num" id="sd" type="number" inputmode="decimal" step="0.1" min="4" max="60" value="${s.d}"><span class="unit">m</span></span></div>
-      <dl class="facts" id="siteFacts"></dl>
-    </div>
-    <div class="card"><h2>方角</h2>
-      <div class="compassPick"><svg viewBox="-32 -32 64 64" id="cmp"></svg><div style="flex:1"><input type="range" id="north" min="0" max="359" step="1" value="${s.north}" aria-label="北の向き"><p class="hint" id="northTxt"></p></div></div>
-      <div class="chips wrap">${SIDES.map(([k, l]) => `<button class="chip" data-north="${{ up: 0, right: 90, down: 180, left: 270 }[k]}">${l}が北</button>`).join('')}</div>
-    </div>
-    <div class="card"><h2>道路に面している側</h2>
-      <div class="chips wrap" id="roads"></div>
-      <p class="hint">角地のときは2つえらべます。3Dの家は、はじめ道路の側から見た向きで出ます。</p>
-    </div>
-    <div class="card"><h2>階数</h2>
-      <div class="chips wrap"><button class="chip" data-fl="1" aria-pressed="${plan.floors === 1}">平屋</button><button class="chip" data-fl="2" aria-pressed="${plan.floors === 2}">2階建て</button></div>
-    </div>
-    <div class="card"><h2>建ぺい率・容積率</h2>
-      <div class="field"><label for="bcr">建ぺい率の上限</label><span><input class="num" id="bcr" type="number" inputmode="numeric" min="0" max="100" step="10" value="${s.bcr}"><span class="unit">％</span></span></div>
-      <div class="field"><label for="far">容積率の上限</label><span><input class="num" id="far" type="number" inputmode="numeric" min="0" max="1000" step="10" value="${s.far}"><span class="unit">％</span></span></div>
-      <dl class="facts" id="ratioFacts"></dl>
-      <p class="hint">上限は土地の用途地域で決まっています。不動産会社や役所の資料で確かめて入れてください。ここで出す数字は目安です。</p>
-    </div>
-    <div class="card"><h2>家の位置</h2>
-      <p class="hint">家（部屋・ドア窓・設備）をまとめて1マス（91cm）ずつ動かします。外構は動きません。</p>
-      <div class="pad"><button class="ib u" data-mv="0,-1" aria-label="上へ">▲</button><button class="ib l" data-mv="-1,0" aria-label="左へ">◀</button><button class="ib d" data-mv="0,1" aria-label="下へ">▼</button><button class="ib r" data-mv="1,0" aria-label="右へ">▶</button></div>
-    </div>
-    <div class="card"><h2>配置図</h2><canvas class="mini" id="mini"></canvas><p class="hint" id="gridTxt">マス目は ${W}×${H}マス（1マス＝91cm）。</p></div>`;
-  const f = $('#siteForm');
-  const num = (id, key, lo, hi) => $(id, f).addEventListener('change', (e) => {
-    let v = parseFloat(e.target.value); if (!isFinite(v)) v = plan.site[key];
-    v = clamp(Math.round(v * 10) / 10, lo, hi); e.target.value = v;
-    commit((p) => { p.site[key] = v; }, null, {});
-    ui.view = null;
-  });
-  num('#sw', 'w', 4, 60); num('#sd', 'd', 4, 60); num('#bcr', 'bcr', 0, 100); num('#far', 'far', 0, 1000);
-  $('#north', f).addEventListener('input', (e) => commit((p) => { p.site.north = Number(e.target.value); }, 'north'));
-  f.onclick = (e) => {
-    const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.north) { commit((p) => { p.site.north = Number(b.dataset.north); }); $('#north', f).value = plan.site.north; }
-    if (b.dataset.road) {
-      const k = b.dataset.road;
-      commit((p) => { const r = new Set(p.site.road); if (r.has(k)) r.delete(k); else r.add(k); p.site.road = SIDES.map(([s2]) => s2).filter((s2) => r.has(s2)); });
-      fit3d = true;
-    }
-    if (b.dataset.fl) {
-      const n = Number(b.dataset.fl);
-      if (n === plan.floors) return;
-      commit((p) => { p.floors = n; }, null, { full: true });
-      if (n === 1 && plan.rooms.some((r) => r.f === 2)) toast('2階の部屋は残してあります。2階建てに戻すとまた出てきます');
-      renderSite();
-    }
-    if (b.dataset.mv) moveHouse(...b.dataset.mv.split(',').map(Number));
-  };
-  updateSiteDyn();
-}
-function updateSiteDyn() {
-  const f = $('#siteForm'); if (!f || !$('#siteFacts', f)) return;
-  const s = plan.site, ar = areas(plan);
-  const { W, H } = dims(plan);
-  $('#siteFacts', f).innerHTML = `<dt>敷地面積</dt><dd>${fmt1(ar.site)}㎡（${tsubo(ar.site)}坪）</dd>`;
-  const over = (v, lim) => (lim && v > lim ? ' class="over"' : '');
-  $('#ratioFacts', f).innerHTML = `<dt>建築面積</dt><dd>${fmt1(ar.building)}㎡</dd><dt>建ぺい率</dt><dd${over(ar.bcr, s.bcr)}>${fmt1(ar.bcr)}％</dd><dt>延床面積</dt><dd>${fmt1(ar.total)}㎡</dd><dt>容積率</dt><dd${over(ar.far, s.far)}>${fmt1(ar.far)}％</dd>`;
-  $('#cmp', f).innerHTML = `<circle r="30" fill="#fbfaf5" stroke="#cfc9b4"/><g transform="rotate(${s.north})"><path d="M0-24 7 2H-7z" fill="#b0574a"/><path d="M0 22 6 2H-6z" fill="#9a958a"/><text y="-12" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">北</text></g>`;
-  $('#northTxt', f).textContent = SIDES.map(([k, l]) => `${l}は${sideDir(plan, k)}`).join('、');
-  $('#roads', f).innerHTML = SIDES.map(([k, l]) => `<button class="chip" data-road="${k}" aria-pressed="${s.road.includes(k)}">${l}（${sideDir(plan, k)}）</button>`).join('');
-  $('#gridTxt', f).textContent = `マス目は ${W}×${H}マス（1マス＝91cm）。`;
-  drawMini($('#mini', f));
-}
-function moveHouse(dx, dy) {
-  const { W, H } = dims(plan);
-  const ok = plan.rooms.every((r) => r.x + dx >= 0 && r.y + dy >= 0 && r.x + r.w + dx <= W && r.y + r.h + dy <= H);
-  if (!ok) { toast('これ以上は土地からはみ出してしまいます'); return; }
-  commit((p) => {
-    for (const r of p.rooms) { r.x += dx; r.y += dy; }
-    for (const o of p.openings) { o.x += dx; o.y += dy; }
-    for (const fx of p.fixtures) { fx.x += dx; fx.y += dy; }
-  }, 'mv');
-}
-function drawMini(c) {
-  if (!c) return;
-  const r = c.getBoundingClientRect(); if (!r.width) return;
-  const d = Math.min(window.devicePixelRatio || 1, 2);
-  c.width = r.width * d; c.height = r.height * d;
-  const g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
-  const sw = plan.site.w / CELL, sd = plan.site.d / CELL, pad = 4.4 + 0.4;
-  const s = Math.min(r.width / (sw + pad * 2), r.height / (sd + pad * 2));
-  const view = { s, ox: (r.width - sw * s) / 2, oy: (r.height - sd * s) / 2 };
-  drawPlan(g, plan, 1, view, {});
-  if (plan.floors === 2) outline2F(g, view);
-  drawCompass(g, r.width - 24, 26, 15, plan.site.north);
-}
-function outline2F(g, view) {
-  const w2 = walls(plan, 2);
-  g.save(); g.strokeStyle = 'rgba(176,87,74,.85)'; g.lineWidth = 2; g.setLineDash([5, 4]);
-  g.beginPath();
-  for (const w of w2.values()) {
-    if (w.k !== 'ext' && w.k !== 'para') continue;
-    const X = (x) => view.ox + x * view.s, Y = (y) => view.oy + y * view.s;
-    if (w.o === 'h') { g.moveTo(X(w.x), Y(w.y)); g.lineTo(X(w.x + 1), Y(w.y)); } else { g.moveTo(X(w.x), Y(w.y)); g.lineTo(X(w.x), Y(w.y + 1)); }
-  }
-  g.stroke(); g.restore();
-}
-
-/* =========================================================
-   外観（3D）
-   ========================================================= */
-const LOOK_TABS = [['roof', '屋根'], ['wall', '外壁'], ['win', '窓・玄関'], ['sun', '日当たり']];
-const SEASONS = [['summer', '夏至（6月）'], ['equinox', '春分・秋分'], ['winter', '冬至（12月）']];
+const ROOF_ORDER = ['kiri', 'yose', 'kata', 'riku'];
 let viewLoading = null;
-async function openLook() {
-  renderLookChrome();
+async function open3d() {
+  ui.look = true; ui.sel = null;
+  $('#planPane').hidden = true; $('#lookPane').hidden = false;
+  renderLookChrome(); renderLookBody();
   if (!view3d) {
     if (!viewLoading) viewLoading = import('./view3d.js');
     let mod;
     try { mod = await viewLoading; } catch (e) { toast('3Dの部品を読みこめませんでした'); console.error(e); return; }
-    if (view3d) return;
-    view3d = new mod.View3D($('#stage3d'), {
-      onWallTap: (key) => {
-        commit((p) => { const s = new Set(p.look.accentWalls); if (s.has(key)) s.delete(key); else s.add(key); p.look.accentWalls = [...s]; });
-      },
-      onFrame: (ang) => { $('#compass3d svg').style.transform = `rotate(${ang}rad)`; },
-    });
+    if (!view3d) view3d = new mod.View3D($('#stage3d'), {});
   }
-  if (ui.tab !== 'look') return;
-  renderLook({ full: true });
+  if (!ui.look) return;
+  fit3d = true;
+  renderLook();
   view3d.start();
+}
+function close3d() {
+  ui.look = false;
+  view3d?.stop();
+  $('#lookPane').hidden = true; $('#planPane').hidden = false;
+  resizeCanvas(); refresh();
 }
 function renderLookChrome() {
   const vis = [['all', 'ぜんぶ'], ['noroof', '屋根なし'], ...(plan.floors === 2 ? [['f1', '1階だけ']] : [])];
   if (plan.floors !== 2 && ui.vis === 'f1') ui.vis = 'noroof';
   $('#visSeg').innerHTML = vis.map(([k, l]) => `<button data-vis="${k}" aria-pressed="${ui.vis === k}">${l}</button>`).join('');
-  $('#lookTabs').innerHTML = LOOK_TABS.map(([k, l]) => `<button data-lt="${k}" aria-pressed="${ui.lookTab === k}">${l}</button>`).join('');
-  $('#compass3d').innerHTML = '<svg viewBox="-20 -20 40 40"><path d="M0-13 5.5 3h-11z" fill="#b0574a"/><path d="M0 13 4.5 3h-9z" fill="#9a958a"/><text y="-2" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">北</text></svg>';
 }
 function renderLook(opts = {}) {
   if (!view3d) return;
-  if (dirty3d) { view3d.build(plan); dirty3d = false; }
+  if (dirty3d) { view3d.build(plan, { simple: true }); dirty3d = false; }
   if (fit3d) { view3d.fit(plan); fit3d = false; }
   view3d.setVis(ui.vis);
-  updateSun();
-  view3d.pick = ui.lookTab === 'wall' && plan.look.accent === 'walls';
-  $('#pickBanner').hidden = !view3d.pick;
+  view3d.setSun({ site: { ...plan.site, north: 0 } }, 'equinox', 10);
   renderLookChrome();
   if (!opts.keepBody) renderLookBody();
 }
-function swatchesHTML(list, cur, attr) {
-  return `<div class="swatches">${list.map(([n, c]) => `<button class="sw" style="background:${c}" data-${attr}="${c}" aria-pressed="${c.toLowerCase() === String(cur).toLowerCase()}" aria-label="${n}" title="${n}"></button>`).join('')}</div>`;
-}
 function renderLookBody() {
-  const L = plan.look, b = $('#lookBody');
-  const chip = (attr, k, label, cur) => `<button class="chip" data-${attr}="${k}" aria-pressed="${k === cur}">${label}</button>`;
-  let h = '';
-  if (ui.lookTab === 'roof') {
-    h += `<p class="lbl">屋根の形</p><div class="chips">${Object.entries(ROOF_SHAPES).map(([k, l]) => chip('roof', k, l, L.roof)).join('')}</div>`;
-    if (L.roof === 'kiri') h += `<p class="lbl">棟（てっぺん）の向き</p><div class="chips">${[['auto', 'おまかせ'], ['x', '横'], ['z', '縦']].map(([k, l]) => chip('ridge', k, l, L.ridge)).join('')}</div>`;
-    if (L.roof === 'kata') h += `<p class="lbl">雨が流れる側</p><div class="chips">${SIDES.map(([k, l]) => chip('shed', k, `${l}（${sideDir(plan, k)}）`, L.shedDir)).join('')}</div>`;
-    if (L.roof !== 'riku') {
-      h += `<p class="lbl">勾配 <span id="pitchTxt">${L.pitch}寸</span></p><input type="range" id="pitch" min="1" max="8" step="0.5" value="${L.pitch}" aria-label="屋根の勾配">`;
-      h += `<p class="lbl">軒の出</p><div class="chips">${[[0, 'なし'], [0.3, '30cm'], [0.45, '45cm'], [0.6, '60cm'], [0.9, '90cm']].map(([k, l]) => chip('eave', k, l, L.eave)).join('')}</div>`;
-    }
-    h += `<p class="lbl">屋根の色</p>${swatchesHTML(ROOF_COLORS, L.roofColor, 'rc')}`;
-  } else if (ui.lookTab === 'wall') {
-    h += `<p class="lbl">外壁の素材</p><div class="chips">${Object.entries(WALL_MATS).map(([k, l]) => chip('wm', k, l, L.wallMat)).join('')}</div>`;
-    h += `<p class="lbl">外壁の色</p>${swatchesHTML(WALL_COLORS, L.wallColor, 'wc')}`;
-    h += `<p class="lbl">アクセント（一部だけ別の素材に）</p><div class="chips">${[['none', 'なし'], ...(plan.floors === 2 ? [['2f', '2階だけ']] : []), ['walls', '壁をえらぶ']].map(([k, l]) => chip('acc', k, l, L.accent)).join('')}</div>`;
-    if (L.accent !== 'none') {
-      h += `<div class="chips">${Object.entries(WALL_MATS).map(([k, l]) => chip('am', k, l, L.accentMat)).join('')}</div>${swatchesHTML([...WALL_COLORS, ['木目', '#9a6a42']], L.accentColor, 'ac')}`;
-      if (L.accent === 'walls') h += `<p class="hint">上の3Dで外壁をタップすると、その面（その階のひと続きの壁）がアクセントに切りかわります。いま ${L.accentWalls.length} 面。</p>`;
-    }
-  } else if (ui.lookTab === 'win') {
-    h += `<p class="lbl">サッシ（窓枠）の色</p>${swatchesHTML(SASH_COLORS, L.sash, 'sash')}`;
-    h += `<p class="lbl">玄関ドアの色</p>${swatchesHTML(DOOR_COLORS, L.door, 'door')}`;
-    h += '<p class="hint">窓やドアの場所・大きさは「間取り」の「ドア・窓」で変えられます。</p>';
-  } else {
-    h += `<p class="lbl">季節</p><div class="chips">${SEASONS.map(([k, l]) => chip('season', k, l, ui.season)).join('')}</div>`;
-    h += `<p class="lbl">時刻 <span id="hourTxt">${hourTxt(ui.hour)}</span></p><input type="range" id="hour" min="4" max="20" step="0.25" value="${ui.hour}" aria-label="時刻">`;
-    h += '<p class="sunline" id="sunTxt"></p><p class="hint">北緯35度（東京・名古屋・大阪あたり）で計算しています。方角は「土地」で変えられます。</p>';
-  }
-  b.innerHTML = h;
-  if (ui.lookTab === 'sun') updateSun();
-  const pitch = $('#pitch', b);
-  if (pitch) {
-    pitch.addEventListener('input', () => { $('#pitchTxt').textContent = pitch.value + '寸'; });
-    pitch.addEventListener('change', () => commit((p) => { p.look.pitch = Number(pitch.value); }, null, { keepBody: true }));
-  }
-  const hour = $('#hour', b);
-  if (hour) hour.addEventListener('input', () => { ui.hour = Number(hour.value); $('#hourTxt').textContent = hourTxt(ui.hour); updateSun(); });
+  const L = plan.look;
+  $('#lookBody').innerHTML = `<p class="lbl">屋根の形</p><div class="chips">${ROOF_ORDER.map((k) => `<button class="chip" data-roof="${k}" aria-pressed="${k === L.roof}">${ROOF_SHAPES[k]}</button>`).join('')}</div>
+    <p class="lbl">外壁の色</p><div class="swatches">${WALL_COLORS.map(([n, c]) => `<button class="sw" style="background:${c}" data-wc="${c}" aria-pressed="${c.toLowerCase() === L.wallColor.toLowerCase()}" aria-label="${n}" title="${n}"></button>`).join('')}</div>
+    <p class="hint">指で回す・つまんで近づく・2本指で動かせます。</p>`;
 }
-const hourTxt = (h) => `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-function updateSun() {
-  if (!view3d) return;
-  const { az, alt } = view3d.setSun(plan, ui.season, ui.hour);
-  const el = $('#sunTxt');
-  if (el) el.textContent = alt > 0 ? `太陽は ${dirName(az)}、高さ ${Math.round(alt)}°` : '日の出前か日の入り後です（夜の明るさで表示）';
-}
-$('#lookTabs').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-lt]'); if (!b) return;
-  ui.lookTab = b.dataset.lt; renderLook();
+$('#go3d').addEventListener('click', () => {
+  if (!plan.rooms.some((r) => r.f <= plan.floors)) { toast('まず部屋を描いてください'); return; }
+  open3d();
 });
+$('#back2d').addEventListener('click', close3d);
 $('#visSeg').addEventListener('click', (e) => {
   const b = e.target.closest('[data-vis]'); if (!b) return;
   ui.vis = b.dataset.vis; renderLook({ keepBody: true });
 });
-$('#frontBtn').addEventListener('click', () => { view3d?.fit(plan); });
 $('#lookBody').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  const d = b.dataset;
-  const set = (fn) => commit((p) => fn(p.look));
-  if (d.roof) set((l) => { l.roof = d.roof; });
-  else if (d.ridge) set((l) => { l.ridge = d.ridge; });
-  else if (d.shed) set((l) => { l.shedDir = d.shed; });
-  else if (d.eave) set((l) => { l.eave = Number(d.eave); });
-  else if (d.rc) set((l) => { l.roofColor = d.rc; });
-  else if (d.wm) set((l) => { l.wallMat = d.wm; });
-  else if (d.wc) set((l) => { l.wallColor = d.wc; });
-  else if (d.acc) set((l) => { l.accent = d.acc; });
-  else if (d.am) set((l) => { l.accentMat = d.am; });
-  else if (d.ac) set((l) => { l.accentColor = d.ac; });
-  else if (d.sash) set((l) => { l.sash = d.sash; });
-  else if (d.door) set((l) => { l.door = d.door; });
-  else if (d.season) { ui.season = d.season; renderLookBody(); }
+  if (b.dataset.roof) commit((p) => { p.look.roof = b.dataset.roof; });
+  if (b.dataset.wc) commit((p) => { p.look.wallColor = b.dataset.wc; });
 });
 
 /* =========================================================
@@ -852,17 +666,16 @@ function planImage() {
   g.fillStyle = '#2b2a26'; g.textBaseline = 'alphabetic'; g.textAlign = 'left';
   g.font = `700 34px ${FONT}`; g.fillText(plan.name, pad, 52);
   g.font = `500 20px ${FONT}`; g.fillStyle = '#5c5950';
-  g.fillText(`延床 ${fmt1(ar.total)}㎡（${tsubo(ar.total)}坪）　建築面積 ${fmt1(ar.building)}㎡　建ぺい率 ${fmt1(ar.bcr)}％　容積率 ${fmt1(ar.far)}％`, pad, 88);
+  g.fillText(`延床 ${fmt1(ar.total)}㎡（${tsubo(ar.total)}坪）`, pad, 88);
   let y = headH;
   for (const f of fls) {
     g.fillStyle = '#2b2a26'; g.font = `700 24px ${FONT}`;
     g.fillText(`${f}階　${fmt1(ar.floors[f].area)}㎡（${tsubo(ar.floors[f].area)}坪）`, pad, y + 36);
     const top = y + blockHead, left = (W - bw) / 2;
     g.save(); g.beginPath(); g.rect(left, top, bw, bh); g.clip();
-    drawPlan(g, plan, f, { s, ox: left - x0 * s, oy: top - y0 * s }, { ghost: true });
+    drawPlan(g, plan, f, { s, ox: left - x0 * s, oy: top - y0 * s }, { ghost: true, plain: true, ext: false });
     g.restore();
     g.strokeStyle = '#d8d3c1'; g.lineWidth = 1; g.strokeRect(left, top, bw, bh);
-    drawCompass(g, left + bw - 34, top + 38, 22, plan.site.north);
     drawScale(g, left + 16, top + bh - 16, s);
     y = top + bh + gap;
   }
@@ -871,58 +684,10 @@ function planImage() {
   g.fillText(`ゆめのおうち ・ 1マス＝91cm ・ ${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`, pad, H - 24);
   return c.toDataURL('image/png');
 }
-function siteImage() {
-  const sw = plan.site.w / CELL, sd = plan.site.d / CELL, pad = 4.8;
-  const s = 40;
-  const W = Math.max((sw + pad * 2) * s, 820), headH = 110;
-  const H = headH + (sd + pad * 2) * s + 50;
-  const c = document.createElement('canvas'); c.width = W; c.height = H;
-  const g = c.getContext('2d');
-  g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, W, H);
-  const ar = areas(plan);
-  g.fillStyle = '#2b2a26'; g.font = `700 34px ${FONT}`; g.fillText(`${plan.name}　配置図`, 32, 52);
-  g.font = `500 20px ${FONT}`; g.fillStyle = '#5c5950';
-  g.fillText(`敷地 ${plan.site.w}m × ${plan.site.d}m（${fmt1(ar.site)}㎡・${tsubo(ar.site)}坪）　建ぺい率 ${fmt1(ar.bcr)}％　容積率 ${fmt1(ar.far)}％`, 32, 88);
-  const view = { s, ox: (W - sw * s) / 2, oy: headH + pad * s };
-  g.save(); g.beginPath(); g.rect(0, headH, W, H - headH - 50); g.clip();
-  drawPlan(g, plan, 1, view, {});
-  if (plan.floors === 2) outline2F(g, view);
-  g.restore();
-  drawCompass(g, W - 50, headH + 46, 26, plan.site.north);
-  drawScale(g, 40, H - 70, s);
-  g.fillStyle = '#8a857a'; g.font = `500 16px ${FONT}`;
-  g.fillText(plan.floors === 2 ? 'ゆめのおうち ・ 赤い点線は2階の外壁' : 'ゆめのおうち', 32, H - 20);
-  return c.toDataURL('image/png');
-}
-async function lookImage() {
-  if (!view3d) {
-    toast('3Dを用意しています…');
-    const prev = ui.tab;
-    setTab('look');
-    await viewLoading;
-    await new Promise((r) => setTimeout(r, 300));
-    if (prev !== 'look') { /* そのまま外観の画面にとどまる */ }
-  }
-  renderLook({ keepBody: true });
-  return view3d.snapshot();
-}
-function openShot() {
-  modal(`<div class="mhead"><h2>画像にする</h2><button class="btn sm" data-close>とじる</button></div>
-    <div class="list">
-      <button class="btn wide" data-img="plan">間取り図（${plan.floors === 2 ? '1階・2階' : '1階'}）</button>
-      <button class="btn wide" data-img="look">外観（いまの3Dの見え方）</button>
-      <button class="btn wide" data-img="site">配置図（土地と外構）</button>
-    </div>
-    <p class="hint">画像は写真に保存したり、LINEなどで送ったりできます。</p>`, {
-    onMount: (m, close) => m.addEventListener('click', async (e) => {
-      const b = e.target.closest('[data-img]'); if (!b) return;
-      close();
-      const kind = b.dataset.img;
-      const url = kind === 'plan' ? planImage() : kind === 'site' ? siteImage() : await lookImage();
-      showImage(url, `${plan.name}_${{ plan: '間取り図', site: '配置図', look: '外観' }[kind]}.png`);
-    }),
-  });
-}
+$('#shotBtn').addEventListener('click', () => {
+  if (ui.look && view3d) showImage(view3d.snapshot(), `${plan.name}_3D.png`);
+  else showImage(planImage(), `${plan.name}_間取り図.png`);
+});
 function showImage(url, filename) {
   modal(`<div class="mhead"><h2>画像ができました</h2><button class="btn sm" data-close>とじる</button></div>
     <img class="preview" src="${url}" alt="${esc(filename)}">
@@ -948,9 +713,7 @@ function setCurrent(p) {
   hist.undo = []; hist.redo = []; hist.tag = null;
   ui.sel = null; ui.view = null; ui.floor = 1;
   dirty3d = true; fit3d = true;
-  if (ui.tab === 'plan') resizeCanvas();
-  refresh({ full: true });
-  if (ui.tab === 'look') openLook();
+  if (ui.look) close3d(); else { resizeCanvas(); refresh(); }
 }
 function openPlans() {
   const render = (m) => {
@@ -968,7 +731,7 @@ function openPlans() {
     <button class="btn primary wide" id="newPlan">新しい案をつくる</button>`, {
     onMount: (m, close) => {
       render(m);
-      $('#newPlan', m).addEventListener('click', () => { close(); openTemplates(false); });
+      $('#newPlan', m).addEventListener('click', () => { close(); openTemplates(); });
       $('#planList', m).addEventListener('click', (e) => {
         const b = e.target.closest('[data-a]'); if (!b) return;
         const id = b.closest('[data-id]').dataset.id;
@@ -981,7 +744,7 @@ function openPlans() {
         if (b.dataset.a === 'rename') promptBox('案の名前', p.name, (v) => { p.name = v; p.updated = Date.now(); save(); render(m); refresh(); });
         if (b.dataset.a === 'del') confirmBox(`「${p.name}」を消しますか？`, '消す', () => {
           store.plans = store.plans.filter((x) => x.id !== id); save();
-          if (!store.plans.length) { close(); openTemplates(true); return; }
+          if (!store.plans.length) { close(); const np = blankPlan(1); store.plans.push(np); setCurrent(np); return; }
           if (id === plan.id) setCurrent(store.plans[0]);
           render(m);
         }, true);
@@ -995,11 +758,9 @@ function copyName(n) {
   do { name = `${base}（コピー${i > 1 ? i : ''}）`; i++; } while (store.plans.some((p) => p.name === name));
   return name;
 }
-function openTemplates(first) {
-  modal(`<div class="mhead"><h2>${first ? 'どこから始めますか？' : '新しい案'}</h2>${first ? '' : '<button class="btn sm" data-close>とじる</button>'}</div>
-    <p class="hint">見本をもとに直していくか、白紙から描けます。あとから土地の大きさや向きも変えられます。</p>
+function openTemplates() {
+  modal(`<div class="mhead"><h2>新しい案</h2><button class="btn sm" data-close>とじる</button></div>
     <div class="tpl">${TEMPLATES.map((t) => `<button class="tplbtn" data-t="${t.key}"><canvas></canvas><b>${t.title}</b><span>${t.sub}</span></button>`).join('')}</div>`, {
-    closable: !first,
     onMount: (m, close) => {
       $$('.tplbtn', m).forEach((b) => {
         const t = TEMPLATES.find((x) => x.key === b.dataset.t);
@@ -1008,89 +769,30 @@ function openTemplates(first) {
           const c = $('canvas', b), r = c.getBoundingClientRect(), d = Math.min(window.devicePixelRatio || 1, 2);
           c.width = r.width * d; c.height = r.height * d;
           const g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
-          const sw = p.site.w / CELL, sd = p.site.d / CELL;
-          const s = Math.min(r.width / (sw + 1), r.height / (sd + 1));
-          drawPlan(g, p, 1, { s, ox: (r.width - sw * s) / 2, oy: (r.height - sd * s) / 2 }, {});
+          const hb = p.rooms.length ? houseBounds(p) : { x0: 0, y0: 0, x1: 22, y1: 22 };
+          const bw = hb.x1 - hb.x0 + 2, bh = hb.y1 - hb.y0 + 2;
+          const s = Math.min(r.width / bw, r.height / bh);
+          drawPlan(g, p, 1, { s, ox: (r.width - bw * s) / 2 - (hb.x0 - 1) * s, oy: (r.height - bh * s) / 2 - (hb.y0 - 1) * s }, { plain: true, ext: false });
         });
         b.addEventListener('click', () => {
           const np = t.make();
           if (store.plans.some((x) => x.name === np.name)) np.name = copyName(np.name);
           store.plans.push(np); close(); setCurrent(np);
-          if (!store.guided) { store.guided = true; save(); openGuide(); }
         });
-      });
-    },
-  });
-}
-function openGuide() {
-  modal(`<h2>ゆめのおうちの使い方</h2>
-    <ol class="steps">
-      <li><div><b>「土地」で土地を入れる</b><span>間口・奥行き（m）、北の向き、道路に面している側を入れます。建ぺい率・容積率の上限も入れておくと、こえたときに知らせます。</span></div></li>
-      <li><div><b>「間取り」で部屋を描く</b><span>部屋の種類をえらんで、マス目を指でなぞります。1マスは91cm。部屋をタップすると、角の丸で大きさを、まん中を引っぱって場所を変えられます。2本指で拡大・移動できます。</span></div></li>
-      <li><div><b>ドア・窓・設備・外構をつける</b><span>「ドア・窓」は壁をタップ。種類と幅をえらびます。「設備」「外構」はえらんでタップか、なぞって置きます。</span></div></li>
-      <li><div><b>「外観」で家を回して見る</b><span>指で回す・つまんで近づく。屋根の形や外壁の素材・色をえらび、季節と時刻で日当たりも確かめられます。「屋根なし」で中ものぞけます。</span></div></li>
-      <li><div><b>画像にして見せる</b><span>上のカメラのボタンで、間取り図・外観・配置図を画像にできます。打ち合わせのときに見せたり、家族に送ったりできます。</span></div></li>
-    </ol>
-    <p class="hint">案はこのiPhoneの中に保存されます。Safariの共有ボタンから「ホーム画面に追加」しておくと、アプリのように開けて、保存も消えにくくなります。ときどきメニューの「バックアップ」もおすすめです。</p>
-    <button class="btn primary wide" data-close>はじめる</button>`);
-}
-function openMenu() {
-  modal(`<div class="mhead"><h2>メニュー</h2><button class="btn sm" data-close>とじる</button></div>
-    <div class="list">
-      <button class="btn wide" data-m="plans">案の一覧</button>
-      <button class="btn wide" data-m="rename">この案の名前を変える</button>
-      <button class="btn wide" data-m="guide">使い方</button>
-      <button class="btn wide" data-m="export">バックアップを書き出す</button>
-      <button class="btn wide" data-m="import">バックアップを読みこむ</button>
-    </div>
-    <p class="hint">案はこのiPhoneの中だけに保存され、ネットには送りません。機種変更のときや念のために、バックアップのファイルを書き出しておけます。</p>
-    <input type="file" id="importFile" accept=".json,application/json" hidden>`, {
-    onMount: (m, close) => {
-      m.addEventListener('click', (e) => {
-        const b = e.target.closest('[data-m]'); if (!b) return;
-        const k = b.dataset.m;
-        if (k === 'plans') { close(); openPlans(); }
-        if (k === 'rename') { close(); promptBox('案の名前', plan.name, (v) => { commit((p) => { p.name = v; }); }); }
-        if (k === 'guide') { close(); openGuide(); }
-        if (k === 'export') {
-          const d = new Date();
-          const name = `ゆめのおうち_バックアップ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
-          const url = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ app: 'yume-ouchi', v: 1, plans: store.plans }));
-          shareFile(url, name, 'application/json');
-        }
-        if (k === 'import') $('#importFile', m).click();
-      });
-      $('#importFile', m).addEventListener('change', async (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        try {
-          const data = JSON.parse(await file.text());
-          const list = Array.isArray(data.plans) ? data.plans : [];
-          let n = 0;
-          for (const p of list) {
-            if (!p || !p.site || !Array.isArray(p.rooms)) continue;
-            const cp = structuredClone(p);
-            if (store.plans.some((x) => x.id === cp.id)) { cp.id = uid(); cp.name = copyName(cp.name); }
-            cp.openings ||= []; cp.fixtures ||= []; cp.ext ||= [];
-            store.plans.push(cp); n++;
-          }
-          save(); close();
-          toast(n ? `${n}つの案を読みこみました（「案の一覧」から開けます）` : '読みこめる案がありませんでした');
-        } catch { toast('このファイルは読みこめませんでした'); }
       });
     },
   });
 }
 
 /* ---------- はじまり ---------- */
-$$('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
 $('#undoBtn').addEventListener('click', undo);
 $('#redoBtn').addEventListener('click', redo);
 $('#planBtn').addEventListener('click', openPlans);
-$('#menuBtn').addEventListener('click', openMenu);
-$('#shotBtn').addEventListener('click', openShot);
+// 前の版で作った案は、マス目を広げておく（土地の設定はなくしたので）
+for (const p of store.plans) { p.site.w = Math.max(p.site.w, 20); p.site.d = Math.max(p.site.d, 20); }
 renderTools();
-if (plan) { store.cur = plan.id; setTab('plan'); }
-else { $('#planName').textContent = 'ようこそ'; setTab('plan'); openTemplates(true); }
+if (!plan) { plan = blankPlan(1); store.plans.push(plan); }
+setCurrent(plan);
 document.fonts?.ready.then(() => drawCanvas());
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-if (new URLSearchParams(location.search).has('test')) window.__view = () => ui.view;
+if (new URLSearchParams(location.search).has('test')) { window.__view = () => ui.view; window.__dbg = { ui, plan: () => plan, walls, edgeAt: (gx, gy) => edgeAt({ gx, gy }) }; }

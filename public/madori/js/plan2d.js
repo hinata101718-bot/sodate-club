@@ -18,7 +18,7 @@ export function drawPlan(ctx, plan, f, view, opts = {}) {
   const rw = ROAD_M / CELL;
   ctx.font = `700 ${Math.max(10, s * 0.55)}px ${FONT}`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (const side of plan.site.road || []) {
+  for (const side of opts.plain ? [] : plan.site.road || []) {
     let r;
     if (side === 'down') r = [X(-rw), Y(sd), (sw + 2 * rw) * s, rw * s];
     if (side === 'up') r = [X(-rw), Y(-rw), (sw + 2 * rw) * s, rw * s];
@@ -37,8 +37,10 @@ export function drawPlan(ctx, plan, f, view, opts = {}) {
   ctx.lineWidth = 1;
   for (let x = 0; x <= W; x++) { ctx.strokeStyle = x % 2 ? '#e2e1d2' : '#d3d2bf'; line(ctx, X(x), Y(0), X(x), Y(H)); }
   for (let y = 0; y <= H; y++) { ctx.strokeStyle = y % 2 ? '#e2e1d2' : '#d3d2bf'; line(ctx, X(0), Y(y), X(W), Y(y)); }
-  ctx.setLineDash([6, 4]); ctx.strokeStyle = '#8b8a70'; ctx.lineWidth = 1.5;
-  ctx.strokeRect(X(0), Y(0), sw * s, sd * s); ctx.setLineDash([]);
+  if (!opts.plain) {
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = '#8b8a70'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(X(0), Y(0), sw * s, sd * s); ctx.setLineDash([]);
+  }
 
   // 外構（1階のときだけ）
   if (f === 1 && opts.ext !== false) for (const e of plan.ext) drawExt(ctx, e, X, Y, s, opts.sel?.id === e.id);

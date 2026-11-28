@@ -260,7 +260,7 @@ export class View3D {
     return { az, alt };
   }
 
-  build(plan) {
+  build(plan, opts = {}) {
     this.root.traverse((o) => o.geometry?.dispose());
     this.root.clear();
     const G = (this.groups = { ground: new THREE.Group(), f1: new THREE.Group(), f2: new THREE.Group(), roof1: new THREE.Group(), roof2: new THREE.Group(), ext: new THREE.Group() });
@@ -275,10 +275,10 @@ export class View3D {
 
     // 地面・土地・道路
     const sw = plan.site.w, sd = plan.site.d;
-    const gnd = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), mat('#cfd4bd'));
+    const gnd = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), mat('#b7c697', 'grass'));
     gnd.rotation.x = -Math.PI / 2; gnd.position.set(sw / 2, -0.01, sd / 2); gnd.receiveShadow = true; G.ground.add(gnd);
-    add(G.ground, boxG(0, sw, -0.01, 0.01, 0, sd), mat('#c4c8a6', 'grass'));
-    for (const side of plan.site.road || []) {
+    if (!opts.simple) add(G.ground, boxG(0, sw, -0.01, 0.01, 0, sd), mat('#c4c8a6', 'grass'));
+    for (const side of opts.simple ? [] : plan.site.road || []) {
       const rw = 4;
       const r = { down: [-rw, sw + rw, sd, sd + rw], up: [-rw, sw + rw, -rw, 0], left: [-rw, 0, -rw, sd + rw], right: [sw, sw + rw, -rw, sd + rw] }[side];
       if (r) add(G.ground, boxG(r[0], r[1], -0.01, 0.012, r[2], r[3]), mat('#8e9092'));
@@ -378,7 +378,7 @@ export class View3D {
     }
 
     // 外構
-    for (const e of plan.ext) this.extItem(G.ext, e);
+    if (!opts.simple) for (const e of plan.ext) this.extItem(G.ext, e);
 
     this.setVis(this.vis);
   }

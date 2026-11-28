@@ -181,6 +181,13 @@ table.rooms tr.sum td { font-weight: 700; border-bottom: none; }
 .steps b { display: block; }
 .steps span { color: var(--sub); font-size: .92rem; }
 .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); transform: translateX(-50%); background: rgb(43 42 38 / .92); color: #fff; padding: 9px 16px; border-radius: 12px; font-size: .9rem; font-weight: 500; z-index: 80; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
+.tools { grid-template-columns: repeat(4, 1fr); }
+.go3d { display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 8px 20px; border-radius: 14px; border: none; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 1.05rem; box-shadow: var(--shadow); }
+.go3d svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.ovl.bl { bottom: 40px; }
+.back { font-size: 1rem; }
+.planbtn { padding-top: 4px; padding-bottom: 6px; }
+.top { padding-bottom: 8px; }
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three-0.160.0.module.min.js" } }</script>
 </head>
@@ -191,21 +198,15 @@ table.rooms tr.sum td { font-weight: 700; border-bottom: none; }
     <button class="ib" id="undoBtn" aria-label="もとに戻す"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
     <button class="ib" id="redoBtn" aria-label="やり直す"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
     <button class="ib" id="shotBtn" aria-label="画像にする"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg></button>
-    <button class="ib" id="menuBtn" aria-label="メニュー"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </header>
-  <nav class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="site">土地</button>
-    <button class="tab" role="tab" data-tab="plan">間取り</button>
-    <button class="tab" role="tab" data-tab="look">外観</button>
-  </nav>
   <main>
-    <section class="pane scroll" id="sitePane" hidden><div class="form" id="siteForm"></div></section>
-    <section class="pane" id="planPane" hidden>
+    <section class="pane" id="planPane">
       <div class="stage" id="planStage">
         <canvas id="planCanvas"></canvas>
         <div class="ovl tl" id="floorSeg"></div>
         <button class="ovl tr pill" id="areaBtn"></button>
-        <button class="ovl br pill" id="fitBtn">全体を見る</button>
+        <button class="ovl bl pill" id="fitBtn">全体を見る</button>
+        <button class="ovl br go3d" id="go3d"><svg viewBox="0 0 24 24"><path d="M12 3 3.5 7.5v9L12 21l8.5-4.5v-9z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/></svg>3Dで見る</button>
       </div>
       <div class="dock">
         <div class="tray" id="tray"></div>
@@ -214,13 +215,10 @@ table.rooms tr.sum td { font-weight: 700; border-bottom: none; }
     </section>
     <section class="pane" id="lookPane" hidden>
       <div class="stage stage3d" id="stage3d">
-        <div class="ovl tl seg" id="visSeg"></div>
-        <div class="ovl tr compass3d" id="compass3d" aria-label="方位"><svg viewBox="-20 -20 40 40"><path d="M0-15 5 2H-5z" fill="#b0574a"/><path d="M0 13 4 2H-4z" fill="#9a958a"/><text y="-6" x="0" font-size="0" fill="#2b2a26"></text></svg></div>
-        <div class="ovl banner" id="pickBanner" hidden>アクセントにする外壁をタップ</div>
-        <button class="ovl br pill" id="frontBtn">正面に戻す</button>
+        <button class="ovl tl pill back" id="back2d">← もどる</button>
+        <div class="ovl tr seg" id="visSeg"></div>
       </div>
       <div class="dock">
-        <div class="subtabs" id="lookTabs"></div>
         <div class="lookbody" id="lookBody"></div>
       </div>
     </section>

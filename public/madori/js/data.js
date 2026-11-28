@@ -93,10 +93,10 @@ export function defaultLook() {
   };
 }
 
-export function blankPlan(floors = 2) {
+export function blankPlan(floors = 1) {
   return {
-    v: 1, id: uid(), name: floors === 2 ? '2階建ての案' : '平屋の案', updated: Date.now(), floors,
-    site: { w: 15, d: 16, north: 0, road: ['down'], bcr: 60, far: 200 },
+    v: 1, id: uid(), name: 'わたしの家', updated: Date.now(), floors,
+    site: { w: 20, d: 20, north: 0, road: [], bcr: 0, far: 0 },
     rooms: [], openings: [], fixtures: [], ext: [], look: defaultLook(),
   };
 }
@@ -111,16 +111,15 @@ function builder(p, ox, oy) {
 }
 
 export const TEMPLATES = [
-  { key: 't2', title: '2階建て 3LDK', sub: '約35坪・南に庭と駐車場', make: makeTwoStory },
-  { key: 't1', title: '平屋 2LDK', sub: '約21坪・寄棟屋根', make: makeOneStory },
-  { key: 'b2', title: '白紙から（2階建て）', sub: '土地だけ用意します', make: () => blankPlan(2) },
-  { key: 'b1', title: '白紙から（平屋）', sub: '土地だけ用意します', make: () => blankPlan(1) },
+  { key: 'b1', title: '白紙から', sub: '何もないマス目から描きます', make: () => blankPlan(1) },
+  { key: 't2', title: '見本：2階建て 3LDK', sub: '約35坪', make: makeTwoStory },
+  { key: 't1', title: '見本：平屋 2LDK', sub: '約21坪', make: makeOneStory },
 ];
 
 function makeTwoStory() {
   const p = blankPlan(2);
   p.name = '2階建て 3LDK';
-  p.site = { w: 15, d: 16, north: 0, road: ['down'], bcr: 60, far: 200 };
+  p.floors = 2;
   const { R, O, F } = builder(p, 2, 2);
   // 1階
   R(1, 'bath', 0, 0, 2, 2); R(1, 'wash', 2, 0, 2, 2); R(1, 'pantry', 4, 0, 1, 2); R(1, 'kitchen', 5, 0, 3, 2);
@@ -143,27 +142,13 @@ function makeTwoStory() {
   O(2, 'v', 10, 1, 1, 'small'); O(2, 'v', 0, 3, 1, 'small'); O(2, 'h', 1, 7, 2, 'koshi'); O(2, 'v', 0, 5, 1, 'koshi');
   O(2, 'h', 5, 7, 2, 'koshi'); O(2, 'v', 8, 5, 1, 'hakidashi');
   F(2, 'toilet', 7.27, 0.15);
-  // 外構（土地の上の位置）
-  p.ext.push(
-    { id: uid(), t: 'deck', x: 2, y: 9, w: 8, h: 2 },
-    { id: uid(), t: 'lawn', x: 0, y: 11, w: 10, h: 4 },
-    { id: uid(), t: 'flower', x: 5, y: 15, w: 4, h: 1 },
-    { id: uid(), t: 'approach', x: 10, y: 9, w: 2, h: 8 },
-    { id: uid(), t: 'parking', x: 13, y: 10, w: 3, h: 6 },
-    { id: uid(), t: 'tree', x: 1.2, y: 12.5, rot: 0 },
-    { id: uid(), t: 'tree', x: 1.2, y: 2.5, rot: 0 },
-    { id: uid(), t: 'gate', x: 9.4, y: 16.4, rot: 0 },
-    { id: uid(), t: 'fence', x1: 0, y1: 0, x2: 0, y2: 17 },
-    { id: uid(), t: 'fence', x1: 0, y1: 0, x2: 16, y2: 0 },
-  );
-  Object.assign(p.look, { roof: 'kiri', pitch: 4, roofColor: '#2c2d2f', wallMat: 'siding', wallColor: '#f2f0ea', accent: 'walls', accentMat: 'wood', accentColor: '#9a6a42', accentWalls: ['2|h|9'], sash: '#2b2b2b', door: '#9a6a42' });
+  Object.assign(p.look, { roof: 'kiri', pitch: 4, roofColor: '#2c2d2f', wallMat: 'siding', wallColor: '#f2f0ea', sash: '#2b2b2b', door: '#9a6a42' });
   return p;
 }
 
 function makeOneStory() {
   const p = blankPlan(1);
   p.name = '平屋 2LDK';
-  p.site = { w: 15, d: 14, north: 0, road: ['down'], bcr: 60, far: 200 };
   const { R, O, F } = builder(p, 2, 2);
   R(1, 'bath', 0, 0, 2, 2); R(1, 'wash', 2, 0, 2, 2); R(1, 'kitchen', 4, 0, 3, 2); R(1, 'ldk', 0, 2, 7, 5);
   R(1, 'corridor', 7, 0, 1, 5); R(1, 'master', 8, 0, 4, 3); R(1, 'toilet', 8, 3, 1, 2); R(1, 'storage', 9, 3, 3, 1, 'クローゼット');
@@ -175,16 +160,7 @@ function makeOneStory() {
   O(1, 'h', 5, 0, 1, 'small'); O(1, 'h', 0, 0, 1, 'small'); O(1, 'h', 2, 0, 1, 'small'); O(1, 'h', 7, 0, 1, 'small');
   O(1, 'h', 9, 0, 2, 'koshi'); O(1, 'v', 12, 1, 1, 'koshi'); O(1, 'h', 10, 7, 1, 'koshi'); O(1, 'v', 12, 5, 1, 'koshi');
   F(1, 'bath1', 0.12, 0.12); F(1, 'vanity', 2.08, 0.06); F(1, 'washer', 3.2, 0.12); F(1, 'kitchenI', 4.1, 0.06); F(1, 'toilet', 8.27, 3.15);
-  p.ext.push(
-    { id: uid(), t: 'deck', x: 2, y: 9, w: 6, h: 2 },
-    { id: uid(), t: 'lawn', x: 0, y: 11, w: 9, h: 4 },
-    { id: uid(), t: 'approach', x: 9, y: 9, w: 2, h: 6 },
-    { id: uid(), t: 'parking', x: 12, y: 9, w: 3, h: 6 },
-    { id: uid(), t: 'tree', x: 1.2, y: 13, rot: 0 },
-    { id: uid(), t: 'gate', x: 8.3, y: 14.5, rot: 0 },
-    { id: uid(), t: 'fence', x1: 0, y1: 0, x2: 0, y2: 15 },
-  );
-  Object.assign(p.look, { roof: 'yose', pitch: 4, roofColor: '#5e4635', wallMat: 'plaster', wallColor: '#e9dfc6', accent: 'none', sash: '#6b5a48', door: '#9a6a42' });
+  Object.assign(p.look, { roof: 'yose', pitch: 4, roofColor: '#5e4635', wallMat: 'siding', wallColor: '#e9dfc6', sash: '#6b5a48', door: '#9a6a42' });
   return p;
 }
 
