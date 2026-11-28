@@ -95,7 +95,7 @@ export const callName = (s, p) => (s.staff.some((q) => q !== p && q.fam === p.fa
 export function newGame(company, boss, seed = Date.now() >>> 0) {
   const s = {
     v: 1, seed, nextId: 1, t: 0, company, boss, money: 300, fame: 0, office: 0,
-    staff: [], teams: [{ id: 1, name: "第1チーム", leader: null, delegate: false }], projects: [], contracts: [], offers: [],
+    staff: [], teams: [{ id: 1, name: "開発1課", leader: null, delegate: false }], projects: [], contracts: [], offers: [],
     games: [], rivalGames: [], candidates: [], log: [], pending: [], fx: [],
     loan: 0, loanDue: null, warned: false, goalIdx: 0, goalsDone: [], award: [], trend: null,
     year: { revenue: 0, expense: 0, start: 0 }, months: [], ranking: [], rivals: D.RIVALS.map((r) => ({ key: r.key, name: r.name, power: r.power, rev: [], next: 0 })),
@@ -166,7 +166,7 @@ export function borrow(s, man) {
   man = Math.min(man, loanLimit(s) - s.loan);
   if (man <= 0) return { ok: false, why: "これ以上は借りられません" };
   s.loan += man; s.money += man; s.loanDue = s.t + 24 * TPM;
-  note(s, `銀行から${yen(man)}借りた。返す期限は${shortDate(s.loanDue)}`, { bubble: false });
+  note(s, `銀行から${yen(man)}借りた。返済期限は${shortDate(s.loanDue)}`, { bubble: false });
   return { ok: true };
 }
 export function repay(s, man) {
@@ -181,7 +181,7 @@ export const monthlyCost = (s) => s.staff.reduce((a, p) => a + p.salary, 0) + D.
 /* ===== 引っ越し（問36） ===== */
 export function canMove(s) {
   const n = s.office + 1;
-  if (n >= D.OFFICES.length) return { ok: false, why: "この先の事務所は、つぎの版で足します" };
+  if (n >= D.OFFICES.length) return { ok: false, why: "いまは、これより広い事務所はありません" };
   const o = D.OFFICES[n];
   if (s.money < o.move) return { ok: false, why: `お金が足りません。あと${yen(o.move - s.money)}です` };
   return { ok: true, office: o };
@@ -198,9 +198,9 @@ export function move(s) {
 /* ===== チーム（問45・問54） ===== */
 export const teamCanAdd = (s) => s.staff.length >= 8 && s.teams.length < 3;
 export function addTeam(s) {
-  if (!teamCanAdd(s)) return { ok: false, why: "社員が8人になると、チームを増やせます" };
+  if (!teamCanAdd(s)) return { ok: false, why: "社員が8人になると、開発課を増やせます" };
   const id = Math.max(...s.teams.map((t) => t.id)) + 1;
-  s.teams.push({ id, name: `第${s.teams.length + 1}チーム`, leader: null, delegate: false });
+  s.teams.push({ id, name: `開発${s.teams.length + 1}課`, leader: null, delegate: false });
   return { ok: true, id };
 }
 export const teamMembers = (s, teamId) => s.staff.filter((p) => p.team === teamId && D.roleOf(p.role).dev);
@@ -219,7 +219,7 @@ export function setLeader(s, teamId, pid) {
 }
 export function transfer(s, pid, teamId) {
   const p = s.staff.find((x) => x.id === pid);
-  if (!p || !D.roleOf(p.role).dev) return { ok: false, why: "チームに入れるのは、作る職種の社員だけです" };
+  if (!p || !D.roleOf(p.role).dev) return { ok: false, why: "開発課に入れるのは、開発職の社員だけです" };
   if (p.team === teamId) return { ok: true };
   if (s.projects.some((x) => x.members.includes(pid)) || s.contracts.some((x) => x.members.includes(pid))) return { ok: false, why: "いまの仕事が終わってからにしてください" };
   s.teams.forEach((t) => { if (t.leader === pid) t.leader = null; });
@@ -254,11 +254,11 @@ export const genresOn = (s) => D.GENRES.filter((g) => g.from <= dateOf(s.t).yf);
 
 /* ===== 企画（問16） ===== */
 const MITATE_LINE = {
-  "◎": ["これは当たる気がします", "{genre}と{theme}、合うと思うんです", "自信あります"],
-  "○": ["手堅くいけると思います", "悪くないはずです", "無難ですが、外さないです"],
-  "△": ["当たれば大きい。かも……", "ちょっと冒険です", "正直、読めません"],
+  "◎": ["{genre}と{theme}は相性がいいと思います", "これは自信があります", "これはいけると思います"],
+  "○": ["大きくは外さないと思います", "手堅くまとまると思います", "悪くない組み合わせです"],
+  "△": ["ちょっと賭けです。当たるかは読めません", "冒険ですが、当たれば大きいです", "正直、どう転ぶかわかりません"],
 };
-const TREND_LINE = ["{x}は今、来てます", "{x}、流行りかけです"];
+const TREND_LINE = ["今年は{x}ものが売れています", "{x}は、いま流行っています"];
 export function planner(s, teamId) {
   const ms = teamMembers(s, teamId);
   return ms.sort((a, b) => b.stats.plan - a.stats.plan)[0] || null;
@@ -301,7 +301,7 @@ export function startProject(s, o) {
   const cost = size.cost + con.fee;
   if (s.money < cost) return { ok: false, why: `お金が足りません。あと${yen(cost - s.money)}です` };
   if (!o.members.length) return { ok: false, why: "担当を選んでください" };
-  if (teamBusy(s, o.team)) return { ok: false, why: "このチームは仕事中です" };
+  if (teamBusy(s, o.team)) return { ok: false, why: "この課は仕事中です" };
   spend(s, cost, "開発費");
   const nBr = size.key === "small" ? 2 : 3;
   const at = nBr === 2 ? [0.35, 0.7] : [0.25, 0.5, 0.78];
@@ -311,7 +311,7 @@ export function startProject(s, o) {
     brAt: at, brDone: 0, choices: [], startT: s.t, cost,
   };
   s.projects.push(pj);
-  note(s, `『${pj.title}』を作りはじめた`, { bubble: false });
+  note(s, `『${pj.title}』を作り始めた`, { bubble: false });
   return { ok: true, id: pj.id };
 }
 export const progress = (pj) => clamp(pj.done / pj.ticks, 0, 1);
@@ -381,7 +381,7 @@ export function chooseBranch(s, pjId, key, auto = false) {
   if (auto) {
     const tm = s.teams.find((t) => t.id === pj.team);
     const L = s.staff.find((p) => p.id === tm.leader);
-    note(s, `${L ? callName(s, L) : "リーダー"}が「${b.label}」を選んだ`, { bubble: false });
+    note(s, `${L ? callName(s, L) : "リーダー"}が方針を「${b.label}」に決めた`, { bubble: false });
   }
 }
 function autoBranch(s, pj, opts) {
@@ -399,7 +399,7 @@ export function review(s, pj) {
   const cm = [0.78, 0.95, 1.08, 1.2, 1.28, 1.34][Math.min(5, Math.round(c))];
   const qa = { fun: f10(q.fun), gfx: f10(q.gfx), snd: f10(q.snd), vol: f10(q.vol), combo: 10 * (cm - 0.5) / 0.84 };
   const G = D.GENRES.find((x) => x.key === pj.genre), T = D.THEMES.find((x) => x.key === pj.theme);
-  const fill = (tx) => tx.replace("{gbit}", G.bit).replace("{tbit}", T.bit).replace("{theme}", T.name).replace("{genre}", G.name);
+  const fill = (tx) => tx.replace("{fg}", G.fg).replace("{fb}", G.fb).replace("{tg}", T.tg).replace("{tb}", T.tb).replaceAll("{theme}", T.name).replaceAll("{long}", G.long);
   // 少し前に使った言い回しは避ける（同じ文のくり返しはAIっぽく見える）
   s.recentLines = s.recentLines || [];
   const fresh = (arr) => { const ok = arr.filter((x) => !s.recentLines.includes(x)); const v = pick(s, ok.length ? ok : arr); s.recentLines.push(v); if (s.recentLines.length > 30) s.recentLines.shift(); return v; };
@@ -411,10 +411,11 @@ export function review(s, pj) {
     // 感想：いちばん良いところと、いちばん惜しいところ
     const ranked = Object.keys(qa).map((k) => ({ k, v: qa[k] * cr.look[k] / 1.2 + (rand(s) - 0.5) })).sort((a, b) => b.v - a.v);
     const best = ranked[0].k, worst = ranked[ranked.length - 1].k;
-    let text;
-    if (score >= 9) text = fill(fresh(cr.lines[best].good)) + fresh(cr.top);
-    else if (score <= 3) text = fill(fresh(cr.lines[worst].bad)) + fresh(cr.low);
-    else text = fill(fresh(cr.lines[best].good)) + fill(fresh(cr.lines[worst].bad));
+    // 3文：どんなゲームか＋良いところ＋惜しいところ（問90）
+    let text = fill(pick(s, cr.intro));
+    if (score >= 9) text += fill(fresh(cr.lines[best].good)) + fresh(cr.top);
+    else if (score <= 3) text += fill(fresh(cr.lines[worst].bad)) + fresh(cr.low);
+    else text += fill(fresh(cr.lines[best].good)) + cr.but + fill(fresh(cr.lines[worst].bad));
     return { name: cr.name, score, text };
   });
 }
@@ -501,7 +502,7 @@ function weeklySales(s) {
     s.myRev.push({ t: s.t, v: money });
     if (wk === 0) note(s, `『${g.title}』の初週は${units(n)}`);
     for (const m of [10000, 100000, 1000000]) if (before < m && g.sold >= m) note(s, `『${g.title}』が${units(m)}を超えた！`, { big: true });
-    if ((n < 30 && wk > 3) || wk > 104) { g.active = false; note(s, `『${g.title}』の売れ行きが止まった。合わせて${units(g.sold)}`, { bubble: false }); }
+    if ((n < 30 && wk > 3) || wk > 104) { g.active = false; note(s, `『${g.title}』の売れ行きが止まった。累計${units(g.sold)}`, { bubble: false }); }
   }
   // ライバル
   for (const g of s.rivalGames) {
@@ -559,21 +560,22 @@ function maybeOffer(s) {
   const yf = dateOf(s.t).yf;
   const weeks = ri(s, 4, 10);
   const o = {
-    id: uid(s), title: pick(s, D.CONTRACTS).replace("{c}", pick(s, D.CLIENTS)), weeks,
+    id: uid(s), client: pick(s, D.CLIENTS), kind: pick(s, D.CONTRACTS), weeks,
     pay: Math.round(weeks * (7 + rand(s) * 5) * eraNeed(yf) * (1 + sp / 150)), until: s.t + 5 * TPW,
   };
+  o.title = `${o.client}の${o.kind}`;
   s.offers.push(o);
-  note(s, `受託の仕事が来た。${o.title}`, { bubble: true });
+  note(s, `${o.client}から受託の依頼が来た（${o.kind}）`, { bubble: true });
 }
 export function takeOffer(s, oid, teamId) {
   const o = s.offers.find((x) => x.id === oid);
   if (!o) return { ok: false, why: "もう締め切られました" };
-  if (teamBusy(s, teamId)) return { ok: false, why: "このチームは仕事中です" };
+  if (teamBusy(s, teamId)) return { ok: false, why: "この課は仕事中です" };
   const ms = teamMembers(s, teamId);
-  if (!ms.length) return { ok: false, why: "チームに作る職種の社員がいません" };
+  if (!ms.length) return { ok: false, why: "この課に開発職の社員がいません" };
   s.offers = s.offers.filter((x) => x !== o);
   s.contracts.push({ id: o.id, title: o.title, pay: o.pay, team: teamId, members: ms.map((p) => p.id), ticks: o.weeks * TPW, done: 0 });
-  note(s, `受託の仕事を受けた。${o.title}`, { bubble: false });
+  note(s, `${o.title}を受注した`, { bubble: false });
   return { ok: true };
 }
 
@@ -599,7 +601,7 @@ export function tick(s) {
     c.done++;
     if (c.done >= c.ticks) {
       earn(s, c.pay);
-      note(s, `受託の仕事が終わった。${yen(c.pay)}が入った`);
+      note(s, `${c.title}を納品した。${yen(c.pay)}が入った`);
       for (const id of c.members) { const p = s.staff.find((x) => x.id === id); if (p) { const m = D.roleOf(p.role).stat; if (rand(s) < 0.5) p.stats[m] = clamp(p.stats[m] + 1, 1, 99); } }
     }
   }
@@ -639,15 +641,15 @@ function weekly(s) {
   const m = d.week === 1;
   if (m) monthly(s, d);
   if (d.month === 12 && d.week === 4) yearEnd(s, d);
-  if (d.month === 1 && d.week === 1) { newTrend(s); const G = D.GENRES.find((x) => x.key === s.trend.genre), T = D.THEMES.find((x) => x.key === s.trend.theme); note(s, `今年は${G.name}と${T.name}が流行っているらしい`, { bubble: false }); for (const p of s.staff) p.age++; }
+  if (d.month === 1 && d.week === 1) { newTrend(s); const G = D.GENRES.find((x) => x.key === s.trend.genre), T = D.THEMES.find((x) => x.key === s.trend.theme); note(s, `今年は${G.name}と${T.name}が流行っている`, { bubble: false }); for (const p of s.staff) p.age++; }
   if (d.month === 4 && d.week === 1 && s.t > 2) entrance(s, d);
   // 新しいゲーム機
   if (d.month === 1 && d.week === 1) for (const c of D.CONSOLES) if (c.year === d.year) note(s, `新しいゲーム機「${c.name}」が出た`, { big: true });
   // 借金の期限
   if (s.loanDue && s.t >= s.loanDue) {
     if (s.money >= s.loan) { s.money -= s.loan; s.loan = 0; s.loanDue = null; note(s, "借金を期限どおりに返した"); }
-    else bankrupt(s, "借金を期限までに返せませんでした。");
-  } else if (s.loanDue && s.loanDue - s.t === 3 * TPM) note(s, `借金を返す期限まで、あと3か月。${yen(s.loan)}`, { big: true });
+    else bankrupt(s, "借金を期限までに返せなかった");
+  } else if (s.loanDue && s.loanDue - s.t === 3 * TPM) note(s, `借金の返済期限まで、あと3か月（残り${yen(s.loan)}）`, { big: true });
   checkGoals(s);
 }
 function monthly(s, d) {
@@ -659,9 +661,9 @@ function monthly(s, d) {
   note(s, `給料と家賃を払った。${yen(cost)}`, { bubble: false });
   if (s.money < 0) {
     const need = -s.money + cost * 0.5;
-    if (s.loan + need <= loanLimit(s)) { borrow(s, Math.ceil(need)); note(s, "お金が足りないので、銀行から借りた", { big: true }); s.warned = false; }
-    else if (!s.warned) { s.warned = true; s.pending.push({ kind: "warn" }); note(s, "お金が足りない。来月も払えないと倒産する", { big: true }); }
-    else bankrupt(s, "給料を払えなくなりました。");
+    if (s.loan + need <= loanLimit(s)) { borrow(s, Math.ceil(need)); note(s, "資金が足りず、銀行から借りた", { big: true }); s.warned = false; }
+    else if (!s.warned) { s.warned = true; s.pending.push({ kind: "warn" }); note(s, "資金が底をついた。来月払えなければ倒産する", { big: true }); }
+    else bankrupt(s, "給料を払えなくなった");
   } else s.warned = false;
 }
 function bankrupt(s, why) { s.over = { why, t: s.t }; s.pending.push({ kind: "bankrupt", why }); }
@@ -674,7 +676,7 @@ function quit(s, p, text) {
 }
 function entrance(s, d) {
   for (const p of [...s.staff]) if (p.age >= 60) quit(s, p, `${callName(s, p)}が定年で会社を去った`);
-  if (capLeft(s) <= 0) { note(s, "入社式の季節。机が空いていないので、新卒は採らなかった", { bubble: false }); return; }
+  if (capLeft(s) <= 0) { note(s, "机に空きがなく、今年は新卒を採らなかった", { bubble: false }); return; }
   const n = ri(s, 2, 3) + (s.office >= 2 ? 1 : 0);
   const yf = dateOf(s.t).yf;
   const grads = [];
@@ -753,5 +755,7 @@ export function deserialize(txt) {
   const s = JSON.parse(txt);
   if (!s || s.v !== 1 || !Array.isArray(s.staff)) throw new Error("PRESS START の保存ファイルではない");
   s.fx = [];
+  // 前の版の呼び方を、いまの呼び方に直す（問94）
+  for (const tm of s.teams || []) { const m = /^第(\d+)チーム$/.exec(tm.name); if (m) tm.name = `開発${m[1]}課`; }
   return s;
 }
