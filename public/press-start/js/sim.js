@@ -137,18 +137,18 @@ function recruitPool(s, n, first = false) {
 }
 export function recruit(s) {
   const cost = recruitCost(s);
-  if (s.money < cost) return { ok: false, why: `お金が足りない。あと${yen(cost - s.money)}` };
+  if (s.money < cost) return { ok: false, why: `お金が足りません。あと${yen(cost - s.money)}です` };
   spend(s, cost, "募集");
   const n = 3 + (hrPower(s) >= 40 ? 1 : 0) + (hrPower(s) >= 70 ? 1 : 0);
   s.candidates = recruitPool(s, n);
-  note(s, `募集を出した。${n}人が応募してきた`, { bubble: false });
+  note(s, `求人を出した。${n}人から応募があった`, { bubble: false });
   return { ok: true };
 }
 export const capLeft = (s) => D.OFFICES[s.office].cap - s.staff.length;
 export function hire(s, id) {
   const p = s.candidates.find((c) => c.id === id);
-  if (!p) return { ok: false, why: "もういない" };
-  if (capLeft(s) <= 0) return { ok: false, why: "事務所に机がない。引っ越すと増やせる" };
+  if (!p) return { ok: false, why: "この人はもういません" };
+  if (capLeft(s) <= 0) return { ok: false, why: "机が空いていません。引っ越すと増えます" };
   s.candidates = s.candidates.filter((c) => c.id !== id);
   delete p.until;
   p.hiredT = s.t;
@@ -164,14 +164,14 @@ function earn(s, man) { s.money += man; s.year.revenue += man; s.monthIn = (s.mo
 export const loanLimit = (s) => D.LOAN_LIMIT[s.office] + Math.floor(s.fame * 20);
 export function borrow(s, man) {
   man = Math.min(man, loanLimit(s) - s.loan);
-  if (man <= 0) return { ok: false, why: "これ以上は借りられない" };
+  if (man <= 0) return { ok: false, why: "これ以上は借りられません" };
   s.loan += man; s.money += man; s.loanDue = s.t + 24 * TPM;
   note(s, `銀行から${yen(man)}借りた。返す期限は${shortDate(s.loanDue)}`, { bubble: false });
   return { ok: true };
 }
 export function repay(s, man) {
   man = Math.min(man, s.loan, s.money);
-  if (man <= 0) return { ok: false, why: "返せるお金がない" };
+  if (man <= 0) return { ok: false, why: "返せるお金がありません" };
   s.loan -= man; s.money -= man;
   if (s.loan <= 0.5) { s.loan = 0; s.loanDue = null; note(s, "借金を全部返した", { bubble: false }); }
   return { ok: true };
@@ -181,9 +181,9 @@ export const monthlyCost = (s) => s.staff.reduce((a, p) => a + p.salary, 0) + D.
 /* ===== 引っ越し（問36） ===== */
 export function canMove(s) {
   const n = s.office + 1;
-  if (n >= D.OFFICES.length) return { ok: false, why: "この先の事務所は、つぎの版で足す" };
+  if (n >= D.OFFICES.length) return { ok: false, why: "この先の事務所は、つぎの版で足します" };
   const o = D.OFFICES[n];
-  if (s.money < o.move) return { ok: false, why: `お金が足りない。あと${yen(o.move - s.money)}` };
+  if (s.money < o.move) return { ok: false, why: `お金が足りません。あと${yen(o.move - s.money)}です` };
   return { ok: true, office: o };
 }
 export function move(s) {
@@ -198,7 +198,7 @@ export function move(s) {
 /* ===== チーム（問45・問54） ===== */
 export const teamCanAdd = (s) => s.staff.length >= 8 && s.teams.length < 3;
 export function addTeam(s) {
-  if (!teamCanAdd(s)) return { ok: false, why: "社員が8人になると、チームを増やせる" };
+  if (!teamCanAdd(s)) return { ok: false, why: "社員が8人になると、チームを増やせます" };
   const id = Math.max(...s.teams.map((t) => t.id)) + 1;
   s.teams.push({ id, name: `第${s.teams.length + 1}チーム`, leader: null, delegate: false });
   return { ok: true, id };
@@ -210,7 +210,7 @@ export function setLeader(s, teamId, pid) {
   const p = s.staff.find((x) => x.id === pid);
   if (!tm) return { ok: false };
   if (pid == null) { tm.leader = null; tm.delegate = false; return { ok: true }; }
-  if (!p || p.rank < D.LEADER_RANK) return { ok: false, why: "リーダーになれるのは課長から" };
+  if (!p || p.rank < D.LEADER_RANK) return { ok: false, why: "リーダーになれるのは課長からです" };
   s.teams.forEach((t) => { if (t.leader === pid) t.leader = null; });
   tm.leader = pid;
   if (D.roleOf(p.role).dev) p.team = teamId;
@@ -219,9 +219,9 @@ export function setLeader(s, teamId, pid) {
 }
 export function transfer(s, pid, teamId) {
   const p = s.staff.find((x) => x.id === pid);
-  if (!p || !D.roleOf(p.role).dev) return { ok: false, why: "チームに入れるのは作る職種の社員だけ" };
+  if (!p || !D.roleOf(p.role).dev) return { ok: false, why: "チームに入れるのは、作る職種の社員だけです" };
   if (p.team === teamId) return { ok: true };
-  if (s.projects.some((x) => x.members.includes(pid)) || s.contracts.some((x) => x.members.includes(pid))) return { ok: false, why: "いまの仕事が終わってから" };
+  if (s.projects.some((x) => x.members.includes(pid)) || s.contracts.some((x) => x.members.includes(pid))) return { ok: false, why: "いまの仕事が終わってからにしてください" };
   s.teams.forEach((t) => { if (t.leader === pid) t.leader = null; });
   p.team = teamId;
   return { ok: true };
@@ -229,7 +229,7 @@ export function transfer(s, pid, teamId) {
 export function changeRole(s, pid, role) {
   const p = s.staff.find((x) => x.id === pid);
   if (!p) return { ok: false };
-  if (s.projects.some((x) => x.members.includes(pid)) || s.contracts.some((x) => x.members.includes(pid))) return { ok: false, why: "いまの仕事が終わってから" };
+  if (s.projects.some((x) => x.members.includes(pid)) || s.contracts.some((x) => x.members.includes(pid))) return { ok: false, why: "いまの仕事が終わってからにしてください" };
   p.role = role;
   p.team = D.roleOf(role).dev ? (p.team ?? s.teams[0].id) : null;
   s.teams.forEach((t) => { if (t.leader === pid && !D.roleOf(role).dev) t.leader = null; });
@@ -299,9 +299,9 @@ export function startProject(s, o) {
   // o: {genre, theme, size, console, team, members, title}
   const size = D.SIZES.find((x) => x.key === o.size), con = consoleOf(o.console);
   const cost = size.cost + con.fee;
-  if (s.money < cost) return { ok: false, why: `お金が足りない。あと${yen(cost - s.money)}` };
-  if (!o.members.length) return { ok: false, why: "担当がいない" };
-  if (teamBusy(s, o.team)) return { ok: false, why: "このチームは仕事中" };
+  if (s.money < cost) return { ok: false, why: `お金が足りません。あと${yen(cost - s.money)}です` };
+  if (!o.members.length) return { ok: false, why: "担当を選んでください" };
+  if (teamBusy(s, o.team)) return { ok: false, why: "このチームは仕事中です" };
   spend(s, cost, "開発費");
   const nBr = size.key === "small" ? 2 : 3;
   const at = nBr === 2 ? [0.35, 0.7] : [0.25, 0.5, 0.78];
@@ -567,10 +567,10 @@ function maybeOffer(s) {
 }
 export function takeOffer(s, oid, teamId) {
   const o = s.offers.find((x) => x.id === oid);
-  if (!o) return { ok: false, why: "もう締め切られた" };
-  if (teamBusy(s, teamId)) return { ok: false, why: "このチームは仕事中" };
+  if (!o) return { ok: false, why: "もう締め切られました" };
+  if (teamBusy(s, teamId)) return { ok: false, why: "このチームは仕事中です" };
   const ms = teamMembers(s, teamId);
-  if (!ms.length) return { ok: false, why: "チームに作る職種の社員がいない" };
+  if (!ms.length) return { ok: false, why: "チームに作る職種の社員がいません" };
   s.offers = s.offers.filter((x) => x !== o);
   s.contracts.push({ id: o.id, title: o.title, pay: o.pay, team: teamId, members: ms.map((p) => p.id), ticks: o.weeks * TPW, done: 0 });
   note(s, `受託の仕事を受けた。${o.title}`, { bubble: false });
@@ -646,7 +646,7 @@ function weekly(s) {
   // 借金の期限
   if (s.loanDue && s.t >= s.loanDue) {
     if (s.money >= s.loan) { s.money -= s.loan; s.loan = 0; s.loanDue = null; note(s, "借金を期限どおりに返した"); }
-    else bankrupt(s, "借金を期限までに返せなかった");
+    else bankrupt(s, "借金を期限までに返せませんでした。");
   } else if (s.loanDue && s.loanDue - s.t === 3 * TPM) note(s, `借金を返す期限まで、あと3か月。${yen(s.loan)}`, { big: true });
   checkGoals(s);
 }
@@ -661,7 +661,7 @@ function monthly(s, d) {
     const need = -s.money + cost * 0.5;
     if (s.loan + need <= loanLimit(s)) { borrow(s, Math.ceil(need)); note(s, "お金が足りないので、銀行から借りた", { big: true }); s.warned = false; }
     else if (!s.warned) { s.warned = true; s.pending.push({ kind: "warn" }); note(s, "お金が足りない。来月も払えないと倒産する", { big: true }); }
-    else bankrupt(s, "給料を払えなくなった");
+    else bankrupt(s, "給料を払えなくなりました。");
   } else s.warned = false;
 }
 function bankrupt(s, why) { s.over = { why, t: s.t }; s.pending.push({ kind: "bankrupt", why }); }
