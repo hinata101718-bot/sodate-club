@@ -1,0 +1,356 @@
+<title>PRESS START 見本</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* 配置：iPhone縦画面の見本を、画面ごとに並べる（せまい画面では縦に1列） */
+:root{
+  --sky:#e4f3fc;      /* 下地の水色 */
+  --white:#ffffff;
+  --blue:#2f7fc1;     /* 主の青 */
+  --navy:#1d3557;     /* 文字と枠 */
+  --line:#b7d6ec;     /* 細い線 */
+  --green:#35a565;    /* 差し色 */
+  --gold:#e0a21b;
+  --muted:#5b7089;
+  --dot:"DotGothic16","Hiragino Sans","Noto Sans JP",monospace;
+  --body:"Noto Sans JP","Hiragino Sans",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{background:var(--sky);color:var(--navy)}
+body{font-family:var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.intro{max-width:760px;margin:0 auto 24px}
+.intro h1{font-family:var(--dot);font-weight:400;font-size:28px;letter-spacing:.08em;margin:0 0 6px;color:var(--blue)}
+.intro p{margin:0;line-height:1.7;color:var(--muted)}
+.wall{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),360px));justify-content:center;gap:32px 24px}
+figure{margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+figcaption{font-size:13px;color:var(--muted);line-height:1.5}
+figcaption b{font-family:var(--dot);font-weight:400;color:var(--navy);font-size:15px;display:block}
+.phone{position:relative;height:660px;background:var(--white);border:3px solid var(--navy);box-shadow:4px 4px 0 var(--line);display:flex;flex-direction:column;overflow:hidden}
+.dot{font-family:var(--dot);font-variant-numeric:tabular-nums}
+/* 上の帯 */
+.top{background:var(--white);border-bottom:2px solid var(--navy);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.r1{display:flex;align-items:center;gap:8px}
+.date{font-size:15px}
+.money{font-size:15px;color:var(--green);margin-left:auto}
+.ib{font-family:var(--body);font-size:11px;border:2px solid var(--navy);background:var(--white);padding:2px 6px;color:var(--navy)}
+.r2{display:flex;align-items:center;gap:8px}
+.speed{display:flex;border:2px solid var(--navy)}
+.speed span{font-size:11px;padding:2px 7px;font-family:var(--dot)}
+.speed span+span{border-left:2px solid var(--navy)}
+.speed .on{background:var(--blue);color:var(--white)}
+.prog{flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:11px;background:var(--sky);border:2px solid var(--line);padding:2px 6px}
+.prog .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bar{flex:0 0 54px;height:8px;border:1px solid var(--navy);background:var(--white);position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--green)}
+.pager{font-size:8px;color:var(--muted);letter-spacing:2px}
+.stage{font-size:11px;color:var(--muted)}
+/* 箱庭 */
+.garden{position:relative;flex:1;background:linear-gradient(var(--sky),var(--white));display:flex;align-items:center;justify-content:center;overflow:hidden}
+.garden canvas{width:100%;image-rendering:pixelated;display:block}
+.ov{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
+.bub{background:var(--white);border:2px solid var(--navy);font-size:11px;padding:3px 7px;white-space:nowrap;box-shadow:2px 2px 0 var(--line)}
+.bub:after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-4px;border:4px solid transparent;border-top-color:var(--navy)}
+.pop{font-family:var(--dot);font-size:12px;color:var(--green);text-shadow:1px 1px 0 var(--white)}
+.pop.blue{color:var(--blue)}
+.bulb{font-size:15px;filter:drop-shadow(1px 1px 0 var(--white))}
+.floor{position:absolute;left:10px;bottom:8px;font-size:11px;color:var(--muted)}
+/* 下のメニュー */
+.nav{display:grid;grid-template-columns:repeat(5,1fr);border-top:2px solid var(--navy);background:var(--white)}
+.nav span{font-size:12px;text-align:center;padding:10px 0 12px;font-weight:500}
+.nav span+span{border-left:1px solid var(--line)}
+.nav .on{background:var(--blue);color:var(--white)}
+/* せり上がる画面 */
+.peek{height:130px;flex:none}
+.sheet{flex:1;min-height:0;background:var(--white);border-top:3px solid var(--navy);display:flex;flex-direction:column;overflow:hidden}
+.grip{width:40px;height:4px;background:var(--line);margin:6px auto 2px}
+.sh{padding:2px 14px 8px;display:flex;align-items:baseline;gap:8px}
+.sh h2{font-family:var(--dot);font-weight:400;font-size:17px;margin:0}
+.sh small{color:var(--muted);font-size:11px}
+.scroll{overflow:auto;padding:0 14px 14px;min-height:0;flex:1}
+/* 社員カード */
+.who{display:flex;gap:12px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.who canvas{width:56px;height:56px;image-rendering:pixelated;background:var(--sky);border:2px solid var(--navy)}
+.who .nm{font-weight:700;font-size:16px}
+.who .meta{font-size:12px;color:var(--muted);line-height:1.6}
+.say{margin:10px 0;font-size:13px;background:var(--sky);padding:6px 10px;border-left:3px solid var(--blue)}
+.st{display:grid;grid-template-columns:7em 2.2em 1fr;align-items:center;gap:4px 8px;font-size:12px}
+.st .v{font-family:var(--dot);text-align:right;font-size:14px}
+.st .v.hi{color:var(--gold)}
+.sb{height:8px;background:var(--sky);border:1px solid var(--line);position:relative}
+.sb i{position:absolute;inset:0 auto 0 0;background:var(--blue)}
+.sb.hi i{background:var(--gold)}
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.gauge{font-size:11px}
+.gauge .g{display:flex;gap:2px;margin-top:3px}
+.gauge .g i{flex:1;height:8px;background:var(--sky);border:1px solid var(--line)}
+.gauge .g i.f{background:var(--green);border-color:var(--green)}
+.btns{display:flex;gap:8px}
+.btn{flex:1;text-align:center;border:2px solid var(--navy);padding:8px 0;font-size:13px;font-weight:500;background:var(--white);box-shadow:2px 2px 0 var(--line)}
+.btn.pri{background:var(--blue);color:var(--white)}
+/* 組織図 */
+.org{display:flex;flex-direction:column;align-items:center;font-size:11px;padding-top:6px}
+.node{border:2px solid var(--navy);background:var(--white);padding:4px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
+.node.boss{background:var(--blue);color:var(--white)}
+.node.dept{background:var(--sky)}
+.node b{font-weight:700}
+.node small{color:var(--muted);font-size:10px}
+.node.boss small{color:var(--white)}
+.vl{width:2px;height:12px;background:var(--navy)}
+.row{display:flex;gap:8px;position:relative;padding-top:12px;justify-content:center}
+.row:before{content:"";position:absolute;top:0;left:var(--l,20%);right:var(--r,20%);height:2px;background:var(--navy)}
+.col{display:flex;flex-direction:column;align-items:center;position:relative}
+.col:before{content:"";position:absolute;top:-12px;left:50%;width:2px;height:12px;background:var(--navy)}
+.faces{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;max-width:76px;margin-top:4px}
+.faces canvas,.lead canvas{width:20px;height:20px;image-rendering:pixelated;background:var(--sky);border:1px solid var(--line)}
+.lead{display:flex;align-items:center;gap:3px}
+.fold{font-size:10px;color:var(--blue);margin-top:2px}
+.tip{margin-top:14px;font-size:11px;color:var(--muted);text-align:center}
+/* 分かれ道 */
+.dim{position:absolute;inset:0;background:rgba(29,53,87,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:10px}
+.paused{font-family:var(--dot);color:var(--white);font-size:14px;letter-spacing:.1em}
+.modal{background:var(--white);border:3px solid var(--navy);box-shadow:4px 4px 0 var(--navy);width:100%;padding:14px;display:flex;flex-direction:column;gap:10px}
+.modal h3{font-family:var(--dot);font-weight:400;font-size:16px;margin:0}
+.modal .from{display:flex;gap:8px;align-items:center;font-size:12px;line-height:1.6}
+.modal .from canvas{width:36px;height:36px;image-rendering:pixelated;background:var(--sky);border:2px solid var(--navy);flex:none}
+.choice{border:2px solid var(--navy);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:8px;box-shadow:2px 2px 0 var(--line)}
+.choice small{color:var(--muted);font-size:11px;white-space:nowrap}
+.step{font-size:11px;color:var(--muted)}
+/* レビュー */
+.review{flex:1;background:var(--navy);color:var(--white);display:flex;flex-direction:column;align-items:center;padding:22px 14px 16px;gap:14px}
+.review .ttl{font-family:var(--dot);font-size:13px;color:var(--line);letter-spacing:.1em}
+.review .game{font-family:var(--dot);font-size:22px;text-align:center}
+.review .sub{font-size:11px;color:var(--line)}
+.critics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin-top:6px}
+.critic{display:flex;flex-direction:column;align-items:center;gap:6px}
+.critic canvas{width:100%;max-width:64px;image-rendering:pixelated;background:#28476f;border:2px solid var(--line)}
+.critic.now canvas{border-color:var(--gold)}
+.score{font-family:var(--dot);font-size:30px;line-height:1;height:32px}
+.score.q{color:#6b86a8}
+.critic small{font-size:10px;color:var(--line)}
+.comment{background:var(--white);color:var(--navy);width:100%;padding:10px 12px;font-size:13px;line-height:1.6;border:2px solid var(--gold);position:relative}
+.comment b{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.total{font-family:var(--dot);font-size:18px;margin-top:auto}
+.total span{font-size:34px;color:var(--gold)}
+.tap{font-size:11px;color:var(--line);animation:blink 1.2s steps(2) infinite}
+@keyframes blink{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.tap{animation:none}}
+.note{max-width:760px;margin:32px auto 0;font-size:13px;line-height:1.8;color:var(--muted)}
+</style>
+
+<div class="intro">
+  <h1>PRESS START</h1>
+  <p>動かない見本の画面です。色と配置、箱庭の見え方を確かめるためのものです。社名・社員・作品名・数字はすべて例です。</p>
+</div>
+
+<div class="wall">
+
+<figure>
+  <figcaption><b>メイン画面</b>問57・58・60・67：箱庭が7割、上に日付・お金・速さと開発の進み具合、下にメニュー</figcaption>
+  <div class="phone">
+    <div class="top">
+      <div class="r1"><span class="dot date">1982年 4月 2週</span><span class="dot money">¥320万</span><span class="ib">記録</span><span class="ib">設定</span></div>
+      <div class="r2">
+        <div class="speed"><span>‖</span><span class="on">▶</span><span>▶▶</span></div>
+        <div class="prog"><span class="nm">コスモクエスト</span><span class="bar"><i style="width:62%"></i></span><span class="dot">62%</span><span class="pager">●○</span></div>
+      </div>
+      <div class="stage">ほしぞらソフト（例）・雑居ビルの小さな事務所　6／8人</div>
+    </div>
+    <div class="garden" data-garden="main">
+      <canvas width="124" height="112"></canvas>
+      <div class="ov bub" data-at="5,1,-22">佐藤がひらめいた！</div>
+      <div class="ov bulb" data-at="5,1,-13">💡</div>
+      <div class="ov pop" data-at="2,4,-16">面白さ+2</div>
+      <div class="ov pop blue" data-at="3,6,-16">絵+3</div>
+    </div>
+    <div class="nav"><span>開発</span><span>社員</span><span>組織</span><span>経営</span><span>業界</span></div>
+  </div>
+</figure>
+
+<figure>
+  <figcaption><b>社員カード</b>問59・63：社員をタップすると下からせり上がる。上に箱庭が少し見えたまま時間は流れる</figcaption>
+  <div class="phone">
+    <div class="top">
+      <div class="r1"><span class="dot date">1982年 4月 2週</span><span class="dot money">¥320万</span><span class="ib">記録</span><span class="ib">設定</span></div>
+    </div>
+    <div class="garden peek" data-garden="peek"><canvas width="124" height="112"></canvas></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="scroll">
+        <div class="who">
+          <canvas width="12" height="12" data-face="0"></canvas>
+          <div><div class="nm">佐藤 陽太</div><div class="meta">デザイナー／主任・24歳・性格：夜型<br>第1チーム「コスモクエスト」担当</div></div>
+        </div>
+        <div class="say">「今日は筆がのる！」</div>
+        <div class="st" id="stats"></div>
+        <div class="gauges">
+          <div class="gauge">体力<div class="g"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div></div>
+          <div class="gauge">やる気<div class="g"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div></div>
+        </div>
+        <div class="btns"><span class="btn">異動</span><span class="btn">職種を変える</span></div>
+      </div>
+    </div>
+    <div class="nav"><span>開発</span><span class="on">社員</span><span>組織</span><span>経営</span><span>業界</span></div>
+  </div>
+</figure>
+
+<figure>
+  <figcaption><b>組織図</b>問53・54・62：社長から部→チーム→社員へ枝分かれ。顔をタップすると異動・リーダー任命</figcaption>
+  <div class="phone">
+    <div class="top">
+      <div class="r1"><span class="dot date">1991年 10月 1週</span><span class="dot money">¥4.2億</span><span class="ib">記録</span><span class="ib">設定</span></div>
+    </div>
+    <div class="sheet" style="border-top:0">
+      <div class="sh"><h2>組織図</h2><small>社員 34人</small></div>
+      <div class="scroll">
+        <div class="org">
+          <div class="node boss"><b>社長</b><small>ヒナタ（例）</small></div>
+          <div class="vl"></div>
+          <div class="row" style="--l:16%;--r:16%">
+            <div class="col">
+              <div class="node dept"><b>開発部</b><div class="lead"><canvas width="12" height="12" data-face="1"></canvas><small>部長 鈴木</small></div></div>
+              <div class="vl"></div>
+              <div class="row" style="--l:25%;--r:25%">
+                <div class="col"><div class="node"><b>第1チーム</b><div class="lead"><canvas width="12" height="12" data-face="2"></canvas><small>課長 高橋</small></div><div class="faces" data-faces="6"></div></div></div>
+                <div class="col"><div class="node"><b>第2チーム</b><div class="lead"><canvas width="12" height="12" data-face="3"></canvas><small>課長 伊藤</small></div><div class="faces" data-faces="5"></div></div></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="node dept"><b>営業部</b><div class="faces" data-faces="4"></div></div>
+              <div class="fold">＋ 広報部・人事部</div>
+            </div>
+          </div>
+          <div class="tip">指で動かして見る・部をたたむ</div>
+        </div>
+      </div>
+    </div>
+    <div class="nav"><span>開発</span><span>社員</span><span class="on">組織</span><span>経営</span><span>業界</span></div>
+  </div>
+</figure>
+
+<figure>
+  <figcaption><b>開発の分かれ道</b>問18・66：時間が止まり、真ん中に選ぶ画面が出る。選ぶとまた流れる</figcaption>
+  <div class="phone">
+    <div class="top">
+      <div class="r1"><span class="dot date">1982年 5月 3週</span><span class="dot money">¥288万</span><span class="ib">記録</span><span class="ib">設定</span></div>
+      <div class="r2">
+        <div class="speed"><span class="on">‖</span><span>▶</span><span>▶▶</span></div>
+        <div class="prog"><span class="nm">コスモクエスト</span><span class="bar"><i style="width:50%"></i></span><span class="dot">50%</span></div>
+      </div>
+    </div>
+    <div class="garden" data-garden="main"><canvas width="124" height="112"></canvas></div>
+    <div class="nav"><span>開発</span><span>社員</span><span>組織</span><span>経営</span><span>業界</span></div>
+    <div class="dim">
+      <div class="paused">‖ 一時停止中</div>
+      <div class="modal">
+        <div class="step">分かれ道 2／3・開発の中ごろ</div>
+        <h3>コスモクエスト</h3>
+        <div class="from"><canvas width="12" height="12" data-face="4"></canvas><div>プランナーの田中：「ここからどこに力を入れましょう？」</div></div>
+        <div class="choice">絵に力を入れる<small>絵＋　期間＋1週</small></div>
+        <div class="choice">音楽に力を入れる<small>音＋　期間＋1週</small></div>
+        <div class="choice">早く仕上げる<small>期間−2週</small></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<figure>
+  <figcaption><b>レビュー発表</b>問15・41・61：4人が並び、タップごとに1人ずつ感想→点数が開く。最後に合計</figcaption>
+  <div class="phone">
+    <div class="review">
+      <div class="ttl">レビュー発表</div>
+      <div class="game">コスモクエスト</div>
+      <div class="sub">RPG × 宇宙　／　ピコステーション（架空の機種）</div>
+      <div class="critics">
+        <div class="critic"><canvas width="16" height="16" data-critic="0"></canvas><div class="score">8</div><small>星野</small></div>
+        <div class="critic"><canvas width="16" height="16" data-critic="1"></canvas><div class="score">9</div><small>岩田</small></div>
+        <div class="critic now"><canvas width="16" height="16" data-critic="2"></canvas><div class="score q">?</div><small>松本</small></div>
+        <div class="critic"><canvas width="16" height="16" data-critic="3"></canvas><div class="score q">?</div><small>大野</small></div>
+      </div>
+      <div class="comment"><b>松本</b>「宇宙の広さがよく出ている。戦闘の音がもう少しほしい」</div>
+      <div class="total">合計 <span>17</span> ／ 40</div>
+      <div class="tap">タップで次へ</div>
+    </div>
+  </div>
+</figure>
+
+</div>
+
+<p class="note">ここにないもの：開発・経営・業界の中身、社員の一覧、募集、引っ越し、覚醒の全画面の演出、はじめの社名入力。見本で配置や色が決まったら、企画書にまとめて作り始めます。</p>
+
+<script>
+(function(){
+  const C={floorA:"#eef5fa",floorB:"#dbe9f3",wall:"#ffffff",wallS:"#cfe3f1",wallE:"#9cc3df",desk:"#c9dbe8",deskF:"#8fadc4",mon:"#2c3e50",scr:"#7fd0ff",skin:"#f3c9a4",skinS:"#d9a882",navy:"#1d3557",green:"#35a565",plant:"#2f8f55",pot:"#b46a3c",win:"#bfe6fb",board:"#ffffff",line:"#1d3557"};
+  const HAIR=["#3b2a20","#e0a21b","#1d1d1d","#8a4b2a","#5b3a8a","#c2410c"];
+  const SHIRT=["#2f7fc1","#35a565","#e86a6a","#f2b33d","#7a5cc2","#4fb3bf"];
+  const N=7, ox=62, oy=34;
+  const px=(c,x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)};
+  const tile=(i,j)=>[ox+(i-j)*8, oy+(i+j)*4];
+  function diamond(c,cx,top,col){for(let r=0;r<8;r++){const h=r<4?(r+1)*2:(8-r)*2;px(c,cx-h,top+r,h*2,1,col)}}
+  function person(c,x,y,p){
+    const hair=HAIR[p.h%HAIR.length], sh=SHIRT[p.s%SHIRT.length];
+    px(c,x-2,y-4,2,4,C.navy);px(c,x+1,y-4,2,4,C.navy);
+    px(c,x-3,y-9,6,5,sh);px(c,x-3,y-9,1,5,"rgba(0,0,0,.15)");
+    px(c,x-2,y-13,5,4,C.skin);px(c,x-1,y-11,1,1,C.navy);px(c,x+1,y-11,1,1,C.navy);
+    px(c,x-2,y-14,5,2,hair);
+    if(p.style===1){px(c,x-3,y-13,1,4,hair);px(c,x+3,y-13,1,4,hair)}
+    else if(p.style===2){px(c,x,y-16,2,2,hair)}
+    else px(c,x-3,y-13,1,2,hair);
+  }
+  function desk(c,cx,cy,p){
+    if(p) person(c,cx+2,cy+1,p);
+    px(c,cx-7,cy-2,14,3,C.desk);px(c,cx-7,cy+1,14,3,C.deskF);px(c,cx-7,cy+4,1,2,C.deskF);px(c,cx+6,cy+4,1,2,C.deskF);
+    px(c,cx-7,cy-8,6,6,C.mon);px(c,cx-6,cy-7,4,4,C.scr);px(c,cx-5,cy-3,2,1,C.mon);
+  }
+  function plant(c,cx,cy){px(c,cx-2,cy-3,5,4,C.pot);px(c,cx-3,cy-9,7,6,C.plant);px(c,cx-1,cy-11,3,2,C.plant);px(c,cx+1,cy-8,1,1,"#58c27d")}
+  function drawRoom(cv){
+    const c=cv.getContext("2d");c.imageSmoothingEnabled=false;c.clearRect(0,0,cv.width,cv.height);
+    const H=26;
+    for(let x=ox-N*8;x<=ox;x++){const y=oy+(ox-x)/2;px(c,x,y-H,1,H,C.wallS)}
+    for(let x=ox;x<=ox+N*8;x++){const y=oy+(x-ox)/2;px(c,x,y-H,1,H,C.wall)}
+    for(let x=ox-N*8;x<=ox+N*8;x++){const y=oy+Math.abs(ox-x)/2;px(c,x,y-H-1,1,2,C.wallE)}
+    for(let x=ox-44;x<=ox-24;x++){const y=oy+(ox-x)/2;px(c,x,y-20,1,10,C.win);if((x-(ox-44))%10===0)px(c,x,y-20,1,10,C.wallE)}
+    for(let x=ox+14;x<=ox+40;x++){const y=oy+(x-ox)/2;px(c,x,y-21,1,12,C.navy);if(x>ox+14&&x<ox+40)px(c,x,y-20,1,10,C.board)}
+    for(let x=ox+17;x<=ox+37;x++){const y=oy+(x-ox)/2;px(c,x,y-14,1,3,x<ox+17+13?C.green:"#dbe9f3")}
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++){const [x,y]=tile(i,j);diamond(c,x,y,(i+j)%2?C.floorB:C.floorA)}
+    const items=[
+      {t:"d",i:2,j:1,p:{h:0,s:1,style:0}},{t:"d",i:2,j:4,p:{h:1,s:3,style:1}},
+      {t:"d",i:5,j:1,p:{h:2,s:0,style:0}},{t:"d",i:5,j:4,p:{h:3,s:2,style:2}},
+      {t:"d",i:3,j:6,p:{h:4,s:4,style:1}},{t:"p",i:0,j:6},{t:"p",i:6,j:0},
+      {t:"w",i:4,j:3,p:{h:5,s:5,style:0}}
+    ].sort((a,b)=>(a.i+a.j)-(b.i+b.j));
+    for(const it of items){const [x,y]=tile(it.i,it.j);const cy=y+4;
+      if(it.t==="d")desk(c,x,cy,it.p);else if(it.t==="p")plant(c,x,cy);else person(c,x,cy+2,it.p)}
+  }
+  document.querySelectorAll(".garden").forEach(g=>{
+    const cv=g.querySelector("canvas");drawRoom(cv);
+    g.querySelectorAll("[data-at]").forEach(el=>{
+      const [i,j,dy]=el.dataset.at.split(",").map(Number);const [x,y]=tile(i,j);
+      el.style.left=(x/cv.width*100)+"%";
+      const place=()=>{const r=cv.getBoundingClientRect(),gr=g.getBoundingClientRect();el.style.top=(r.top-gr.top+(y+4+dy)*r.height/112)+"px"};
+      place();addEventListener("resize",place);
+    });
+  });
+  function face(cv,n){
+    const c=cv.getContext("2d");c.imageSmoothingEnabled=false;
+    const hair=HAIR[n%HAIR.length],sh=SHIRT[(n*2+1)%SHIRT.length];
+    px(c,2,9,8,3,sh);px(c,3,3,6,6,C.skin);px(c,4,5,1,1,C.navy);px(c,7,5,1,1,C.navy);px(c,5,7,2,1,C.skinS);
+    px(c,3,2,6,2,hair);px(c,2,3,1,n%3===1?5:2,hair);px(c,9,3,1,n%3===1?5:2,hair);if(n%3===2)px(c,5,0,2,2,hair);
+  }
+  document.querySelectorAll("[data-face]").forEach(cv=>face(cv,+cv.dataset.face));
+  document.querySelectorAll("[data-faces]").forEach((box,k)=>{for(let n=0;n<+box.dataset.faces;n++){const cv=document.createElement("canvas");cv.width=12;cv.height=12;face(cv,n+k*3+5);box.appendChild(cv)}});
+  document.querySelectorAll("[data-critic]").forEach(cv=>{
+    const n=+cv.dataset.critic,c=cv.getContext("2d");c.imageSmoothingEnabled=false;
+    const hair=["#d9d9d9","#1d1d1d","#8a4b2a","#3b2a20"][n],sh=["#e86a6a","#2f7fc1","#35a565","#f2b33d"][n];
+    px(c,3,12,10,4,sh);px(c,7,12,2,3,"#ffffff");px(c,4,4,8,8,C.skin);px(c,6,7,1,1,C.navy);px(c,9,7,1,1,C.navy);px(c,7,10,2,1,C.skinS);
+    px(c,4,3,8,2,hair);
+    if(n===0){px(c,3,4,1,4,hair);px(c,12,4,1,4,hair)}
+    if(n===1){px(c,5,6,3,2,"rgba(29,53,87,.0)");px(c,5,6,2,1,C.navy);px(c,9,6,2,1,C.navy);px(c,7,6,2,1,C.navy)}
+    if(n===2){px(c,3,4,1,7,hair);px(c,12,4,1,7,hair)}
+    if(n===3){px(c,4,2,8,1,hair);px(c,6,1,4,1,hair)}
+  });
+  const stats=[["企画",32],["デザイン",71],["プログラミング",18],["サウンド",25],["営業",12],["採用",9],["広報",20]];
+  document.getElementById("stats").innerHTML=stats.map(([k,v])=>`<span>${k}</span><span class="v${v>=70?" hi":""}">${v}</span><span class="sb${v>=70?" hi":""}"><i style="width:${v}%"></i></span>`).join("");
+})();
+</script>
