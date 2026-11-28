@@ -1,7 +1,7 @@
 /* ゆめのおうち：電波がなくても開けるようにするための保存係。
    画面と自分のプログラム（js）はネット優先で取りに行き、だめなら保存しておいたものを出す（新旧がまざらないように）。
    3Dの部品（vendor）・アイコン・フォントは、保存したものを優先して出す。 */
-const CACHE = "madori-v1";
+const CACHE = "madori-v2";
 const CORE = [
   "./", "./index.html", "./manifest.webmanifest",
   "./js/app.js", "./js/data.js", "./js/model.js", "./js/plan2d.js", "./js/view3d.js",
